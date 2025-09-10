@@ -1,0 +1,45 @@
+{
+  "name": "jci-kl-membership-app",
+  "version": "1.0.0",
+  "description": "超级国际青年商会管理系统",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
+    "type-check": "tsc --noEmit",
+    "setup:firebase": "node scripts/setup-firebase.js",
+    "deploy:netlify": "node scripts/deploy-netlify.js",
+    "firebase:emulators": "firebase emulators:start",
+    "firebase:deploy": "firebase deploy"
+  },
+  "dependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-router-dom": "^6.20.1",
+    "@reduxjs/toolkit": "^2.0.1",
+    "react-redux": "^9.0.4",
+    "antd": "^5.12.8",
+    "react-hook-form": "^7.48.2",
+    "yup": "^1.4.0",
+    "@hookform/resolvers": "^3.3.2",
+    "firebase": "^10.7.1",
+    "dayjs": "^1.11.10",
+    "axios": "^1.6.2",
+    "react-query": "^3.39.3",
+    "zustand": "^4.4.7"
+  },
+  "devDependencies": {
+    "@types/react": "^18.2.43",
+    "@types/react-dom": "^18.2.17",
+    "@typescript-eslint/eslint-plugin": "^6.14.0",
+    "@typescript-eslint/parser": "^6.14.0",
+    "@vitejs/plugin-react": "^4.2.1",
+    "eslint": "^8.55.0",
+    "eslint-plugin-react-hooks": "^4.6.0",
+    "eslint-plugin-react-refresh": "^0.4.5",
+    "typescript": "^5.2.2",
+    "vite": "^5.0.8"
+  }
+}

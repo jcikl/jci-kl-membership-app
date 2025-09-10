@@ -1,0 +1,59 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 会员集合规则
+    match /members/{memberId} {
+      // 允许认证用户读取和写入自己的会员信息
+      allow read, write: if request.auth != null && 
+        (request.auth.uid == resource.data.userId || 
+         request.auth.token.role in ['admin', 'moderator']);
+      
+      // 允许创建新会员记录
+      allow create: if request.auth != null && 
+        request.auth.uid == request.resource.data.userId;
+    }
+    
+    // 活动集合规则
+    match /events/{eventId} {
+      // 所有认证用户都可以读取活动
+      allow read: if request.auth != null;
+      
+      // 只有管理员和版主可以创建、更新、删除活动
+      allow write: if request.auth != null && 
+        request.auth.token.role in ['admin', 'moderator'];
+    }
+    
+    // 活动报名集合规则
+    match /eventRegistrations/{registrationId} {
+      // 用户可以读取自己的报名记录
+      allow read: if request.auth != null && 
+        request.auth.uid == resource.data.userId;
+      
+      // 用户可以创建自己的报名记录
+      allow create: if request.auth != null && 
+        request.auth.uid == request.resource.data.userId;
+      
+      // 管理员可以读取所有报名记录
+      allow read: if request.auth != null && 
+        request.auth.token.role in ['admin', 'moderator'];
+    }
+    
+    // 财务记录集合规则
+    match /financialRecords/{recordId} {
+      // 只有管理员可以访问财务记录
+      allow read, write: if request.auth != null && 
+        request.auth.token.role == 'admin';
+    }
+    
+    // 消息通知集合规则
+    match /notifications/{notificationId} {
+      // 用户可以读取发送给自己的通知
+      allow read: if request.auth != null && 
+        request.auth.uid == resource.data.recipientId;
+      
+      // 管理员可以创建和读取所有通知
+      allow write: if request.auth != null && 
+        request.auth.token.role in ['admin', 'moderator'];
+    }
+  }
+}
