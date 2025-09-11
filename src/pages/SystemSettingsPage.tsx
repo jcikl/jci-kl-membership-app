@@ -1,12 +1,9 @@
 import React from 'react';
 import { Card, Typography, Tabs } from 'antd';
-import RBACRoles from '@/components/rbac/RBACRoles';
-import RBACPermissions from '@/components/rbac/RBACPermissions';
-import RBACBindings from '@/components/rbac/RBACBindings';
 import RBACAudit from '@/components/rbac/RBACAudit';
 import ChapterSettings from '@/components/ChapterSettings';
-import StorageTest from '@/components/StorageTest';
 import CouncilTasksManager from '@/components/CouncilTasksManager';
+import MembershipTasksManager from '@/components/MembershipTasksManager.tsx';
 
 const { Title } = Typography;
 
@@ -26,29 +23,14 @@ const SystemSettingsPage: React.FC = () => {
             children: <ChapterSettings />
           },
           {
+            key: 'membership-tasks',
+            label: '会员管理任务',
+            children: <MembershipTasksManager />
+          },
+          {
             key: 'council-tasks',
             label: '理事团任务',
             children: <CouncilTasksManager />
-          },
-          {
-            key: 'storage-test',
-            label: '存储测试',
-            children: <StorageTest />
-          },
-          {
-            key: 'roles',
-            label: '角色管理',
-            children: <RBACRoles />
-          },
-          {
-            key: 'permissions',
-            label: '权限管理',
-            children: <RBACPermissions />
-          },
-          {
-            key: 'bindings',
-            label: '用户角色绑定',
-            children: <RBACBindings />
           },
           {
             key: 'audit',

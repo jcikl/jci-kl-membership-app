@@ -16,6 +16,7 @@ import {
   SaveOutlined,
   InfoCircleOutlined,
 } from '@ant-design/icons';
+import { Switch } from 'antd';
 import ImageUpload from './ImageUpload';
 import { getChapterSettings, saveChapterSettings, getDefaultChapterSettings } from '@/services/chapterSettingsService';
 import type { ChapterSettings } from '@/types';
@@ -161,6 +162,34 @@ const ChapterSettings: React.FC = () => {
                   rows={4}
                   placeholder="请输入分会简介，描述分会的使命、愿景等"
                 />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Divider orientation="left">用户户口类别晋升条件</Divider>
+
+          <Row gutter={24}>
+            <Col span={8}>
+              <Form.Item name={["promotionRules", "minAgeForActive"]} label="最低年龄（活跃/晋升参考）">
+                <InputNumber style={{ width: '100%' }} min={0} max={120} placeholder="如：21" />
+              </Form.Item>
+            </Col>
+            <Col span={8}>
+              <Form.Item name={["promotionRules", "requirePaymentVerified"]} label="需付款核验">
+                <Switch />
+              </Form.Item>
+            </Col>
+            <Col span={8}>
+              <Form.Item name={["promotionRules", "requireSenatorIdForHonorary"]} label="荣誉需参议员编号">
+                <Switch />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Row gutter={24}>
+            <Col span={24}>
+              <Form.Item name={["promotionRules", "nationalityWhitelist"]} label="国籍白名单（逗号分隔）">
+                <Input placeholder="例如：MY, SG, CN" />
               </Form.Item>
             </Col>
           </Row>

@@ -1,10 +1,12 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Layout, Dropdown, Avatar, Space, Typography, Button } from 'antd';
 import { UserOutlined, LogoutOutlined, SettingOutlined } from '@ant-design/icons';
 import type { MenuProps } from 'antd';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/store/authStore';
 import { logoutUser } from '@/services/authService';
+import { getChapterSettings, getDefaultChapterSettings } from '@/services/chapterSettingsService';
+import type { ChapterSettings } from '@/types';
 
 const { Header } = Layout;
 const { Text } = Typography;
@@ -12,6 +14,7 @@ const { Text } = Typography;
 const AppHeader: React.FC = () => {
   const navigate = useNavigate();
   const { user, member, logout } = useAuthStore();
+  const [chapterTitle, setChapterTitle] = useState<string>('');
 
   const handleLogout = async () => {
     try {
@@ -46,6 +49,30 @@ const AppHeader: React.FC = () => {
     },
   ];
 
+  // 加载分会名称用于标题
+  useEffect(() => {
+    let isMounted = true;
+    const load = async () => {
+      try {
+        const settings: ChapterSettings | null = await getChapterSettings();
+        if (!isMounted) return;
+        if (settings && settings.chapterName) {
+          setChapterTitle(settings.chapterName);
+        } else {
+          const defaults = getDefaultChapterSettings();
+          setChapterTitle(defaults.chapterName);
+        }
+      } catch (e) {
+        const defaults = getDefaultChapterSettings();
+        setChapterTitle(defaults.chapterName);
+      }
+    };
+    load();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
   return (
     <Header 
       style={{ 
@@ -59,7 +86,7 @@ const AppHeader: React.FC = () => {
     >
       <div>
         <Typography.Title level={4} style={{ margin: 0, color: '#1890ff' }}>
-          超级国际青年商会管理系统
+          {chapterTitle ? `${chapterTitle}管理系统` : '管理系统'}
         </Typography.Title>
       </div>
       

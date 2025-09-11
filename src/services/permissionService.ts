@@ -450,6 +450,13 @@ const ACCOUNT_TYPE_PERMISSION_MAP: Record<AccountType, string[]> = {
     'activity.read',
     'message.read',
     'profile.read'
+  ],
+  user: [
+    // 与 member 相同的基础权限
+    'member.read', 'member.update',
+    'activity.read',
+    'message.read',
+    'profile.read', 'profile.update'
   ]
 };
 

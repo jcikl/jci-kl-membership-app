@@ -29,6 +29,7 @@ import { MemberPosition, JCIPosition } from '@/types/rbac';
 import { JCI_POSITION_OPTIONS } from '@/types/rbac';
 import { Member } from '@/types';
 import { useAuthStore } from '@/store/authStore';
+import { useIsAdmin } from '@/hooks/usePermissions';
 import dayjs from 'dayjs';
 
 const { Title, Text } = Typography;
@@ -94,6 +95,7 @@ const PositionManagement: React.FC = () => {
   }>>({});
   
   const { member } = useAuthStore();
+  const { isAdmin } = useIsAdmin();
 
   // 加载职位列表
   const loadPositions = async () => {
@@ -767,7 +769,7 @@ const PositionManagement: React.FC = () => {
                                         type="primary"
                                         size="small"
                                         icon={<EditOutlined />}
-                                        onClick={() => startYearEdit(year.toString())}
+                                        onClick={() => { if (!isAdmin) { message.error('您没有权限进行该操作'); return; } startYearEdit(year.toString()); }}
                                         style={{
                                           width: '24px',
                                           height: '24px',
@@ -777,6 +779,7 @@ const PositionManagement: React.FC = () => {
                                           alignItems: 'center',
                                           justifyContent: 'center'
                                         }}
+                                        disabled={!isAdmin}
                                       />
                                     ) : (
                                       <Space size="small">
@@ -784,7 +787,7 @@ const PositionManagement: React.FC = () => {
                                           type="primary"
                                           size="small"
                                           icon={<SaveOutlined />}
-                                          onClick={() => saveYearEdit(year.toString())}
+                                          onClick={() => { if (!isAdmin) { message.error('您没有权限进行该操作'); return; } saveYearEdit(year.toString()); }}
                                           style={{
                                             width: '24px',
                                             height: '24px',
@@ -794,6 +797,7 @@ const PositionManagement: React.FC = () => {
                                             alignItems: 'center',
                                             justifyContent: 'center'
                                           }}
+                                          disabled={!isAdmin}
                                         />
                                         <Button
                                           size="small"
@@ -1182,7 +1186,7 @@ const PositionManagement: React.FC = () => {
          onCancel={closePositionAssignModal}
          footer={null}
          width={800}
-         destroyOnClose
+         destroyOnHidden
        >
          {selectedYearForAssign && yearEditData[selectedYearForAssign] && (
            <div>

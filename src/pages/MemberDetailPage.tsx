@@ -3,6 +3,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Card, Descriptions, Tag, Button, Space, Typography, Spin } from 'antd';
 import { ArrowLeftOutlined, EditOutlined } from '@ant-design/icons';
 import { useMemberStore } from '@/store/memberStore';
+import { getAccountTypeTagProps } from '@/utils/accountType';
+import { useAccountType } from '@/hooks/useMemberCategory';
 
 const { Title } = Typography;
 
@@ -10,6 +12,7 @@ const MemberDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { currentMember, isLoading, fetchMemberById } = useMemberStore();
+  const { accountType, loading: categoryLoading } = useAccountType(id);
 
   useEffect(() => {
     if (id) {
@@ -36,16 +39,6 @@ const MemberDetailPage: React.FC = () => {
     );
   }
 
-  const getStatusTag = (status: string) => {
-    const statusMap = {
-      active: { color: 'green', text: '活跃' },
-      inactive: { color: 'orange', text: '非活跃' },
-      pending: { color: 'blue', text: '待审核' },
-      suspended: { color: 'red', text: '已暂停' },
-    };
-    const config = statusMap[status as keyof typeof statusMap];
-    return <Tag color={config.color}>{config.text}</Tag>;
-  };
 
   const getLevelTag = (level: string) => {
     const levelMap = {
@@ -91,8 +84,8 @@ const MemberDetailPage: React.FC = () => {
           <Descriptions.Item label="手机号" span={1}>
             {currentMember.phone}
           </Descriptions.Item>
-          <Descriptions.Item label="状态" span={1}>
-            {getStatusTag(currentMember.status)}
+          <Descriptions.Item label="用户户口类别" span={1}>
+            {categoryLoading ? <Spin size="small" /> : <Tag {...getAccountTypeTagProps(accountType)} />}
           </Descriptions.Item>
           <Descriptions.Item label="等级" span={1}>
             {getLevelTag(currentMember.level)}

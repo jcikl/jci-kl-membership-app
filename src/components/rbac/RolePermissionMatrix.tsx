@@ -28,7 +28,6 @@ import {
 import { permissionMatrixService } from '@/services/rbacService';
 
 const { Title, Text } = Typography;
-const { TabPane } = Tabs;
 
 const RolePermissionMatrix: React.FC = () => {
   const [matrix, setMatrix] = useState<RolePermissionMatrixType>({
@@ -263,21 +262,27 @@ const RolePermissionMatrix: React.FC = () => {
           </Col>
         </Row>
 
-        <Tabs defaultActiveKey={matrix.modules[0]} onChange={setSelectedModule}>
-          {matrix.modules.map(module => (
-            <TabPane tab={module} key={module}>
-              <div style={{ marginBottom: 16 }}>
-                <Space>
-                  <Text strong>模块：{module}</Text>
-                  <Tooltip title="绿色表示有权限，灰色表示无权限">
-                    <InfoCircleOutlined style={{ color: '#1890ff' }} />
-                  </Tooltip>
-                </Space>
+        <Tabs 
+          defaultActiveKey={matrix.modules[0]} 
+          onChange={setSelectedModule}
+          items={matrix.modules.map(module => ({
+            key: module,
+            label: module,
+            children: (
+              <div>
+                <div style={{ marginBottom: 16 }}>
+                  <Space>
+                    <Text strong>模块：{module}</Text>
+                    <Tooltip title="绿色表示有权限，灰色表示无权限">
+                      <InfoCircleOutlined style={{ color: '#1890ff' }} />
+                    </Tooltip>
+                  </Space>
+                </div>
+                {renderMatrixTable(module)}
               </div>
-              {renderMatrixTable(module)}
-            </TabPane>
-          ))}
-        </Tabs>
+            )
+          }))}
+        />
       </Card>
 
       {/* 权限说明 */}

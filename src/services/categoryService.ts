@@ -14,6 +14,18 @@ import {
 import { db } from './firebase';
 import { MemberCategory, MembershipCategory, AccountType } from '@/types/rbac';
 
+// 移除对象中的 undefined 字段，避免 Firestore 写入报错
+const removeUndefined = <T extends Record<string, any>>(obj: T): T => {
+  const cleaned: Record<string, any> = {};
+  Object.keys(obj).forEach((key) => {
+    const value = obj[key];
+    if (value !== undefined) {
+      cleaned[key] = value;
+    }
+  });
+  return cleaned as T;
+};
+
 // 分类分配选项
 export interface CategoryAssignmentOptions {
   reason?: string;
@@ -52,10 +64,20 @@ export const categoryService = {
           reason: options.reason,
           status: 'active'
         });
+        // 同步写入 members 集合的 accountType 字段
+        try {
+          const memberRef = doc(db, 'members', memberId);
+          await updateDoc(memberRef, removeUndefined({
+            accountType,
+            updatedAt: new Date().toISOString()
+          }));
+        } catch (syncErr) {
+          console.error('同步更新 members.accountType 失败:', syncErr);
+        }
         return existingCategory.id;
       }
 
-      const categoryData: Omit<MemberCategory, 'id'> = {
+      const categoryDataRaw: Omit<MemberCategory, 'id'> = {
         memberId,
         membershipCategory,
         accountType,
@@ -66,8 +88,19 @@ export const categoryService = {
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       };
+      const categoryData = removeUndefined(categoryDataRaw);
 
       const docRef = await addDoc(collection(db, 'member_categories'), categoryData);
+      // 同步写入 members 集合的 accountType 字段
+      try {
+        const memberRef = doc(db, 'members', memberId);
+        await updateDoc(memberRef, removeUndefined({
+          accountType,
+          updatedAt: new Date().toISOString()
+        }));
+      } catch (syncErr) {
+        console.error('同步更新 members.accountType 失败:', syncErr);
+      }
       return docRef.id;
     } catch (error) {
       console.error('分配分类失败:', error);
@@ -126,10 +159,11 @@ export const categoryService = {
   updateCategory: async (categoryId: string, updates: Partial<MemberCategory>): Promise<void> => {
     try {
       const categoryRef = doc(db, 'member_categories', categoryId);
-      await updateDoc(categoryRef, {
+      const cleaned = removeUndefined({
         ...updates,
         updatedAt: new Date().toISOString()
       });
+      await updateDoc(categoryRef, cleaned);
     } catch (error) {
       console.error('更新分类失败:', error);
       throw error;
@@ -255,7 +289,8 @@ export const categoryService = {
         admin: 0,
         member: 0,
         moderator: 0,
-        guest: 0
+        guest: 0,
+        user: 0
       };
 
       // 统计各类型数量

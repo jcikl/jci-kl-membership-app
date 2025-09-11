@@ -70,5 +70,11 @@ export const getDefaultChapterSettings = (): Omit<ChapterSettings, 'id' | 'creat
     contactPhone: '',
     website: '',
     logoUrl: '',
+    promotionRules: {
+      minAgeForActive: 21,
+      nationalityWhitelist: [],
+      requirePaymentVerified: true,
+      requireSenatorIdForHonorary: true,
+    },
   };
 };

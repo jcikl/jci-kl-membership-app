@@ -180,7 +180,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
             <Card
               size="small"
               style={{ textAlign: 'center' }}
-              bodyStyle={{ padding: 8 }}
+              styles={{ body: { padding: 8 } }}
             >
               <div style={{ position: 'relative', display: 'inline-block' }}>
                 <Image

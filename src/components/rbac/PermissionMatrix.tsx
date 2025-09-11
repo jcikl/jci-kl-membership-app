@@ -31,7 +31,6 @@ import {
 } from '@/types/rbac';
 
 const { Title, Text } = Typography;
-const { TabPane } = Tabs;
 
 // 权限矩阵数据接口
 interface PermissionMatrixData {
@@ -589,21 +588,26 @@ const PermissionMatrix: React.FC = () => {
           </Row>
         </Card>
 
-        <Tabs defaultActiveKey={matrix.modules[0]}>
-          {matrix.modules.map(module => (
-            <TabPane tab={module} key={module}>
-              <div style={{ marginBottom: 16 }}>
-                <Space>
-                  <Text strong>模块：{module}</Text>
-                  <Tooltip title="绿色表示有权限，红色表示无权限">
-                    <InfoCircleOutlined style={{ color: '#1890ff' }} />
-                  </Tooltip>
-                </Space>
+        <Tabs 
+          defaultActiveKey={matrix.modules[0]}
+          items={matrix.modules.map(module => ({
+            key: module,
+            label: module,
+            children: (
+              <div>
+                <div style={{ marginBottom: 16 }}>
+                  <Space>
+                    <Text strong>模块：{module}</Text>
+                    <Tooltip title="绿色表示有权限，红色表示无权限">
+                      <InfoCircleOutlined style={{ color: '#1890ff' }} />
+                    </Tooltip>
+                  </Space>
+                </div>
+                {renderMatrixTable(module)}
               </div>
-              {renderMatrixTable(module)}
-            </TabPane>
-          ))}
-        </Tabs>
+            )
+          }))}
+        />
       </Card>
 
       {/* 角色权限说明 */}

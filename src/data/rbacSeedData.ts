@@ -31,7 +31,33 @@ export const PERMISSION_SEED_DATA: Omit<Permission, 'id' | 'createdAt' | 'update
   { key: 'profile.create', label: '创建个人资料', description: '创建个人资料', module: '个人资料', action: 'Create' },
   { key: 'profile.read', label: '查看个人资料', description: '查看个人资料', module: '个人资料', action: 'Read' },
   { key: 'profile.update', label: '更新个人资料', description: '更新个人资料', module: '个人资料', action: 'Update' },
-  { key: 'profile.delete', label: '删除个人资料', description: '删除个人资料', module: '个人资料', action: 'Delete' }
+  { key: 'profile.delete', label: '删除个人资料', description: '删除个人资料', module: '个人资料', action: 'Delete' },
+
+  // 问卷管理权限
+  { key: 'survey.create', label: '创建问卷', description: '创建新问卷', module: '问卷管理', action: 'Create' },
+  { key: 'survey.read', label: '查看问卷', description: '查看问卷信息', module: '问卷管理', action: 'Read' },
+  { key: 'survey.update', label: '更新问卷', description: '更新问卷信息', module: '问卷管理', action: 'Update' },
+  { key: 'survey.delete', label: '删除问卷', description: '删除问卷', module: '问卷管理', action: 'Delete' },
+  { key: 'survey.publish', label: '发布问卷', description: '发布问卷', module: '问卷管理', action: 'Publish' },
+  { key: 'survey.close', label: '关闭问卷', description: '关闭问卷', module: '问卷管理', action: 'Close' },
+  { key: 'survey.archive', label: '归档问卷', description: '归档问卷', module: '问卷管理', action: 'Archive' },
+
+  // 问卷回答权限
+  { key: 'survey.response.create', label: '提交回答', description: '提交问卷回答', module: '问卷回答', action: 'Create' },
+  { key: 'survey.response.read', label: '查看回答', description: '查看问卷回答', module: '问卷回答', action: 'Read' },
+  { key: 'survey.response.update', label: '更新回答', description: '更新问卷回答', module: '问卷回答', action: 'Update' },
+  { key: 'survey.response.delete', label: '删除回答', description: '删除问卷回答', module: '问卷回答', action: 'Delete' },
+  { key: 'survey.response.export', label: '导出回答', description: '导出问卷回答数据', module: '问卷回答', action: 'Export' },
+
+  // 问卷分析权限
+  { key: 'survey.analytics.read', label: '查看分析', description: '查看问卷分析数据', module: '问卷分析', action: 'Read' },
+  { key: 'survey.analytics.export', label: '导出分析', description: '导出问卷分析报告', module: '问卷分析', action: 'Export' },
+
+  // 问卷模板权限
+  { key: 'survey.template.create', label: '创建模板', description: '创建问卷模板', module: '问卷模板', action: 'Create' },
+  { key: 'survey.template.read', label: '查看模板', description: '查看问卷模板', module: '问卷模板', action: 'Read' },
+  { key: 'survey.template.update', label: '更新模板', description: '更新问卷模板', module: '问卷模板', action: 'Update' },
+  { key: 'survey.template.delete', label: '删除模板', description: '删除问卷模板', module: '问卷模板', action: 'Delete' }
 ];
 
 // 角色种子数据 - 根据用户提供的角色列表
@@ -47,7 +73,11 @@ export const ROLE_SEED_DATA: Role[] = [
       'activity.create', 'activity.read', 'activity.update', 'activity.delete',
       'finance.create', 'finance.read', 'finance.update', 'finance.delete',
       'message.create', 'message.read', 'message.update', 'message.delete',
-      'profile.create', 'profile.read', 'profile.update', 'profile.delete'
+      'profile.create', 'profile.read', 'profile.update', 'profile.delete',
+      'survey.create', 'survey.read', 'survey.update', 'survey.delete', 'survey.publish', 'survey.close', 'survey.archive',
+      'survey.response.create', 'survey.response.read', 'survey.response.update', 'survey.response.delete', 'survey.response.export',
+      'survey.analytics.read', 'survey.analytics.export',
+      'survey.template.create', 'survey.template.read', 'survey.template.update', 'survey.template.delete'
     ],
     deny: [],
     conditions: {},
@@ -64,7 +94,11 @@ export const ROLE_SEED_DATA: Role[] = [
       'activity.create', 'activity.read', 'activity.update', 'activity.delete',
       'finance.create', 'finance.read', 'finance.update', 'finance.delete',
       'message.create', 'message.read', 'message.update', 'message.delete',
-      'profile.create', 'profile.read', 'profile.update', 'profile.delete'
+      'profile.create', 'profile.read', 'profile.update', 'profile.delete',
+      'survey.create', 'survey.read', 'survey.update', 'survey.delete', 'survey.publish', 'survey.close', 'survey.archive',
+      'survey.response.create', 'survey.response.read', 'survey.response.update', 'survey.response.delete', 'survey.response.export',
+      'survey.analytics.read', 'survey.analytics.export',
+      'survey.template.create', 'survey.template.read', 'survey.template.update', 'survey.template.delete'
     ],
     deny: [],
     conditions: {},
@@ -82,7 +116,9 @@ export const ROLE_SEED_DATA: Role[] = [
       'member.read',
       'activity.read',
       'message.read',
-      'profile.read', 'profile.update'
+      'profile.read', 'profile.update',
+      'survey.read',
+      'survey.response.create', 'survey.response.read', 'survey.response.update'
     ],
     deny: [],
     conditions: {},
@@ -98,7 +134,9 @@ export const ROLE_SEED_DATA: Role[] = [
       'member.read',
       'activity.read',
       'message.read',
-      'profile.read', 'profile.update'
+      'profile.read', 'profile.update',
+      'survey.read',
+      'survey.response.create', 'survey.response.read', 'survey.response.update'
     ],
     deny: [],
     conditions: {},
@@ -114,7 +152,9 @@ export const ROLE_SEED_DATA: Role[] = [
       'member.read',
       'activity.read',
       'message.read',
-      'profile.read', 'profile.update'
+      'profile.read', 'profile.update',
+      'survey.read',
+      'survey.response.create', 'survey.response.read', 'survey.response.update'
     ],
     deny: [],
     conditions: {},
@@ -130,7 +170,9 @@ export const ROLE_SEED_DATA: Role[] = [
       'member.read',
       'activity.read',
       'message.read',
-      'profile.read', 'profile.update'
+      'profile.read', 'profile.update',
+      'survey.read',
+      'survey.response.create', 'survey.response.read', 'survey.response.update'
     ],
     deny: [],
     conditions: {},
@@ -146,7 +188,9 @@ export const ROLE_SEED_DATA: Role[] = [
       'member.read',
       'activity.read',
       'message.read',
-      'profile.read'
+      'profile.read',
+      'survey.read',
+      'survey.response.create', 'survey.response.read'
     ],
     deny: [],
     conditions: {},
@@ -165,7 +209,11 @@ export const ROLE_SEED_DATA: Role[] = [
       'activity.create', 'activity.read', 'activity.update', 'activity.delete',
       'finance.create', 'finance.read', 'finance.update', 'finance.delete',
       'message.create', 'message.read', 'message.update', 'message.delete',
-      'profile.create', 'profile.read', 'profile.update', 'profile.delete'
+      'profile.create', 'profile.read', 'profile.update', 'profile.delete',
+      'survey.create', 'survey.read', 'survey.update', 'survey.delete', 'survey.publish', 'survey.close', 'survey.archive',
+      'survey.response.create', 'survey.response.read', 'survey.response.update', 'survey.response.delete', 'survey.response.export',
+      'survey.analytics.read', 'survey.analytics.export',
+      'survey.template.create', 'survey.template.read', 'survey.template.update', 'survey.template.delete'
     ],
     deny: [],
     conditions: {},
@@ -193,7 +241,11 @@ export const ROLE_SEED_DATA: Role[] = [
       'activity.create', 'activity.read', 'activity.update', 'activity.delete',
       'finance.read', // 秘书长只能查看财务
       'message.create', 'message.read', 'message.update', 'message.delete',
-      'profile.create', 'profile.read', 'profile.update', 'profile.delete'
+      'profile.create', 'profile.read', 'profile.update', 'profile.delete',
+      'survey.create', 'survey.read', 'survey.update', 'survey.publish', 'survey.close',
+      'survey.response.create', 'survey.response.read', 'survey.response.update', 'survey.response.export',
+      'survey.analytics.read', 'survey.analytics.export',
+      'survey.template.create', 'survey.template.read', 'survey.template.update'
     ],
     deny: [],
     conditions: {},
@@ -272,7 +324,7 @@ export const ROLE_SEED_DATA: Role[] = [
 
 // 策略配置种子数据
 export const POLICY_SEED_DATA: RBACPolicy = {
-  defaultNewUserType: 'member',
+  defaultNewUserType: 'user',
   typeChangeBy: ['developer'],
   positionOnlyFor: ['active'],
   actingPresidentMirrors: 'president',

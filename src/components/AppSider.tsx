@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Layout, Menu, Typography } from 'antd';
-import { 
+import {
   DashboardOutlined, 
   TeamOutlined, 
   UserOutlined,
@@ -8,7 +8,8 @@ import {
   DollarOutlined,
   MessageOutlined,
   SettingOutlined,
-  SafetyOutlined
+  SafetyOutlined,
+  FileTextOutlined
 } from '@ant-design/icons';
 import { useNavigate, useLocation } from 'react-router-dom';
 
@@ -30,6 +31,11 @@ const AppSider: React.FC = () => {
       key: '/members',
       icon: <TeamOutlined />,
       label: '会员管理',
+    },
+    {
+      key: '/surveys',
+      icon: <FileTextOutlined />,
+      label: '问卷管理',
     },
     {
       key: '/events',

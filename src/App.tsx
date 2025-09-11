@@ -15,6 +15,11 @@ import MemberListPage from '@/pages/MemberListPage';
 import MemberDetailPage from '@/pages/MemberDetailPage';
 import ProfilePage from '@/pages/ProfilePage';
 import SystemSettingsPage from '@/pages/SystemSettingsPage';
+import SurveyListPage from '@/pages/SurveyListPage';
+import SurveyCreatePage from '@/pages/SurveyCreatePage';
+import SurveyEditPage from '@/pages/SurveyEditPage';
+import SurveyDetailPage from '@/pages/SurveyDetailPage';
+import SurveyResponsePage from '@/pages/SurveyResponsePage';
 
 // RBAC组件
 import RBACManagement from '@/components/rbac/RBACManagement';
@@ -81,6 +86,11 @@ const App: React.FC = () => {
             <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/members" element={<MemberListPage />} />
             <Route path="/members/:id" element={<MemberDetailPage />} />
+            <Route path="/surveys" element={<SurveyListPage />} />
+            <Route path="/surveys/create" element={<SurveyCreatePage />} />
+            <Route path="/surveys/:id" element={<SurveyDetailPage />} />
+            <Route path="/surveys/:id/edit" element={<SurveyEditPage />} />
+            <Route path="/surveys/:id/response" element={<SurveyResponsePage />} />
             <Route path="/profile" element={<ProfilePage />} />
             <Route path="/rbac-management" element={<RBACManagement />} />
             <Route path="/system-settings" element={<SystemSettingsPage />} />

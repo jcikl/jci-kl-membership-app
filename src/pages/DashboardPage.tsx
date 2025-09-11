@@ -332,7 +332,7 @@ const DashboardPage: React.FC = () => {
               </Space>
             }
             style={{ height: '500px' }}
-            bodyStyle={{ height: 'calc(100% - 57px)', overflow: 'auto' }}
+            styles={{ body: { height: 'calc(100% - 57px)', overflow: 'auto' } }}
           >
             <List
               dataSource={hobbyAnalysis.slice(0, 6)} // 显示前6个最受欢迎的兴趣
@@ -372,7 +372,7 @@ const DashboardPage: React.FC = () => {
               </Space>
             }
             style={{ height: '500px' }}
-            bodyStyle={{ height: 'calc(100% - 57px)', overflow: 'auto' }}
+            styles={{ body: { height: 'calc(100% - 57px)', overflow: 'auto' } }}
           >
             <List
               dataSource={categoryAnalysis}
@@ -412,7 +412,7 @@ const DashboardPage: React.FC = () => {
               </Space>
             }
             style={{ height: '500px' }}
-            bodyStyle={{ height: 'calc(100% - 57px)', overflow: 'auto' }}
+            styles={{ body: { height: 'calc(100% - 57px)', overflow: 'auto' } }}
           >
             <List
               dataSource={industryAnalysis.slice(0, 6)} // 显示前6个最受欢迎的行业
@@ -469,7 +469,7 @@ const DashboardPage: React.FC = () => {
               </Space>
             }
             style={{ height: '500px' }}
-            bodyStyle={{ height: 'calc(100% - 57px)', overflow: 'auto' }}
+            styles={{ body: { height: 'calc(100% - 57px)', overflow: 'auto' } }}
           >
             <Table
               columns={allUsersColumns}

@@ -12,7 +12,8 @@ import {
   Select,
   Modal,
   Form,
-  message
+  message,
+  Tabs
 } from 'antd';
 import { 
   PlusOutlined, 
@@ -26,9 +27,14 @@ import { useForm, Controller } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
 import { useMemberStore } from '@/store/memberStore';
-import { Member, MemberStatus, MemberLevel } from '@/types';
+import { Member, MemberLevel } from '@/types';
+import { getAccountTypeTagProps, getAccountTypeFormOptions, isValidAccountType } from '@/utils/accountType';
 import ProfileEditForm from '@/components/ProfileEditForm';
 import BatchImportModal from '@/components/BatchImportModal';
+import SenatorManagement from '@/components/SenatorManagement';
+import VisitingMembershipManager from '@/components/VisitingMembershipManager';
+import AssociateMembershipManager from '@/components/AssociateMembershipManager';
+import OfficialMembershipManager from '@/components/OfficialMembershipManager';
 
 const { Title } = Typography;
 const { Search } = Input;
@@ -39,7 +45,7 @@ const memberFormSchema = yup.object({
   email: yup.string().email('请输入有效的邮箱').required('请输入邮箱'),
   phone: yup.string().required('请输入手机号'),
   memberId: yup.string().required('请输入会员编号'),
-  status: yup.string().required('请选择状态'),
+  accountType: yup.string().test('is-valid-account-type', '请选择有效的用户户口类别', (value) => value ? isValidAccountType(value) : false).required('请选择用户户口类别'),
   level: yup.string().required('请选择等级'),
 });
 
@@ -56,7 +62,7 @@ const MemberListPage: React.FC = () => {
     deleteMemberById 
   } = useMemberStore();
   
-  const [statusFilter, setStatusFilter] = useState<MemberStatus | 'all'>('all');
+  const [accountTypeFilter, setAccountTypeFilter] = useState<string | 'all'>('all');
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [isBatchImportVisible, setIsBatchImportVisible] = useState(false);
   const [editingMember, setEditingMember] = useState<Member | null>(null);
@@ -79,9 +85,9 @@ const MemberListPage: React.FC = () => {
     console.log('Search:', value);
   };
 
-  const handleStatusFilter = (value: MemberStatus | 'all') => {
-    setStatusFilter(value);
-    // 这里可以实现状态过滤逻辑
+  const handleAccountTypeFilter = (value: string | 'all') => {
+    setAccountTypeFilter(value);
+    // 这里可以实现用户户口类别过滤逻辑
   };
 
   const handleAddMember = () => {
@@ -131,8 +137,29 @@ const MemberListPage: React.FC = () => {
         // await updateMemberById(editingMember.id, data);
         message.success('更新成功');
       } else {
-        // 添加新会员
-        await addMember(data as Omit<Member, 'id' | 'createdAt' | 'updatedAt'>);
+        // 添加新会员 - 创建完整的会员对象
+        const memberData: Omit<Member, 'id' | 'createdAt' | 'updatedAt'> = {
+          name: data.name,
+          email: data.email,
+          phone: data.phone,
+          memberId: data.memberId,
+          joinDate: new Date().toISOString(),
+          status: 'active', // 默认状态
+          level: data.level as any,
+          profile: {
+            // 基本档案信息
+          }
+        };
+        
+        await addMember(memberData);
+        
+        // 如果设置了账户类型，需要单独创建分类记录
+        if (data.accountType && data.accountType !== 'member') {
+          // 这里需要调用 categoryService 来创建分类记录
+          // 由于需要 memberId，我们需要先获取新创建的会员ID
+          message.info('会员已创建，请稍后在分类管理中设置用户户口类别');
+        }
+        
         message.success('添加成功');
       }
       setIsModalVisible(false);
@@ -170,18 +197,12 @@ const MemberListPage: React.FC = () => {
       key: 'memberId',
     },
     {
-      title: '状态',
-      dataIndex: 'status',
-      key: 'status',
-      render: (status: MemberStatus) => {
-        const statusMap = {
-          active: { color: 'green', text: '活跃' },
-          inactive: { color: 'orange', text: '非活跃' },
-          pending: { color: 'blue', text: '待审核' },
-          suspended: { color: 'red', text: '已暂停' },
-        };
-        const config = statusMap[status];
-        return <Tag color={config.color}>{config.text}</Tag>;
+      title: '用户户口类别',
+      dataIndex: 'accountType',
+      key: 'accountType',
+      render: (accountType: string) => {
+        const tagProps = getAccountTypeTagProps(accountType);
+        return <Tag {...tagProps} />;
       },
     },
     {
@@ -231,75 +252,112 @@ const MemberListPage: React.FC = () => {
     },
   ];
 
+  const MemberListContent = () => (
+    <div>
+      <Row justify="space-between" align="middle" style={{ marginBottom: 16 }}>
+        <Col>
+          <Title level={4} style={{ margin: 0 }}>
+            会员列表
+          </Title>
+        </Col>
+        <Col>
+          <Space>
+            <Button 
+              icon={<UploadOutlined />}
+              onClick={handleBatchImport}
+            >
+              批量导入
+            </Button>
+            <Button 
+              type="primary" 
+              icon={<PlusOutlined />}
+              onClick={handleAddMember}
+            >
+              添加会员
+            </Button>
+          </Space>
+        </Col>
+      </Row>
+
+      <Row gutter={16} style={{ marginBottom: 16 }}>
+        <Col span={12}>
+          <Search
+            placeholder="搜索会员姓名或邮箱"
+            allowClear
+            enterButton={<SearchOutlined />}
+            size="large"
+            onSearch={handleSearch}
+          />
+        </Col>
+        <Col span={6}>
+          <Select
+            placeholder="选择用户户口类别"
+            style={{ width: '100%' }}
+            size="large"
+            value={accountTypeFilter}
+            onChange={handleAccountTypeFilter}
+          >
+            <Option value="all">全部类别</Option>
+            {getAccountTypeFormOptions().map(option => (
+              <Option key={option.value} value={option.value}>
+                {option.label}
+              </Option>
+            ))}
+          </Select>
+        </Col>
+      </Row>
+
+      <Table
+        columns={columns}
+        dataSource={members}
+        loading={isLoading}
+        rowKey="id"
+        pagination={{
+          current: pagination.page,
+          pageSize: pagination.limit,
+          total: pagination.total,
+          showSizeChanger: true,
+          showQuickJumper: true,
+          showTotal: (total, range) => 
+            `第 ${range[0]}-${range[1]} 条/共 ${total} 条`,
+        }}
+      />
+    </div>
+  );
+
   return (
     <div>
       <Card>
-        <Row justify="space-between" align="middle" style={{ marginBottom: 16 }}>
-          <Col>
-            <Title level={3} style={{ margin: 0 }}>
-              会员管理
-            </Title>
-          </Col>
-          <Col>
-            <Space>
-              <Button 
-                icon={<UploadOutlined />}
-                onClick={handleBatchImport}
-              >
-                批量导入
-              </Button>
-              <Button 
-                type="primary" 
-                icon={<PlusOutlined />}
-                onClick={handleAddMember}
-              >
-                添加会员
-              </Button>
-            </Space>
-          </Col>
-        </Row>
-
-        <Row gutter={16} style={{ marginBottom: 16 }}>
-          <Col span={12}>
-            <Search
-              placeholder="搜索会员姓名或邮箱"
-              allowClear
-              enterButton={<SearchOutlined />}
-              size="large"
-              onSearch={handleSearch}
-            />
-          </Col>
-          <Col span={6}>
-            <Select
-              placeholder="选择状态"
-              style={{ width: '100%' }}
-              size="large"
-              value={statusFilter}
-              onChange={handleStatusFilter}
-            >
-              <Option value="all">全部状态</Option>
-              <Option value="active">活跃</Option>
-              <Option value="inactive">非活跃</Option>
-              <Option value="pending">待审核</Option>
-              <Option value="suspended">已暂停</Option>
-            </Select>
-          </Col>
-        </Row>
-
-        <Table
-          columns={columns}
-          dataSource={members}
-          loading={isLoading}
-          rowKey="id"
-          pagination={{
-            current: pagination.page,
-            pageSize: pagination.limit,
-            total: pagination.total,
-            showSizeChanger: true,
-            showQuickJumper: true,
-            showTotal: (total, range) => 
-              `第 ${range[0]}-${range[1]} 条/共 ${total} 条`,
-          }}
+        <Title level={3} style={{ marginBottom: 16 }}>会员管理</Title>
+        <Tabs
+          defaultActiveKey="member-list"
+          items={[
+            {
+              key: 'member-list',
+              label: '会员列表',
+              children: <MemberListContent />
+            },
+            {
+              key: 'senators',
+              label: '参议员管理',
+              children: <SenatorManagement />
+            },
+            {
+              key: 'visiting-membership',
+              label: '拜访会员管理',
+              children: <VisitingMembershipManager />
+            },
+            {
+              key: 'associate-membership',
+              label: '准会员管理',
+              children: <AssociateMembershipManager />
+            },
+            {
+              key: 'official-membership',
+              label: '正式会员管理',
+              children: <OfficialMembershipManager />
+            }
+          ]}
         />
       </Card>
 
@@ -313,7 +371,7 @@ const MemberListPage: React.FC = () => {
         }}
         footer={null}
         width={editingMember ? 1200 : 600}
-        destroyOnClose
+        destroyOnHidden
         style={{ top: 20 }}
       >
         {editingMember ? (
@@ -393,19 +451,20 @@ const MemberListPage: React.FC = () => {
           <Row gutter={16}>
             <Col span={12}>
               <Form.Item
-                label="状态"
-                validateStatus={errors.status ? 'error' : ''}
-                help={errors.status?.message}
+                label="用户户口类别"
+                validateStatus={errors.accountType ? 'error' : ''}
+                help={errors.accountType?.message}
               >
                 <Controller
-                  name="status"
+                  name="accountType"
                   control={control}
                   render={({ field }) => (
-                    <Select {...field} placeholder="请选择状态">
-                      <Option value="active">活跃</Option>
-                      <Option value="inactive">非活跃</Option>
-                      <Option value="pending">待审核</Option>
-                      <Option value="suspended">已暂停</Option>
+                    <Select {...field} placeholder="请选择用户户口类别">
+                      {getAccountTypeFormOptions().map(option => (
+                        <Option key={option.value} value={option.value}>
+                          {option.label}
+                        </Option>
+                      ))}
                     </Select>
                   )}
                 />

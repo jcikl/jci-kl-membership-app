@@ -25,9 +25,11 @@ import {
 import { categoryService, CategoryAssignmentOptions } from '@/services/categoryService';
 import { getMembers } from '@/services/memberService';
 import { MemberCategory, MembershipCategory, AccountType } from '@/types/rbac';
-import { MEMBERSHIP_CATEGORY_OPTIONS, ACCOUNT_TYPE_OPTIONS } from '@/types/rbac';
+import { MEMBERSHIP_CATEGORY_OPTIONS } from '@/types/rbac';
+import { getAccountTypeFormOptions, getAccountTypeTagProps } from '@/utils/accountType';
 import { Member } from '@/types';
 import { useAuthStore } from '@/store/authStore';
+import { useIsAdmin } from '@/hooks/usePermissions';
 import dayjs from 'dayjs';
 
 const { Title, Text } = Typography;
@@ -45,6 +47,7 @@ const CategoryManagement: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState<MembershipCategory | ''>('');
   const [stats, setStats] = useState<any>(null);
   const { member } = useAuthStore();
+  const { isAdmin } = useIsAdmin();
 
   // 加载分类列表
   const loadCategories = async () => {
@@ -152,6 +155,10 @@ const CategoryManagement: React.FC = () => {
 
   // 打开编辑模态框
   const openEditModal = (category: MemberCategory) => {
+    if (!isAdmin) {
+      message.error('您没有权限进行该操作');
+      return;
+    }
     setEditingCategory(category);
     form.setFieldsValue({
       memberId: category.memberId,
@@ -164,6 +171,10 @@ const CategoryManagement: React.FC = () => {
 
   // 打开创建模态框
   const openCreateModal = () => {
+    if (!isAdmin) {
+      message.error('您没有权限进行该操作');
+      return;
+    }
     setEditingCategory(null);
     form.resetFields();
     setModalVisible(true);
@@ -217,8 +228,8 @@ const CategoryManagement: React.FC = () => {
       key: 'accountType',
       width: 120,
       render: (type: AccountType) => {
-        const option = ACCOUNT_TYPE_OPTIONS.find(opt => opt.value === type);
-        return <Tag color="green">{option?.label || type}</Tag>;
+        const tagProps = getAccountTypeTagProps(type);
+        return <Tag {...tagProps} />;
       }
     },
     {
@@ -266,11 +277,17 @@ const CategoryManagement: React.FC = () => {
           </Button>
           <Popconfirm
             title="确定要删除这个分类记录吗？"
-            onConfirm={() => handleDelete(record.id)}
+            onConfirm={() => {
+              if (!isAdmin) {
+                message.error('您没有权限进行该操作');
+                return;
+              }
+              handleDelete(record.id);
+            }}
             okText="确定"
             cancelText="取消"
           >
-            <Button type="link" danger icon={<DeleteOutlined />}>
+            <Button type="link" danger icon={<DeleteOutlined />} disabled={!isAdmin}>
               删除
             </Button>
           </Popconfirm>
@@ -352,6 +369,7 @@ const CategoryManagement: React.FC = () => {
                 type="primary"
                 icon={<PlusOutlined />}
                 onClick={openCreateModal}
+                disabled={!isAdmin}
               >
                 分配分类
               </Button>
@@ -431,7 +449,7 @@ const CategoryManagement: React.FC = () => {
                 rules={[{ required: true, message: '请选择账户类型' }]}
               >
                 <Select placeholder="选择账户类型">
-                  {ACCOUNT_TYPE_OPTIONS.map(option => (
+                  {getAccountTypeFormOptions().map(option => (
                     <Option key={option.value} value={option.value}>
                       {option.label}
                     </Option>

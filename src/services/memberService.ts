@@ -15,7 +15,6 @@ import {
 } from 'firebase/firestore';
 import { db } from './firebase';
 import { Member, PaginationParams, PaginatedResponse } from '@/types';
-import { applyNewMemberRule } from './autoRulesService';
 
 const MEMBERS_COLLECTION = 'members';
 
@@ -119,8 +118,21 @@ export const getMemberByEmail = async (email: string): Promise<Member | null> =>
 // 创建新会员
 export const createMember = async (memberData: Omit<Member, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> => {
   try {
-    // 应用新用户规则（默认为准会员）
-    const processedMemberData = await applyNewMemberRule(memberData);
+    const now = new Date().toISOString();
+    const processedMemberData = {
+      ...memberData,
+      membershipCategory: 'associate', // 默认为准会员
+      accountType: 'user',
+      categoryReason: '新用户自动分配为准会员',
+      categoryAssignedBy: 'system',
+      categoryAssignedDate: new Date().toLocaleDateString('en-GB', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric'
+      }),
+      createdAt: now,
+      updatedAt: now
+    };
     
     const docRef = await addDoc(collection(db, MEMBERS_COLLECTION), processedMemberData);
     return docRef.id;
@@ -205,8 +217,21 @@ export const createMembersBatch = async (membersData: Omit<Member, 'id' | 'creat
     // 批量创建
     for (const memberData of membersData) {
       try {
-        // 应用新用户规则（默认为准会员）
-        const processedMemberData = await applyNewMemberRule(memberData);
+        const now = new Date().toISOString();
+        const processedMemberData = {
+          ...memberData,
+          membershipCategory: 'associate', // 默认为准会员
+          accountType: 'user',
+          categoryReason: '新用户自动分配为准会员',
+          categoryAssignedBy: 'system',
+          categoryAssignedDate: new Date().toLocaleDateString('en-GB', {
+            day: '2-digit',
+            month: 'short',
+            year: 'numeric'
+          }),
+          createdAt: now,
+          updatedAt: now
+        };
         
         const docRef = doc(collection(db, MEMBERS_COLLECTION));
         batch.set(docRef, processedMemberData);

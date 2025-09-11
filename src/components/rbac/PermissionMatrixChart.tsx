@@ -7,237 +7,155 @@ import {
   Table,
   Tag,
   Space,
-  Tooltip,
-  Badge,
   Statistic,
-  Progress
+  Button,
+  Modal,
+  message,
+  Select,
+  Form
 } from 'antd';
 import {
-  CheckCircleOutlined,
-  CloseCircleOutlined,
-  InfoCircleOutlined,
   UserOutlined,
   CrownOutlined,
   TeamOutlined
 } from '@ant-design/icons';
-import { ROLE_DEFINITIONS, PERMISSION_MODULES, PERMISSION_ACTIONS } from '@/types/rbac';
+import { ROLE_DEFINITIONS } from '@/types/rbac';
+import { useAuthStore } from '@/store/authStore';
+import { categoryService } from '@/services/categoryService';
+import { getMembers } from '@/services/memberService';
 
 const { Text } = Typography;
 
-interface PermissionMatrixChartProps {
-  matrix?: Record<string, Record<string, Record<string, boolean>>>;
-}
+interface PermissionMatrixChartProps {}
 
-const PermissionMatrixChart: React.FC<PermissionMatrixChartProps> = ({ matrix }) => {
-  const [chartData, setChartData] = useState<any[]>([]);
-  const [roleStats, setRoleStats] = useState<Record<string, any>>({});
+const PermissionMatrixChart: React.FC<PermissionMatrixChartProps> = () => {
+  const [developerUsers, setDeveloperUsers] = useState<any[]>([]);
+  const [adminUsers, setAdminUsers] = useState<any[]>([]);
+  const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
+  const [isPositionModalOpen, setIsPositionModalOpen] = useState(false);
+  const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
+  const [allMembers, setAllMembers] = useState<any[]>([]);
+  const [availableMembers, setAvailableMembers] = useState<any[]>([]);
+  const [selectedMemberId, setSelectedMemberId] = useState<string>('');
+  const [selectedAccountType, setSelectedAccountType] = useState<string>('developer');
+
+  const { member } = useAuthStore();
+
+  // 加载开发者与管理员用户列表
+  const loadAccountTypeUsers = async () => {
+    try {
+      console.log('开始加载开发者和管理员用户...');
+      const [devCats, adminCats] = await Promise.all([
+        categoryService.getMembersByAccountType('developer' as any),
+        categoryService.getMembersByAccountType('admin' as any)
+      ]);
+      console.log('开发者分类数据:', devCats);
+      console.log('管理员分类数据:', adminCats);
+      setDeveloperUsers(devCats || []);
+      setAdminUsers(adminCats || []);
+    } catch (e) {
+      console.error('加载用户列表失败:', e);
+    }
+  };
+
+  // 加载所有会员列表
+  const loadAllMembers = async () => {
+    try {
+      const response = await getMembers();
+      setAllMembers(response.data || []);
+    } catch (e) {
+      console.error('加载会员列表失败:', e);
+    }
+  };
 
   useEffect(() => {
-    if (matrix) {
-      generateChartData();
+    loadAccountTypeUsers();
+    loadAllMembers();
+  }, []);
+
+  // 当账户类型或所有会员列表变化时，更新可选择的会员列表
+  useEffect(() => {
+    if (allMembers.length > 0) {
+      updateAvailableMembers();
     }
-  }, [matrix]);
+  }, [selectedAccountType, allMembers]);
 
-  const generateChartData = () => {
-    if (!matrix) return;
-
-    const roles = Object.keys(ROLE_DEFINITIONS);
-    const modules = Object.values(PERMISSION_MODULES);
-    const actions = Object.values(PERMISSION_ACTIONS);
-
-    // 生成表格数据
-    const data: any[] = [];
-    const stats: Record<string, any> = {};
-
-    roles.forEach(role => {
-      stats[role] = {
-        total: 0,
-        granted: 0,
-        modules: {}
-      };
-
-      modules.forEach(module => {
-        stats[role].modules[module] = {
-          total: 0,
-          granted: 0
-        };
-
-        actions.forEach(action => {
-          const hasPermission = matrix[module]?.[action]?.[role] || false;
-          stats[role].total++;
-          stats[role].modules[module].total++;
-          
-          if (hasPermission) {
-            stats[role].granted++;
-            stats[role].modules[module].granted++;
-          }
-
-          data.push({
-            key: `${role}-${module}-${action}`,
-            role,
-            module,
-            action,
-            hasPermission,
-            roleType: getRoleType(role)
-          });
-        });
+  // 更新可选择的会员列表（排除已有目标账户类型的用户）
+  const updateAvailableMembers = async () => {
+    try {
+      const [devCats, adminCats] = await Promise.all([
+        categoryService.getMembersByAccountType('developer' as any),
+        categoryService.getMembersByAccountType('admin' as any)
+      ]);
+      
+      const existingDevIds = new Set(devCats.map(cat => cat.memberId));
+      const existingAdminIds = new Set(adminCats.map(cat => cat.memberId));
+      
+      const filtered = allMembers.filter(member => {
+        if (selectedAccountType === 'developer') {
+          return !existingDevIds.has(member.id);
+        } else if (selectedAccountType === 'admin') {
+          return !existingAdminIds.has(member.id);
+        }
+        return true;
       });
-    });
-
-    setChartData(data);
-    setRoleStats(stats);
+      
+      setAvailableMembers(filtered);
+    } catch (e) {
+      console.error('获取可用会员列表失败:', e);
+      setAvailableMembers(allMembers);
+    }
   };
+
+  // 手动分配账户类型
+  const handleAssignAccountType = async () => {
+    if (!selectedMemberId) {
+      message.error('请选择会员');
+      return;
+    }
+    if (!member?.id) {
+      message.error('未获取到当前用户信息');
+      return;
+    }
+    
+    try {
+      const targetMember = allMembers.find(m => m.id === selectedMemberId);
+      if (!targetMember) {
+        message.error('未找到选中的会员');
+        return;
+      }
+      
+      // 获取目标会员的当前分类，如果没有则默认为associate
+      const existing = await categoryService.getMemberCategory(selectedMemberId);
+      const membershipCategory = existing?.membershipCategory || 'associate';
+      
+      await categoryService.assignCategory(
+        selectedMemberId, 
+        membershipCategory, 
+        selectedAccountType as any, 
+        { assignedBy: member.id }
+      );
+      
+      message.success(`已将 ${targetMember.name} 设置为 ${selectedAccountType === 'developer' ? '开发者' : '管理员'}`);
+      setIsAssignModalOpen(false);
+      setSelectedMemberId('');
+      loadAccountTypeUsers(); // 刷新列表
+      updateAvailableMembers(); // 更新可选择的会员列表
+    } catch (e: any) {
+      console.error('分配账户类型失败', e);
+      message.error(`分配失败：${e?.message || '未知错误'}`);
+    }
+  };
+
+  // 角色类型判断
 
   const getRoleType = (role: string): 'category' | 'position' => {
     const categoryRoles = ['DEVELOPER', 'ADMINISTRATOR', 'OFFICIAL_MEMBER', 'ASSOCIATE_MEMBER', 'HONORARY_MEMBER', 'AFFILIATE_MEMBER', 'VISITOR_MEMBER'];
     return categoryRoles.includes(role) ? 'category' : 'position';
   };
 
-  const getPermissionColor = (hasPermission: boolean) => {
-    return hasPermission ? '#52c41a' : '#ff4d4f';
-  };
-
-  const getRoleIcon = (role: string) => {
-    if (role === 'DEVELOPER') return <CrownOutlined style={{ color: '#fa8c16' }} />;
-    if (role === 'ADMINISTRATOR') return <UserOutlined style={{ color: '#1890ff' }} />;
-    if (getRoleType(role) === 'position') return <TeamOutlined style={{ color: '#722ed1' }} />;
-    return <UserOutlined style={{ color: '#52c41a' }} />;
-  };
-
-  const columns = [
-    {
-      title: '角色',
-      dataIndex: 'role',
-      key: 'role',
-      width: 150,
-      fixed: 'left' as const,
-      render: (role: string, record: any) => (
-        <Space>
-          {getRoleIcon(role)}
-          <div>
-            <div style={{ fontWeight: 'bold' }}>
-              {ROLE_DEFINITIONS[role as keyof typeof ROLE_DEFINITIONS]}
-            </div>
-            <div style={{ fontSize: '12px', color: '#666' }}>
-              {record.roleType === 'category' ? '户口类别' : '岗位'}
-            </div>
-          </div>
-        </Space>
-      )
-    },
-    {
-      title: '模块',
-      dataIndex: 'module',
-      key: 'module',
-      width: 120,
-      render: (module: string) => (
-        <Tag color="blue">{module}</Tag>
-      )
-    },
-    {
-      title: '功能',
-      dataIndex: 'action',
-      key: 'action',
-      width: 100,
-      render: (action: string) => (
-        <Tag color="cyan">{action}</Tag>
-      )
-    },
-    {
-      title: '权限状态',
-      dataIndex: 'hasPermission',
-      key: 'hasPermission',
-      width: 120,
-      align: 'center' as const,
-      render: (hasPermission: boolean) => (
-        <Space>
-          {hasPermission ? (
-            <CheckCircleOutlined style={{ color: '#52c41a', fontSize: '16px' }} />
-          ) : (
-            <CloseCircleOutlined style={{ color: '#ff4d4f', fontSize: '16px' }} />
-          )}
-          <Text style={{ color: getPermissionColor(hasPermission) }}>
-            {hasPermission ? '有权限' : '无权限'}
-          </Text>
-        </Space>
-      )
-    }
-  ];
-
-  const roleColumns = [
-    {
-      title: '角色',
-      dataIndex: 'role',
-      key: 'role',
-      width: 150,
-      render: (role: string) => (
-        <Space>
-          {getRoleIcon(role)}
-          <div>
-            <div style={{ fontWeight: 'bold' }}>
-              {ROLE_DEFINITIONS[role as keyof typeof ROLE_DEFINITIONS]}
-            </div>
-            <div style={{ fontSize: '12px', color: '#666' }}>
-              {getRoleType(role) === 'category' ? '户口类别' : '岗位'}
-            </div>
-          </div>
-        </Space>
-      )
-    },
-    {
-      title: '权限统计',
-      dataIndex: 'stats',
-      key: 'stats',
-      render: (stats: any) => (
-        <div>
-          <Progress
-            percent={Math.round((stats.granted / stats.total) * 100)}
-            size="small"
-            strokeColor={{
-              '0%': '#ff4d4f',
-              '50%': '#faad14',
-              '100%': '#52c41a'
-            }}
-          />
-          <div style={{ marginTop: 4, fontSize: '12px' }}>
-            {stats.granted} / {stats.total} 权限
-          </div>
-        </div>
-      )
-    },
-    {
-      title: '模块权限详情',
-      dataIndex: 'modules',
-      key: 'modules',
-      render: (modules: any) => (
-        <Space wrap>
-          {Object.entries(modules).map(([module, stats]: [string, any]) => (
-            <Tooltip
-              key={module}
-              title={`${module}: ${stats.granted}/${stats.total} 权限`}
-            >
-              <Badge
-                count={stats.granted}
-                showZero
-                color={stats.granted === stats.total ? '#52c41a' : '#faad14'}
-              >
-                <Tag color="blue" style={{ margin: 2 }}>
-                  {module}
-                </Tag>
-              </Badge>
-            </Tooltip>
-          ))}
-        </Space>
-      )
-    }
-  ];
-
-  const roleData = Object.entries(roleStats).map(([role, stats]) => ({
-    key: role,
-    role,
-    stats,
-    modules: stats.modules
-  }));
+  // 角色图标函数（当前未使用，预留后续扩展）
+  // const getRoleIcon = (_role: string) => null;
 
   return (
     <div>
@@ -271,38 +189,138 @@ const PermissionMatrixChart: React.FC<PermissionMatrixChartProps> = ({ matrix })
         </Col>
       </Row>
 
-      <Card title="角色权限概览" style={{ marginBottom: 16 }}>
-        <Table
-          columns={roleColumns}
-          dataSource={roleData}
-          pagination={false}
-          size="small"
-          bordered
-        />
+      {/* 手动分配账户类型 */}
+      <Card title="手动分配账户类型" style={{ marginBottom: 16 }}>
+        <Space>
+          <Button 
+            type="primary" 
+            onClick={() => setIsAssignModalOpen(true)}
+          >
+            分配开发者/管理员
+          </Button>
+          <Text type="secondary">选择会员并分配为开发者或管理员</Text>
+        </Space>
       </Card>
 
-      <Card title="详细权限矩阵">
-        <div style={{ marginBottom: 16 }}>
-          <Space>
-            <Text strong>权限矩阵详情</Text>
-            <Tooltip title="显示所有角色在不同模块中的权限分配情况">
-              <InfoCircleOutlined style={{ color: '#1890ff' }} />
-            </Tooltip>
-          </Space>
-        </div>
-        
-        <Table
-          columns={columns}
-          dataSource={chartData}
-          pagination={{ pageSize: 50 }}
-          scroll={{ x: 800, y: 400 }}
-          size="small"
-          bordered
-          rowClassName={(record) => 
-            record.hasPermission ? 'permission-granted' : 'permission-denied'
-          }
-        />
+      <Card title="开发者与管理员用户" style={{ marginBottom: 16 }}>
+        <Row gutter={16}>
+          <Col span={12}>
+            <Card size="small" title="开发者 (Developer)" extra={<Button size="small" onClick={() => {
+              try { (async () => { const list = await categoryService.getMembersByAccountType('developer' as any); setDeveloperUsers(list); })(); } catch {}
+            }}>刷新</Button>}>
+              <Table
+                size="small"
+                rowKey={(r: any) => r.id}
+                pagination={{ pageSize: 10 }}
+                dataSource={developerUsers}
+                columns={[
+                  { title: 'Member ID', dataIndex: 'memberId', key: 'memberId', width: 160 },
+                  { title: 'Account Type', dataIndex: 'accountType', key: 'accountType', width: 120 },
+                  { title: 'Assigned At', dataIndex: 'assignedDate', key: 'assignedDate', width: 200 },
+                  { title: 'Status', dataIndex: 'status', key: 'status', width: 80 },
+                ]}
+              />
+            </Card>
+          </Col>
+          <Col span={12}>
+            <Card size="small" title="管理员 (Admin)" extra={<Button size="small" onClick={() => {
+              try { (async () => { const list = await categoryService.getMembersByAccountType('admin' as any); setAdminUsers(list); })(); } catch {}
+            }}>刷新</Button>}>
+              <Table
+                size="small"
+                rowKey={(r: any) => r.id}
+                pagination={{ pageSize: 10 }}
+                dataSource={adminUsers}
+                columns={[
+                  { title: 'Member ID', dataIndex: 'memberId', key: 'memberId', width: 160 },
+                  { title: 'Account Type', dataIndex: 'accountType', key: 'accountType', width: 120 },
+                  { title: 'Assigned At', dataIndex: 'assignedDate', key: 'assignedDate', width: 200 },
+                  { title: 'Status', dataIndex: 'status', key: 'status', width: 80 },
+                ]}
+              />
+            </Card>
+          </Col>
+        </Row>
       </Card>
+
+      {/* 详细权限矩阵已移除 */}
+
+      {/* 户口类别列表弹窗 */}
+      <Modal
+        title="户口类别列表"
+        open={isCategoryModalOpen}
+        onCancel={() => setIsCategoryModalOpen(false)}
+        footer={null}
+      >
+        <Space direction="vertical" style={{ width: '100%' }}>
+          {['DEVELOPER','ADMINISTRATOR','OFFICIAL_MEMBER','ASSOCIATE_MEMBER','HONORARY_MEMBER','AFFILIATE_MEMBER','VISITOR_MEMBER'].map(role => (
+            <Tag key={role} color="blue">{ROLE_DEFINITIONS[role as keyof typeof ROLE_DEFINITIONS]}</Tag>
+          ))}
+        </Space>
+      </Modal>
+
+      {/* 岗位角色列表弹窗 */}
+      <Modal
+        title="岗位角色列表"
+        open={isPositionModalOpen}
+        onCancel={() => setIsPositionModalOpen(false)}
+        footer={null}
+      >
+        <Space direction="vertical" style={{ width: '100%' }}>
+          {['PRESIDENT','ACTING_PRESIDENT','SECRETARY_GENERAL','TREASURER','ADVISOR_PRESIDENT','VICE_PRESIDENT','DEPARTMENT_HEAD'].map(role => (
+            <Tag key={role} color="purple">{ROLE_DEFINITIONS[role as keyof typeof ROLE_DEFINITIONS]}</Tag>
+          ))}
+        </Space>
+      </Modal>
+
+      {/* 手动分配账户类型弹窗 */}
+      <Modal
+        title="分配账户类型"
+        open={isAssignModalOpen}
+        onCancel={() => {
+          setIsAssignModalOpen(false);
+          setSelectedMemberId('');
+        }}
+        afterOpenChange={(open) => {
+          if (open) {
+            updateAvailableMembers(); // 打开弹窗时更新可选择的会员列表
+          }
+        }}
+        onOk={handleAssignAccountType}
+        okText="确认分配"
+        cancelText="取消"
+      >
+        <Form layout="vertical">
+          <Form.Item label="选择会员" required>
+            <Select
+              placeholder="请选择要分配的会员"
+              value={selectedMemberId}
+              onChange={setSelectedMemberId}
+              showSearch
+              filterOption={(input, option) =>
+                (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
+              }
+              options={availableMembers.map(member => ({
+                value: member.id,
+                label: `${member.name} (${member.email})`
+              }))}
+            />
+          </Form.Item>
+          <Form.Item label="账户类型" required>
+            <Select
+              value={selectedAccountType}
+              onChange={(value) => {
+                setSelectedAccountType(value);
+                setSelectedMemberId(''); // 清空已选择的会员
+              }}
+              options={[
+                { value: 'developer', label: '开发者' },
+                { value: 'admin', label: '管理员' }
+              ]}
+            />
+          </Form.Item>
+        </Form>
+      </Modal>
 
       <style>{`
         .permission-granted {

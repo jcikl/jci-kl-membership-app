@@ -41,7 +41,7 @@ export interface RoleBinding {
 }
 
 // 用户类型
-export type AccountType = 'developer' | 'admin' | 'member' | 'moderator' | 'guest';
+export type AccountType = 'developer' | 'admin' | 'member' | 'moderator' | 'guest' | 'user';
 
 // 会员类别
 export type MembershipCategory = 'active' | 'associate' | 'honorary' | 'affiliate' | 'visitor' | 'alumni' | 'corporate' | 'student';
@@ -292,5 +292,6 @@ export const ACCOUNT_TYPE_OPTIONS = [
   { value: 'admin', label: '管理员' },
   { value: 'member', label: '普通会员' },
   { value: 'moderator', label: '版主' },
-  { value: 'guest', label: '访客' }
+  { value: 'guest', label: '访客' },
+  { value: 'user', label: '普通用户' }
 ] as const;
