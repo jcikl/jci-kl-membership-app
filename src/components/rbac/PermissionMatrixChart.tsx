@@ -44,13 +44,10 @@ const PermissionMatrixChart: React.FC<PermissionMatrixChartProps> = () => {
   // 加载开发者与管理员用户列表
   const loadAccountTypeUsers = async () => {
     try {
-      console.log('开始加载开发者和管理员用户...');
       const [devCats, adminCats] = await Promise.all([
         categoryService.getMembersByAccountType('developer' as any),
         categoryService.getMembersByAccountType('admin' as any)
       ]);
-      console.log('开发者分类数据:', devCats);
-      console.log('管理员分类数据:', adminCats);
       setDeveloperUsers(devCats || []);
       setAdminUsers(adminCats || []);
     } catch (e) {

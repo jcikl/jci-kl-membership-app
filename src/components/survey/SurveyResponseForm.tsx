@@ -276,8 +276,11 @@ const SurveyResponseForm: React.FC = () => {
 
       case 'nps':
         return (
-          <div>
-            <Text>0 - 非常不可能推荐</Text>
+          <React.Fragment>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+              <Text>0 - 非常不可能推荐</Text>
+              <Text>10 - 非常可能推荐</Text>
+            </div>
             <Slider
               {...commonProps}
               min={0}
@@ -289,8 +292,7 @@ const SurveyResponseForm: React.FC = () => {
               }}
               style={{ margin: '16px 0' }}
             />
-            <Text>10 - 非常可能推荐</Text>
-          </div>
+          </React.Fragment>
         );
 
       case 'slider':

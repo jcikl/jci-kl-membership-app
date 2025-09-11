@@ -151,22 +151,22 @@ const ProfileEditForm: React.FC<ProfileEditFormProps> = ({ member, onSubmit, onC
         case 'name':
           return (
             <Col span={12}>
-              <Form.Item label="姓名" required>
-                <FieldPermissionController field={field} userRole={userRole} memberData={member}>
+              <FieldPermissionController field={field} userRole={userRole} memberData={member}>
+                <Form.Item label="姓名" required>
                   <Controller
                     name="name"
                     control={control}
                     render={({ field }) => <Input {...field} placeholder="真实姓名" />}
                   />
-                </FieldPermissionController>
-              </Form.Item>
+                </Form.Item>
+              </FieldPermissionController>
             </Col>
           );
         case 'fullNameNric':
           return (
             <Col span={12}>
-              <Form.Item label="Full Name as per NRIC" required>
-                <FieldPermissionController field={field} userRole={userRole} memberData={member}>
+              <FieldPermissionController field={field} userRole={userRole} memberData={member}>
+                <Form.Item label="Full Name as per NRIC" required>
                   <Controller 
                     name="fullNameNric" 
                     control={control} 
@@ -178,20 +178,20 @@ const ProfileEditForm: React.FC<ProfileEditFormProps> = ({ member, onSubmit, onC
                       />
                     )} 
                   />
-                </FieldPermissionController>
-              </Form.Item>
+                </Form.Item>
+              </FieldPermissionController>
             </Col>
           );
         case 'senatorId':
           return (
             <Col span={12}>
-              <Form.Item label="参议员编号">
-                <FieldPermissionController 
-                  field={field} 
-                  userRole={userRole} 
-                  memberData={member}
-                  showLockMessage={true}
-                >
+              <FieldPermissionController 
+                field={field} 
+                userRole={userRole} 
+                memberData={member}
+                showLockMessage={true}
+              >
+                <Form.Item label="参议员编号">
                   <Controller 
                     name="senatorId" 
                     control={control} 
@@ -207,15 +207,15 @@ const ProfileEditForm: React.FC<ProfileEditFormProps> = ({ member, onSubmit, onC
                       />
                     )} 
                   />
-                </FieldPermissionController>
-              </Form.Item>
+                </Form.Item>
+              </FieldPermissionController>
             </Col>
           );
         case 'gender':
           return (
             <Col span={8}>
-              <Form.Item label="性别" required>
-                <FieldPermissionController field={field} userRole={userRole} memberData={member}>
+              <FieldPermissionController field={field} userRole={userRole} memberData={member}>
+                <Form.Item label="性别" required>
                   <Controller
                     name="gender"
                     control={control}
@@ -223,15 +223,15 @@ const ProfileEditForm: React.FC<ProfileEditFormProps> = ({ member, onSubmit, onC
                       <Select {...field} options={GENDER_OPTIONS.map(g => ({ value: g, label: g }))} allowClear />
                     )}
                   />
-                </FieldPermissionController>
-              </Form.Item>
+                </Form.Item>
+              </FieldPermissionController>
             </Col>
           );
         case 'race':
           return (
             <Col span={8}>
-              <Form.Item label="种族" required>
-                <FieldPermissionController field={field} userRole={userRole} memberData={member}>
+              <FieldPermissionController field={field} userRole={userRole} memberData={member}>
+                <Form.Item label="种族" required>
                   <Controller
                     name="race"
                     control={control}
@@ -239,15 +239,15 @@ const ProfileEditForm: React.FC<ProfileEditFormProps> = ({ member, onSubmit, onC
                       <Select {...field} options={RACE_OPTIONS.map(g => ({ value: g, label: g }))} allowClear />
                     )}
                   />
-                </FieldPermissionController>
-              </Form.Item>
+                </Form.Item>
+              </FieldPermissionController>
             </Col>
           );
         case 'birthDate':
           return (
             <Col span={8}>
-              <Form.Item label="出生日期">
-                <FieldPermissionController field={field} userRole={userRole} memberData={member}>
+              <FieldPermissionController field={field} userRole={userRole} memberData={member}>
+                <Form.Item label="出生日期">
                   <Controller 
                     name="birthDate" 
                     control={control} 
@@ -263,25 +263,25 @@ const ProfileEditForm: React.FC<ProfileEditFormProps> = ({ member, onSubmit, onC
                       />
                     )} 
                   />
-                </FieldPermissionController>
-              </Form.Item>
+                </Form.Item>
+              </FieldPermissionController>
             </Col>
           );
         case 'address':
           return (
             <Col span={24}>
-              <Form.Item label="家庭住址">
-                <FieldPermissionController field={field} userRole={userRole} memberData={member}>
+              <FieldPermissionController field={field} userRole={userRole} memberData={member}>
+                <Form.Item label="家庭住址">
                   <Controller name="address" control={control} render={({ field }) => <Input.TextArea {...field} rows={2} />} />
-                </FieldPermissionController>
-              </Form.Item>
+                </Form.Item>
+              </FieldPermissionController>
             </Col>
           );
         case 'nricOrPassport':
           return (
             <Col span={12}>
-              <Form.Item label="NRIC/ Passport Number" required>
-                <FieldPermissionController field={field} userRole={userRole} memberData={member}>
+              <FieldPermissionController field={field} userRole={userRole} memberData={member}>
+                <Form.Item label="NRIC/ Passport Number" required>
                   <Controller 
                     name="nricOrPassport" 
                     control={control} 
@@ -296,53 +296,53 @@ const ProfileEditForm: React.FC<ProfileEditFormProps> = ({ member, onSubmit, onC
                       />
                     )} 
                   />
-                </FieldPermissionController>
-              </Form.Item>
+                </Form.Item>
+              </FieldPermissionController>
             </Col>
           );
         case 'email':
           return (
             <Col span={12}>
-              <Form.Item label="邮箱" required>
-                <FieldPermissionController field={field} userRole={userRole} memberData={member}>
+              <FieldPermissionController field={field} userRole={userRole} memberData={member}>
+                <Form.Item label="邮箱" required>
                   <Controller
                     name="email"
                     control={control}
                     render={({ field }) => <Input {...field} placeholder="邮箱" />}
                   />
-                </FieldPermissionController>
-              </Form.Item>
+                </Form.Item>
+              </FieldPermissionController>
             </Col>
           );
         case 'phone':
           return (
             <Col span={12}>
-              <Form.Item label="手机号" required>
-                <FieldPermissionController field={field} userRole={userRole} memberData={member}>
+              <FieldPermissionController field={field} userRole={userRole} memberData={member}>
+                <Form.Item label="手机号" required>
                   <Controller
                     name="phone"
                     control={control}
                     render={({ field }) => <Input {...field} placeholder="手机号" />}
                   />
-                </FieldPermissionController>
-              </Form.Item>
+                </Form.Item>
+              </FieldPermissionController>
             </Col>
           );
         case 'whatsappGroup':
           return (
             <Col span={12}>
-              <Form.Item label="加入 WhatsApp 群" valuePropName="checked">
-                <FieldPermissionController field={field} userRole={userRole} memberData={member}>
+              <FieldPermissionController field={field} userRole={userRole} memberData={member}>
+                <Form.Item label="加入 WhatsApp 群" valuePropName="checked">
                   <Controller name="whatsappGroup" control={control} render={({ field }) => <Switch {...field} checked={field.value} />} />
-                </FieldPermissionController>
-              </Form.Item>
+                </Form.Item>
+              </FieldPermissionController>
             </Col>
           );
         case 'hobbies':
           return (
             <Col span={24}>
-              <Form.Item label="兴趣/爱好（多选）">
-                <FieldPermissionController field={field} userRole={userRole} memberData={member}>
+              <FieldPermissionController field={field} userRole={userRole} memberData={member}>
+                <Form.Item label="兴趣/爱好（多选）">
                   <Controller
                     name="hobbies"
                     control={control}
@@ -350,15 +350,15 @@ const ProfileEditForm: React.FC<ProfileEditFormProps> = ({ member, onSubmit, onC
                       <Select {...field} mode="multiple" options={HOBBY_OPTIONS.map(v => ({ value: v, label: v }))} />
                     )}
                   />
-                </FieldPermissionController>
-              </Form.Item>
+                </Form.Item>
+              </FieldPermissionController>
             </Col>
           );
         case 'profilePhotoUrl':
           return (
             <Col span={12}>
-              <Form.Item label="头像上传">
-                <FieldPermissionController field={field} userRole={userRole} memberData={member}>
+              <FieldPermissionController field={field} userRole={userRole} memberData={member}>
+                <Form.Item label="头像上传">
                   <Controller
                     name="profilePhotoUrl"
                     control={control}
@@ -387,19 +387,19 @@ const ProfileEditForm: React.FC<ProfileEditFormProps> = ({ member, onSubmit, onC
                       </div>
                     )}
                   />
-                </FieldPermissionController>
-              </Form.Item>
+                </Form.Item>
+              </FieldPermissionController>
             </Col>
           );
         // 职业信息字段
         case 'company':
           return (
             <Col span={12}>
-              <Form.Item label="公司/雇主名称" required>
-                <FieldPermissionController field={field} userRole={userRole} memberData={member}>
+              <FieldPermissionController field={field} userRole={userRole} memberData={member}>
+                <Form.Item label="公司/雇主名称" required>
                   <Controller name="company" control={control} render={({ field }) => <Input {...field} />} />
-                </FieldPermissionController>
-              </Form.Item>
+                </Form.Item>
+              </FieldPermissionController>
             </Col>
           );
         case 'departmentAndPosition':
