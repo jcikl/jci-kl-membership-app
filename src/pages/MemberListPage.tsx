@@ -19,13 +19,16 @@ import {
   SearchOutlined, 
   EditOutlined, 
   DeleteOutlined,
-  UserOutlined 
+  UserOutlined,
+  UploadOutlined
 } from '@ant-design/icons';
-import { useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
 import { useMemberStore } from '@/store/memberStore';
 import { Member, MemberStatus, MemberLevel } from '@/types';
+import ProfileEditForm from '@/components/ProfileEditForm';
+import BatchImportModal from '@/components/BatchImportModal';
 
 const { Title } = Typography;
 const { Search } = Input;
@@ -49,15 +52,17 @@ const MemberListPage: React.FC = () => {
     pagination, 
     fetchMembers, 
     addMember, 
+    addMembersBatch,
     deleteMemberById 
   } = useMemberStore();
   
   const [statusFilter, setStatusFilter] = useState<MemberStatus | 'all'>('all');
   const [isModalVisible, setIsModalVisible] = useState(false);
+  const [isBatchImportVisible, setIsBatchImportVisible] = useState(false);
   const [editingMember, setEditingMember] = useState<Member | null>(null);
 
   const {
-    register,
+    control,
     handleSubmit,
     reset,
     formState: { errors },
@@ -83,6 +88,19 @@ const MemberListPage: React.FC = () => {
     setEditingMember(null);
     reset();
     setIsModalVisible(true);
+  };
+
+  const handleBatchImport = () => {
+    setIsBatchImportVisible(true);
+  };
+
+  const handleBatchImportSubmit = async (membersData: Omit<Member, 'id' | 'createdAt' | 'updatedAt'>[]) => {
+    try {
+      const result = await addMembersBatch(membersData);
+      return result;
+    } catch (error) {
+      throw error;
+    }
   };
 
   const handleEditMember = (member: Member) => {
@@ -223,13 +241,21 @@ const MemberListPage: React.FC = () => {
             </Title>
           </Col>
           <Col>
-            <Button 
-              type="primary" 
-              icon={<PlusOutlined />}
-              onClick={handleAddMember}
-            >
-              添加会员
-            </Button>
+            <Space>
+              <Button 
+                icon={<UploadOutlined />}
+                onClick={handleBatchImport}
+              >
+                批量导入
+              </Button>
+              <Button 
+                type="primary" 
+                icon={<PlusOutlined />}
+                onClick={handleAddMember}
+              >
+                添加会员
+              </Button>
+            </Space>
           </Col>
         </Row>
 
@@ -286,9 +312,26 @@ const MemberListPage: React.FC = () => {
           reset();
         }}
         footer={null}
-        width={600}
+        width={editingMember ? 1200 : 600}
+        destroyOnClose
+        style={{ top: 20 }}
       >
-        <Form onFinish={handleSubmit(onSubmit)} layout="vertical">
+        {editingMember ? (
+          <ProfileEditForm
+            member={editingMember}
+            onSubmit={async (updated) => {
+              // 通过 store 执行更新
+              const { updateMemberById, fetchMembers } = useMemberStore.getState();
+              await updateMemberById(editingMember.id, updated as Partial<Member>);
+              await fetchMembers({ page: 1, limit: pagination.limit });
+              setIsModalVisible(false);
+            }}
+            onCancel={() => {
+              setIsModalVisible(false);
+            }}
+          />
+        ) : (
+          <Form onSubmitCapture={handleSubmit(onSubmit)} layout="vertical">
           <Row gutter={16}>
             <Col span={12}>
               <Form.Item
@@ -296,7 +339,11 @@ const MemberListPage: React.FC = () => {
                 validateStatus={errors.name ? 'error' : ''}
                 help={errors.name?.message}
               >
-                <Input {...register('name')} placeholder="请输入姓名" />
+                <Controller
+                  name="name"
+                  control={control}
+                  render={({ field }) => <Input {...field} placeholder="请输入姓名" />}
+                />
               </Form.Item>
             </Col>
             <Col span={12}>
@@ -305,7 +352,11 @@ const MemberListPage: React.FC = () => {
                 validateStatus={errors.email ? 'error' : ''}
                 help={errors.email?.message}
               >
-                <Input {...register('email')} placeholder="请输入邮箱" />
+                <Controller
+                  name="email"
+                  control={control}
+                  render={({ field }) => <Input {...field} placeholder="请输入邮箱" />}
+                />
               </Form.Item>
             </Col>
           </Row>
@@ -317,7 +368,11 @@ const MemberListPage: React.FC = () => {
                 validateStatus={errors.phone ? 'error' : ''}
                 help={errors.phone?.message}
               >
-                <Input {...register('phone')} placeholder="请输入手机号" />
+                <Controller
+                  name="phone"
+                  control={control}
+                  render={({ field }) => <Input {...field} placeholder="请输入手机号" />}
+                />
               </Form.Item>
             </Col>
             <Col span={12}>
@@ -326,7 +381,11 @@ const MemberListPage: React.FC = () => {
                 validateStatus={errors.memberId ? 'error' : ''}
                 help={errors.memberId?.message}
               >
-                <Input {...register('memberId')} placeholder="请输入会员编号" />
+                <Controller
+                  name="memberId"
+                  control={control}
+                  render={({ field }) => <Input {...field} placeholder="请输入会员编号" />}
+                />
               </Form.Item>
             </Col>
           </Row>
@@ -338,12 +397,18 @@ const MemberListPage: React.FC = () => {
                 validateStatus={errors.status ? 'error' : ''}
                 help={errors.status?.message}
               >
-                <Select {...register('status')} placeholder="请选择状态">
-                  <Option value="active">活跃</Option>
-                  <Option value="inactive">非活跃</Option>
-                  <Option value="pending">待审核</Option>
-                  <Option value="suspended">已暂停</Option>
-                </Select>
+                <Controller
+                  name="status"
+                  control={control}
+                  render={({ field }) => (
+                    <Select {...field} placeholder="请选择状态">
+                      <Option value="active">活跃</Option>
+                      <Option value="inactive">非活跃</Option>
+                      <Option value="pending">待审核</Option>
+                      <Option value="suspended">已暂停</Option>
+                    </Select>
+                  )}
+                />
               </Form.Item>
             </Col>
             <Col span={12}>
@@ -352,13 +417,19 @@ const MemberListPage: React.FC = () => {
                 validateStatus={errors.level ? 'error' : ''}
                 help={errors.level?.message}
               >
-                <Select {...register('level')} placeholder="请选择等级">
-                  <Option value="bronze">铜牌</Option>
-                  <Option value="silver">银牌</Option>
-                  <Option value="gold">金牌</Option>
-                  <Option value="platinum">白金</Option>
-                  <Option value="diamond">钻石</Option>
-                </Select>
+                <Controller
+                  name="level"
+                  control={control}
+                  render={({ field }) => (
+                    <Select {...field} placeholder="请选择等级">
+                      <Option value="bronze">铜牌</Option>
+                      <Option value="silver">银牌</Option>
+                      <Option value="gold">金牌</Option>
+                      <Option value="platinum">白金</Option>
+                      <Option value="diamond">钻石</Option>
+                    </Select>
+                  )}
+                />
               </Form.Item>
             </Col>
           </Row>
@@ -369,12 +440,20 @@ const MemberListPage: React.FC = () => {
                 取消
               </Button>
               <Button type="primary" htmlType="submit">
-                {editingMember ? '更新' : '添加'}
+                添加
               </Button>
             </Space>
           </Form.Item>
         </Form>
+        )}
       </Modal>
+
+      {/* 批量导入模态框 */}
+      <BatchImportModal
+        visible={isBatchImportVisible}
+        onCancel={() => setIsBatchImportVisible(false)}
+        onImport={handleBatchImportSubmit}
+      />
     </div>
   );
 };

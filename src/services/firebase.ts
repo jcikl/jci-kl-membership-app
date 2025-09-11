@@ -1,7 +1,7 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth, connectAuthEmulator } from 'firebase/auth';
 import { getFirestore, connectFirestoreEmulator } from 'firebase/firestore';
-import { getStorage, connectStorageEmulator } from 'firebase/storage';
+import { getStorage, connectStorageEmulator, ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
 
 // Firebase 配置
 const firebaseConfig = {
@@ -34,3 +34,10 @@ if (useEmulators) {
 }
 
 export default app;
+
+// 简单的上传工具函数
+export const uploadFileAndGetUrl = async (path: string, file: File | Blob): Promise<string> => {
+  const ref = storageRef(storage, path);
+  await uploadBytes(ref, file);
+  return await getDownloadURL(ref);
+};

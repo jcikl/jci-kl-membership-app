@@ -5,6 +5,7 @@ import { useAuthStore } from '@/store/authStore';
 import { onAuthStateChanged } from '@/services/authService';
 import { getMemberByEmail } from '@/services/memberService';
 import { User } from 'firebase/auth';
+import { initChapterSettings } from '@/scripts/initChapterSettings';
 
 // 页面组件
 import LoginPage from '@/pages/LoginPage';
@@ -13,6 +14,10 @@ import DashboardPage from '@/pages/DashboardPage';
 import MemberListPage from '@/pages/MemberListPage';
 import MemberDetailPage from '@/pages/MemberDetailPage';
 import ProfilePage from '@/pages/ProfilePage';
+import SystemSettingsPage from '@/pages/SystemSettingsPage';
+
+// RBAC组件
+import RBACManagement from '@/components/rbac/RBACManagement';
 
 // 布局组件
 import AppHeader from '@/components/AppHeader';
@@ -25,6 +30,11 @@ const App: React.FC = () => {
   const { user, isLoading, setUser, setMember, setLoading } = useAuthStore();
 
   useEffect(() => {
+    // 初始化分会设置
+    initChapterSettings().catch(error => {
+      console.error('初始化分会设置失败:', error);
+    });
+
     const unsubscribe = onAuthStateChanged(async (user: User | null) => {
       setUser(user);
       
@@ -72,6 +82,8 @@ const App: React.FC = () => {
             <Route path="/members" element={<MemberListPage />} />
             <Route path="/members/:id" element={<MemberDetailPage />} />
             <Route path="/profile" element={<ProfilePage />} />
+            <Route path="/rbac-management" element={<RBACManagement />} />
+            <Route path="/system-settings" element={<SystemSettingsPage />} />
             <Route path="*" element={<Navigate to="/dashboard" replace />} />
           </Routes>
         </Content>

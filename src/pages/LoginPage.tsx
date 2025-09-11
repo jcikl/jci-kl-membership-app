@@ -2,7 +2,7 @@ import React from 'react';
 import { Form, Input, Button, Card, Typography, message, Space } from 'antd';
 import { UserOutlined, LockOutlined } from '@ant-design/icons';
 import { Link, useNavigate } from 'react-router-dom';
-import { useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
 import { loginUser } from '@/services/authService';
@@ -20,7 +20,7 @@ const LoginPage: React.FC = () => {
   const [loading, setLoading] = React.useState(false);
 
   const {
-    register,
+    control,
     handleSubmit,
     formState: { errors },
   } = useForm<LoginForm>({
@@ -56,17 +56,23 @@ const LoginPage: React.FC = () => {
           <Text type="secondary">会员管理系统</Text>
         </div>
 
-        <Form onFinish={handleSubmit(onSubmit)} layout="vertical">
+        <Form onSubmitCapture={handleSubmit(onSubmit)} layout="vertical">
           <Form.Item
             label="邮箱"
             validateStatus={errors.email ? 'error' : ''}
             help={errors.email?.message}
           >
-            <Input
-              {...register('email')}
-              prefix={<UserOutlined />}
-              placeholder="请输入邮箱"
-              size="large"
+            <Controller
+              name="email"
+              control={control}
+              render={({ field }) => (
+                <Input
+                  {...field}
+                  prefix={<UserOutlined />}
+                  placeholder="请输入邮箱"
+                  size="large"
+                />
+              )}
             />
           </Form.Item>
 
@@ -75,11 +81,17 @@ const LoginPage: React.FC = () => {
             validateStatus={errors.password ? 'error' : ''}
             help={errors.password?.message}
           >
-            <Input.Password
-              {...register('password')}
-              prefix={<LockOutlined />}
-              placeholder="请输入密码"
-              size="large"
+            <Controller
+              name="password"
+              control={control}
+              render={({ field }) => (
+                <Input.Password
+                  {...field}
+                  prefix={<LockOutlined />}
+                  placeholder="请输入密码"
+                  size="large"
+                />
+              )}
             />
           </Form.Item>
 

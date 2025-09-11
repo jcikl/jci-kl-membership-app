@@ -1,5 +1,5 @@
 import React from 'react';
-import { Form, Input, Button, Card, Typography, message, Space } from 'antd';
+import { Form, Input, Button, Card, Typography, message, Space, Modal } from 'antd';
 import { UserOutlined, LockOutlined, PhoneOutlined, IdcardOutlined } from '@ant-design/icons';
 import { Link, useNavigate } from 'react-router-dom';
 import { useForm, Controller } from 'react-hook-form';
@@ -41,8 +41,14 @@ const RegisterPage: React.FC = () => {
     setLoading(true);
     try {
       await registerUser(data);
-      message.success('注册成功！请登录');
-      navigate('/login');
+      Modal.confirm({
+        title: '注册成功',
+        content: '是否现在前往完善个人资料？',
+        okText: '前往完善资料',
+        cancelText: '稍后再说',
+        onOk: () => navigate('/profile'),
+        onCancel: () => navigate('/login'),
+      });
     } catch (error: any) {
       message.error(error.message || '注册失败，请重试');
     } finally {

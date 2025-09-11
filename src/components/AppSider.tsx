@@ -7,7 +7,8 @@ import {
   CalendarOutlined,
   DollarOutlined,
   MessageOutlined,
-  SettingOutlined
+  SettingOutlined,
+  SafetyOutlined
 } from '@ant-design/icons';
 import { useNavigate, useLocation } from 'react-router-dom';
 
@@ -51,7 +52,12 @@ const AppSider: React.FC = () => {
       label: '个人资料',
     },
     {
-      key: '/settings',
+      key: '/rbac-management',
+      icon: <SafetyOutlined />,
+      label: '权限管理',
+    },
+    {
+      key: '/system-settings',
       icon: <SettingOutlined />,
       label: '系统设置',
     },
