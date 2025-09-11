@@ -12,7 +12,6 @@ import {
   Statistic,
   Input,
   Select,
-  DatePicker,
   Tooltip,
   Badge
 } from 'antd';
@@ -24,10 +23,7 @@ import {
   CopyOutlined,
   PlayCircleOutlined,
   PauseCircleOutlined,
-  ArchiveOutlined,
-  BarChartOutlined,
-  SearchOutlined,
-  FilterOutlined
+  BarChartOutlined
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { surveyService } from '@/services/surveyService';
@@ -41,7 +37,6 @@ dayjs.locale('zh-cn');
 
 const { Search } = Input;
 const { Option } = Select;
-const { RangePicker } = DatePicker;
 
 interface SurveyListProps {
   showCreateButton?: boolean;
@@ -257,7 +252,7 @@ const SurveyList: React.FC<SurveyListProps> = ({
       title: '操作',
       key: 'actions',
       width: 200,
-      render: (_, record: Survey) => (
+      render: (_: any, record: Survey) => (
         <Space size="small">
           <Tooltip title="查看">
             <Button

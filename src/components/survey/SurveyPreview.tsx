@@ -25,7 +25,7 @@ import {
   RightOutlined,
   UploadOutlined
 } from '@ant-design/icons';
-import { Survey, SurveyQuestion, QuestionType } from '@/types';
+import { Survey, SurveyQuestion } from '@/types';
 
 const { TextArea } = Input;
 const { Title, Text } = Typography;
@@ -47,7 +47,7 @@ const SurveyPreview: React.FC<SurveyPreviewProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const questions = survey.questions || [];
-  const settings = survey.settings || {};
+  const settings = (survey.settings || {}) as any;
   const currentQuestion = questions[currentQuestionIndex];
 
   // 计算进度
@@ -94,7 +94,7 @@ const SurveyPreview: React.FC<SurveyPreviewProps> = ({
 
   // 渲染问题
   const renderQuestion = (question: SurveyQuestion) => {
-    const { id, type, title, description, required, options, validation } = question;
+    const { id, type, options, validation } = question;
 
     const commonProps = {
       value: answers[id],

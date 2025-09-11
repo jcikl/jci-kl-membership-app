@@ -2,13 +2,12 @@ import React from 'react';
 import { Card, Table, Tag, Space, Button, Typography, Row, Col, Statistic, message } from 'antd';
 import { getMembers } from '@/services/memberService';
 import { Member } from '@/types';
-import { useIsAdmin } from '@/hooks/usePermissions';
+// import { useIsAdmin } from '@/hooks/usePermissions';
 import dayjs from 'dayjs';
 
-const { Title } = Typography;
 
 const VisitingMembershipManager: React.FC = () => {
-  const { isAdmin } = useIsAdmin();
+  // const { isAdmin } = useIsAdmin();
   const [loading, setLoading] = React.useState(false);
   const [members, setMembers] = React.useState<Member[]>([]);
 
@@ -18,8 +17,8 @@ const VisitingMembershipManager: React.FC = () => {
       const res = await getMembers({ page: 1, limit: 500 });
       // 过滤出拜访会员且国籍非马来西亚
       const visitingMembers = res.data.filter(m => {
-        const isVisitor = m.profile?.proposedMembershipCategory === 'visitor' || 
-                         (m.profile?.categoryReviewStatus === 'approved' && m.profile?.proposedMembershipCategory === 'visitor');
+        const isVisitor = m.profile?.proposedMembershipCategory === 'visitor' as any || 
+                         (m.profile?.categoryReviewStatus === 'approved' && m.profile?.proposedMembershipCategory === 'visitor' as any);
         const isNonMalaysian = m.profile?.nationality && m.profile.nationality.toLowerCase() !== 'malaysia' && 
                               m.profile.nationality.toLowerCase() !== 'malaysian';
         return isVisitor && isNonMalaysian;

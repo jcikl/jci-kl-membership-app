@@ -1,11 +1,9 @@
 import React from 'react';
 import { Card, Table, Button, Space, Tag, Row, Col, Typography, message } from 'antd';
-import { ReloadOutlined } from '@ant-design/icons';
 import { getMembers } from '@/services/memberService';
 import { Member } from '@/types';
 import dayjs from 'dayjs';
 
-const { Title } = Typography;
 
 const OfficialMembershipManager: React.FC = () => {
   const [loading, setLoading] = React.useState(false);
@@ -17,8 +15,8 @@ const OfficialMembershipManager: React.FC = () => {
       const res = await getMembers({ page: 1, limit: 500 });
       // 过滤出正式会员
       const officialMembers = res.data.filter(m => 
-        m.profile?.proposedMembershipCategory === 'official' || 
-        (m.profile?.categoryReviewStatus === 'approved' && m.profile?.proposedMembershipCategory === 'official')
+        m.profile?.proposedMembershipCategory === 'active' as any || 
+        (m.profile?.categoryReviewStatus === 'approved' && m.profile?.proposedMembershipCategory === 'active' as any)
       );
       setMembers(officialMembers);
     } catch (e) {

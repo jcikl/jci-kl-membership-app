@@ -48,7 +48,7 @@ export const surveyPermissionService = {
 
       return {
         success: true,
-        data: { ...permission, id: docRef.id },
+        data: { ...permission, id: docRef.id } as any,
         message: '权限授予成功'
       };
     } catch (error) {
@@ -92,7 +92,7 @@ export const surveyPermissionService = {
       };
 
       if (updates.expiresAt) {
-        updateData.expiresAt = Timestamp.fromDate(new Date(updates.expiresAt));
+        (updateData as any).expiresAt = Timestamp.fromDate(new Date(updates.expiresAt!));
       }
 
       await updateDoc(docRef, updateData);
@@ -136,7 +136,7 @@ export const surveyPermissionService = {
         ...data,
         grantedAt: data.grantedAt?.toDate?.()?.toISOString() || data.grantedAt,
         expiresAt: data.expiresAt?.toDate?.()?.toISOString() || data.expiresAt,
-      } as SurveyPermission;
+      } as any;
 
       return {
         success: true,
@@ -170,7 +170,7 @@ export const surveyPermissionService = {
           ...data,
           grantedAt: data.grantedAt?.toDate?.()?.toISOString() || data.grantedAt,
           expiresAt: data.expiresAt?.toDate?.()?.toISOString() || data.expiresAt,
-        } as SurveyPermission;
+        } as any;
         permissions.push(permission);
       });
 
@@ -206,7 +206,7 @@ export const surveyPermissionService = {
           ...data,
           grantedAt: data.grantedAt?.toDate?.()?.toISOString() || data.grantedAt,
           expiresAt: data.expiresAt?.toDate?.()?.toISOString() || data.expiresAt,
-        } as SurveyPermission;
+        } as any;
         permissions.push(permission);
       });
 
@@ -246,7 +246,7 @@ export const surveyPermissionService = {
           ...data,
           grantedAt: data.grantedAt?.toDate?.()?.toISOString() || data.grantedAt,
           expiresAt: data.expiresAt?.toDate?.()?.toISOString() || data.expiresAt,
-        } as SurveyPermission;
+        } as any;
 
         // 检查权限是否过期
         if (permissionData.expiresAt && new Date(permissionData.expiresAt) < now) {
@@ -305,7 +305,7 @@ export const surveyPermissionService = {
           expiresAt: userPerm.expiresAt ? Timestamp.fromDate(new Date(userPerm.expiresAt)) : null,
         });
 
-        permissions.push({ ...permission, id: docRef.id });
+        permissions.push({ ...permission, id: docRef.id } as any);
       }
 
       return {

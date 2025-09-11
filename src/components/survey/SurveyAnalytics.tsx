@@ -9,8 +9,6 @@ import {
   Typography,
   Space,
   Button,
-  DatePicker,
-  Select,
   Spin,
   Alert,
   Tabs,
@@ -18,9 +16,6 @@ import {
   Tag
 } from 'antd';
 import {
-  BarChartOutlined,
-  PieChartOutlined,
-  LineChartOutlined,
   DownloadOutlined,
   EyeOutlined
 } from '@ant-design/icons';
@@ -28,8 +23,6 @@ import { surveyAnalyticsService } from '@/services/surveyService';
 import { SurveyAnalytics as SurveyAnalyticsType, QuestionAnalytics } from '@/types';
 
 const { Title, Text } = Typography;
-const { RangePicker } = DatePicker;
-const { Option } = Select;
 
 interface SurveyAnalyticsProps {
   surveyId: string;

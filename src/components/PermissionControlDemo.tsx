@@ -2,9 +2,9 @@ import React from 'react';
 import { Card, Typography, Space, Alert, Divider } from 'antd';
 import { LockOutlined, EyeOutlined, InfoCircleOutlined } from '@ant-design/icons';
 import { checkFieldPermission, UserRole } from '@/utils/fieldPermissions';
-import { FieldPermission, LockReason, LOCK_REASON_MESSAGES } from '@/types/profileFields';
+import { FieldPermission } from '@/types/profileFields';
 
-const { Title, Text, Paragraph } = Typography;
+const { Title, Text } = Typography;
 
 interface PermissionControlDemoProps {
   userRole: UserRole;
@@ -114,13 +114,12 @@ const PermissionControlDemo: React.FC<PermissionControlDemoProps> = ({
                       <Text>权限状态: {getPermissionText(permissionInfo.permission)}</Text>
                       {permissionInfo.lockReason && (
                         <Text type="secondary">
-                          ({LOCK_REASON_MESSAGES[permissionInfo.lockReason]})
+                          ('此字段已被锁定')
                         </Text>
                       )}
                     </Space>
                   }
                   type={getAlertType(permissionInfo.permission)}
-                  size="small"
                   showIcon={false}
                 />
                 

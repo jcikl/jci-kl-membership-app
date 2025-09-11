@@ -95,18 +95,18 @@ export const useSurveyPermissions = (surveyId?: string) => {
       ]);
 
       setPermissions({
-        canCreate: canCreate.success && canCreate.data,
-        canRead: canRead.success && canRead.data,
-        canUpdate: canUpdate.success && canUpdate.data,
-        canDelete: canDelete.success && canDelete.data,
-        canPublish: canPublish.success && canPublish.data,
-        canClose: canClose.success && canClose.data,
-        canArchive: canArchive.success && canArchive.data,
-        canViewResponses: canViewResponses.success && canViewResponses.data,
-        canExportResponses: canExportResponses.success && canExportResponses.data,
-        canViewAnalytics: canViewAnalytics.success && canViewAnalytics.data,
-        canManageTemplates: canManageTemplates.success && canManageTemplates.data,
-        canSubmitResponse: canSubmitResponse.success && canSubmitResponse.data
+        canCreate: canCreate,
+        canRead: canRead,
+        canUpdate: canUpdate,
+        canDelete: canDelete,
+        canPublish: canPublish,
+        canClose: canClose,
+        canArchive: canArchive,
+        canViewResponses: canViewResponses,
+        canExportResponses: canExportResponses,
+        canViewAnalytics: canViewAnalytics,
+        canManageTemplates: canManageTemplates,
+        canSubmitResponse: canSubmitResponse
       });
     } catch (error) {
       console.error('检查问卷权限失败:', error);
@@ -142,32 +142,32 @@ export const useSurveyPermissions = (surveyId?: string) => {
   };
 
   // 检查是否可以访问问卷
-  const canAccessSurvey = (surveyId: string): boolean => {
+  const canAccessSurvey = (_: string): boolean => {
     return permissions.canRead;
   };
 
   // 检查是否可以编辑问卷
-  const canEditSurvey = (surveyId: string): boolean => {
+  const canEditSurvey = (_: string): boolean => {
     return permissions.canUpdate;
   };
 
   // 检查是否可以删除问卷
-  const canDeleteSurvey = (surveyId: string): boolean => {
+  const canDeleteSurvey = (_: string): boolean => {
     return permissions.canDelete;
   };
 
   // 检查是否可以发布问卷
-  const canPublishSurvey = (surveyId: string): boolean => {
+  const canPublishSurvey = (_: string): boolean => {
     return permissions.canPublish;
   };
 
   // 检查是否可以查看回答
-  const canViewResponses = (surveyId: string): boolean => {
+  const canViewResponses = (_: string): boolean => {
     return permissions.canViewResponses;
   };
 
   // 检查是否可以查看分析
-  const canViewAnalytics = (surveyId: string): boolean => {
+  const canViewAnalytics = (_: string): boolean => {
     return permissions.canViewAnalytics;
   };
 

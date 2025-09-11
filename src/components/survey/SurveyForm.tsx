@@ -16,12 +16,11 @@ import {
 } from 'antd';
 import { useNavigate, useParams } from 'react-router-dom';
 import { surveyService } from '@/services/surveyService';
-import { Survey, SurveyType, SurveyTargetAudience, SurveySettings } from '@/types';
+import { Survey } from '@/types';
 import QuestionEditor from './QuestionEditor';
 import SurveyPreview from './SurveyPreview';
 
 const { TextArea } = Input;
-const { Option } = Select;
 
 interface SurveyFormProps {
   mode: 'create' | 'edit';
@@ -75,13 +74,13 @@ const SurveyForm: React.FC<SurveyFormProps> = ({ mode }) => {
         form.setFieldsValue({
           ...result.data,
           settings: {
+            ...result.data.settings,
             allowBackNavigation: true,
             showProgressBar: true,
             randomizeQuestions: false,
             randomizeOptions: false,
             showQuestionNumbers: true,
-            autoSave: true,
-            ...result.data.settings
+            autoSave: true
           }
         });
       } else {

@@ -1,6 +1,6 @@
 // 数据迁移脚本：将 Member 和 MemberProfile 中的 accountType 数据迁移到 member_categories 集合
 import { db } from '../services/firebase';
-import { collection, getDocs, doc, updateDoc, addDoc, query, where } from 'firebase/firestore';
+import { collection, getDocs, doc, updateDoc } from 'firebase/firestore';
 import { categoryService } from '../services/categoryService';
 
 const MEMBERS_COLLECTION = 'members';
@@ -55,8 +55,7 @@ export const migrateAccountTypeData = async () => {
           accountType as any,
           {
             reason: member.profile?.categoryReason || '数据迁移',
-            assignedBy: member.profile?.categoryAssignedBy || 'system',
-            assignedDate: member.profile?.categoryAssignedDate || new Date().toISOString()
+            assignedBy: member.profile?.categoryAssignedBy || 'system'
           }
         );
 

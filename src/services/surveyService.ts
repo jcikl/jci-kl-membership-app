@@ -10,9 +10,7 @@ import {
   where, 
   orderBy, 
   limit, 
-  startAfter,
   Timestamp,
-  writeBatch,
   serverTimestamp
 } from 'firebase/firestore';
 import { db } from './firebase';
@@ -20,8 +18,6 @@ import {
   Survey, 
   SurveyResponse, 
   SurveyAnalytics, 
-  SurveyTemplate,
-  SurveyPermission,
   SurveyStatus,
   SurveyType,
   SurveyTargetAudience,
@@ -157,7 +153,7 @@ export const surveyService = {
       targetAudience?: SurveyTargetAudience;
       createdBy?: string;
       search?: string;
-    } = {}
+    } = { page: 1, limit: 10 }
   ): Promise<ApiResponse<PaginatedResponse<Survey>>> {
     try {
       const { page = 1, limit: pageSize = 10, sortBy = 'createdAt', sortOrder = 'desc', ...filters } = params;
@@ -330,7 +326,7 @@ export const surveyService = {
   },
 
   // 获取用户的问卷
-  async getUserSurveys(userId: string, params: PaginationParams = {}): Promise<ApiResponse<PaginatedResponse<Survey>>> {
+  async getUserSurveys(userId: string, params: PaginationParams = { page: 1, limit: 10 }): Promise<ApiResponse<PaginatedResponse<Survey>>> {
     return this.getSurveys({
       ...params,
       createdBy: userId
@@ -338,7 +334,7 @@ export const surveyService = {
   },
 
   // 获取公开的问卷（用于回答）
-  async getPublicSurveys(params: PaginationParams = {}): Promise<ApiResponse<PaginatedResponse<Survey>>> {
+  async getPublicSurveys(params: PaginationParams = { page: 1, limit: 10 }): Promise<ApiResponse<PaginatedResponse<Survey>>> {
     return this.getSurveys({
       ...params,
       status: 'published'
@@ -355,15 +351,15 @@ export const surveyResponseService = {
       const response: Omit<SurveyResponse, 'id'> = {
         ...responseData,
         status: 'completed',
-        startedAt: responseData.startedAt || now,
+        startedAt: (responseData as any).startedAt || now,
         completedAt: now,
-        timeSpent: responseData.timeSpent || 0
+        timeSpent: (responseData as any).timeSpent || 0
       };
 
       const docRef = await addDoc(collection(db, 'survey_responses'), {
         ...response,
         startedAt: Timestamp.fromDate(new Date(response.startedAt)),
-        completedAt: Timestamp.fromDate(new Date(response.completedAt)),
+        completedAt: Timestamp.fromDate(new Date(response.completedAt || now)),
       });
 
       // 更新问卷的回答数量
@@ -422,7 +418,7 @@ export const surveyResponseService = {
   // 获取问卷的所有回答
   async getSurveyResponses(
     surveyId: string, 
-    params: PaginationParams = {}
+    params: PaginationParams = { page: 1, limit: 10 }
   ): Promise<ApiResponse<PaginatedResponse<SurveyResponse>>> {
     try {
       const { page = 1, limit: pageSize = 10 } = params;
@@ -470,7 +466,7 @@ export const surveyResponseService = {
   // 获取用户的回答
   async getUserResponses(
     userId: string, 
-    params: PaginationParams = {}
+    params: PaginationParams = { page: 1, limit: 10 }
   ): Promise<ApiResponse<PaginatedResponse<SurveyResponse>>> {
     try {
       const { page = 1, limit: pageSize = 10 } = params;
@@ -550,7 +546,7 @@ export const surveyAnalyticsService = {
       }
 
       // 获取回答数据
-      const responsesResult = await surveyResponseService.getSurveyResponses(surveyId, { limit: 1000 });
+      const responsesResult = await surveyResponseService.getSurveyResponses(surveyId, { page: 1, limit: 1000 });
       if (!responsesResult.success || !responsesResult.data) {
         return {
           success: false,
@@ -602,7 +598,8 @@ export const surveyAnalyticsService = {
             if (r?.value) {
               const values = Array.isArray(r.value) ? r.value : [r.value];
               values.forEach(v => {
-                distribution[v] = (distribution[v] || 0) + 1;
+                const key = String(v);
+                distribution[key] = (distribution[key] || 0) + 1;
               });
             }
           });

@@ -16,7 +16,6 @@ import {
   message,
   Popconfirm,
   Tooltip,
-  Divider
 } from 'antd';
 import {
   PlusOutlined,
@@ -24,10 +23,9 @@ import {
   DeleteOutlined,
   CopyOutlined,
   UpOutlined,
-  DownOutlined,
-  SettingOutlined
+  DownOutlined
 } from '@ant-design/icons';
-import { SurveyQuestion, QuestionType, SurveyQuestionOption } from '@/types';
+import { SurveyQuestion, QuestionType } from '@/types';
 
 const { TextArea } = Input;
 const { Option } = Select;
@@ -197,24 +195,24 @@ const QuestionEditor: React.FC<QuestionEditorProps> = ({ questions, onChange }) 
   };
 
   // 添加选项
-  const handleAddOption = () => {
-    const currentOptions = form.getFieldValue('options') || [];
-    const newOption = {
-      id: generateOptionId(),
-      label: '',
-      value: '',
-      order: currentOptions.length + 1,
-      isOther: false
-    };
-    form.setFieldValue('options', [...currentOptions, newOption]);
-  };
+  // const handleAddOption = () => {
+  //   const currentOptions = form.getFieldValue('options') || [];
+  //   const newOption = {
+  //     id: generateOptionId(),
+  //     label: '',
+  //     value: '',
+  //     order: currentOptions.length + 1,
+  //     isOther: false
+  //   };
+  //   form.setFieldValue('options', [...currentOptions, newOption]);
+  // };
 
   // 删除选项
-  const handleDeleteOption = (index: number) => {
-    const currentOptions = form.getFieldValue('options') || [];
-    const newOptions = currentOptions.filter((_: any, i: number) => i !== index);
-    form.setFieldValue('options', newOptions);
-  };
+  // const handleDeleteOption = (index: number) => {
+  //   const currentOptions = form.getFieldValue('options') || [];
+  //   const newOptions = currentOptions.filter((_: any, i: number) => i !== index);
+  //   form.setFieldValue('options', newOptions);
+  // };
 
   // 是否需要选项的问题类型
   const needsOptions = (type: QuestionType) => {
@@ -390,7 +388,7 @@ const QuestionEditor: React.FC<QuestionEditorProps> = ({ questions, onChange }) 
           >
             <Select
               placeholder="选择问题类型"
-              onChange={(value) => {
+              onChange={() => {
                 // 清空选项
                 form.setFieldValue('options', []);
               }}

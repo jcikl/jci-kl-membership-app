@@ -6,7 +6,6 @@ import {
   BarChartOutlined, 
   CheckCircleOutlined,
   ClockCircleOutlined,
-  TrophyOutlined
 } from '@ant-design/icons';
 import SurveyListSimple from '@/components/survey/SurveyListSimple';
 import { useNavigate } from 'react-router-dom';

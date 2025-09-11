@@ -31,7 +31,7 @@ import {
 } from '@ant-design/icons';
 import { useNavigate, useParams } from 'react-router-dom';
 import { surveyService, surveyResponseService } from '@/services/surveyService';
-import { Survey, SurveyQuestion, QuestionType, SurveyResponse } from '@/types';
+import { Survey, SurveyQuestion } from '@/types';
 
 const { TextArea } = Input;
 const { Title, Text } = Typography;
@@ -46,11 +46,11 @@ const SurveyResponseForm: React.FC = () => {
   const [submitting, setSubmitting] = useState(false);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, any>>({});
-  const [startTime, setStartTime] = useState<Date>(new Date());
+  const [startTime] = useState<Date>(new Date());
   const [showSubmitModal, setShowSubmitModal] = useState(false);
 
   const questions = survey?.questions || [];
-  const settings = survey?.settings || {};
+  const settings = (survey?.settings || {}) as any;
   const currentQuestion = questions[currentQuestionIndex];
 
   // 计算进度
@@ -146,7 +146,7 @@ const SurveyResponseForm: React.FC = () => {
         answers: Object.entries(values).map(([questionId, value]) => ({
           questionId,
           questionType: questions.find(q => q.id === questionId)?.type || 'text',
-          value,
+          value: value as any,
           answeredAt: new Date().toISOString()
         })),
         status: 'completed' as const,
@@ -186,24 +186,24 @@ const SurveyResponseForm: React.FC = () => {
   // 保存草稿
   const handleSaveDraft = async () => {
     try {
-      const values = form.getFieldsValue();
-      const timeSpent = Math.floor((new Date().getTime() - startTime.getTime()) / 1000);
+      // const values = form.getFieldsValue();
+      // const timeSpent = Math.floor((new Date().getTime() - startTime.getTime()) / 1000);
       
-      const responseData = {
-        surveyId: id!,
-        respondentId: 'current-user',
-        respondentEmail: 'user@example.com',
-        answers: Object.entries(values).map(([questionId, value]) => ({
-          questionId,
-          questionType: questions.find(q => q.id === questionId)?.type || 'text',
-          value,
-          answeredAt: new Date().toISOString()
-        })),
-        status: 'in_progress' as const,
-        startedAt: startTime.toISOString(),
-        timeSpent,
-        isAnonymous: survey?.isAnonymous || false
-      };
+      // const responseData = {
+      //   surveyId: id!,
+      //   respondentId: 'current-user',
+      //   respondentEmail: 'user@example.com',
+      //   answers: Object.entries(values).map(([questionId, value]) => ({
+      //     questionId,
+      //     questionType: questions.find(q => q.id === questionId)?.type || 'text',
+      //     value,
+      //     answeredAt: new Date().toISOString()
+      //   })),
+      //   status: 'in_progress' as const,
+      //   startedAt: startTime.toISOString(),
+      //   timeSpent,
+      //   isAnonymous: survey?.isAnonymous || false
+      // };
 
       // 这里可以实现保存草稿的逻辑
       message.success('草稿已保存');
@@ -214,7 +214,7 @@ const SurveyResponseForm: React.FC = () => {
 
   // 渲染问题
   const renderQuestion = (question: SurveyQuestion) => {
-    const { id, type, title, description, required, options, validation } = question;
+    const { id, type, options, validation } = question;
 
     const commonProps = {
       value: answers[id],

@@ -1,11 +1,11 @@
 import React from 'react';
 import { Alert, Space, Typography } from 'antd';
-import { LockOutlined, EyeOutlined, InfoCircleOutlined } from '@ant-design/icons';
+import { LockOutlined, EyeOutlined } from '@ant-design/icons';
 import { 
   checkFieldPermission, 
   UserRole 
 } from '@/utils/fieldPermissions';
-import { FieldPermission, LockReason, LOCK_REASON_MESSAGES } from '@/types/profileFields';
+import { FieldPermission } from '@/types/profileFields';
 
 const { Text } = Typography;
 
@@ -15,7 +15,6 @@ interface FieldPermissionStatusProps {
   memberData: any;
   showIcon?: boolean;
   showMessage?: boolean;
-  size?: 'small' | 'default';
 }
 
 const FieldPermissionStatus: React.FC<FieldPermissionStatusProps> = ({
@@ -24,7 +23,6 @@ const FieldPermissionStatus: React.FC<FieldPermissionStatusProps> = ({
   memberData,
   showIcon = true,
   showMessage = true,
-  size = 'small'
 }) => {
   const permissionResult = checkFieldPermission(field, userRole, memberData);
   
@@ -89,7 +87,6 @@ const FieldPermissionStatus: React.FC<FieldPermissionStatusProps> = ({
         </Space>
       }
       type={getAlertType()}
-      size={size}
       showIcon={false}
       style={{ marginTop: 8 }}
     />

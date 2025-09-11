@@ -5,9 +5,6 @@ import {
   TeamOutlined, 
   TrophyOutlined, 
   SafetyOutlined,
-  CheckCircleOutlined,
-  ClockCircleOutlined,
-  FileTextOutlined,
   UserOutlined
 } from '@ant-design/icons';
 import RBACAudit from '@/components/rbac/RBACAudit';

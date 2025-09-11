@@ -25,6 +25,7 @@ export interface MemberProfile {
   
   // Senator ID
   senatorId?: string; // 参议员编号
+  senatorVerified?: boolean; // 参议员验证状态
 
   // Social & contact
   linkedin?: string;

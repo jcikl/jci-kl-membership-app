@@ -1,17 +1,15 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Row, Col, Card, Statistic, Table, Button, Space, Typography, List, Tag, Spin, Image, Progress, Badge, Avatar } from 'antd';
+import { Row, Col, Card, Statistic, Table, Button, Space, Typography, List, Tag, Spin, Image, Progress, Badge } from 'antd';
 import { 
   UserOutlined, 
   TeamOutlined, 
   CalendarOutlined, 
-  DollarOutlined, 
   HeartOutlined, 
   ApartmentOutlined, 
   ShopOutlined, 
   InfoCircleOutlined, 
   EyeOutlined,
   TrophyOutlined,
-  CrownOutlined,
   MailOutlined,
   PhoneOutlined,
   EnvironmentOutlined,
@@ -694,7 +692,7 @@ const DashboardPage: React.FC = () => {
                 pageSizeOptions: ['5', '10', '20', '50'],
               }}
               size="small"
-              rowClassName={(record, index) => 
+              rowClassName={(_: any, index) => 
                 index % 2 === 0 ? 'table-row-light' : 'table-row-dark'
               }
             />

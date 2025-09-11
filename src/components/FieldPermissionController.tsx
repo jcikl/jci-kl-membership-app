@@ -1,12 +1,11 @@
 import React from 'react';
-import { Form, Tooltip, Alert, Space } from 'antd';
-import { LockOutlined, EyeOutlined, InfoCircleOutlined } from '@ant-design/icons';
+import { Tooltip, Alert } from 'antd';
+import { LockOutlined, EyeOutlined } from '@ant-design/icons';
 import { 
   checkFieldPermission, 
-  FieldPermissionResult, 
   UserRole 
 } from '@/utils/fieldPermissions';
-import { FieldPermission, LockReason, LOCK_REASON_MESSAGES } from '@/types/profileFields';
+import { FieldPermission } from '@/types/profileFields';
 
 interface FieldPermissionControllerProps {
   field: string;
@@ -77,7 +76,7 @@ const FieldPermissionController: React.FC<FieldPermissionControllerProps> = ({
   const renderLockMessage = () => {
     if (!showLockMessage || !permissionResult.lockReason) return null;
 
-    const message = LOCK_REASON_MESSAGES[permissionResult.lockReason];
+    const message = '此字段已被锁定，无法编辑';
     if (!message) return null;
 
     return (
@@ -85,7 +84,6 @@ const FieldPermissionController: React.FC<FieldPermissionControllerProps> = ({
         message={message}
         type="warning"
         showIcon
-        size="small"
         style={{ marginTop: 8 }}
       />
     );

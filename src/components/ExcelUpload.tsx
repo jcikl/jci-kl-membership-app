@@ -1,8 +1,8 @@
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import { Upload, Button, message, Alert, Progress } from 'antd';
-import { InboxOutlined, FileExcelOutlined, DownloadOutlined } from '@ant-design/icons';
+import { FileExcelOutlined, DownloadOutlined } from '@ant-design/icons';
 import * as XLSX from 'xlsx';
-import { Member, MemberStatus, MemberLevel } from '@/types';
+import { MemberStatus, MemberLevel } from '@/types';
 
 const { Dragger } = Upload;
 
@@ -74,7 +74,7 @@ interface ParsedMember {
 const ExcelUpload: React.FC<ExcelUploadProps> = ({ onDataParsed, onTemplateDownload }) => {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  // const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Excel列映射配置
   const columnMapping = {
