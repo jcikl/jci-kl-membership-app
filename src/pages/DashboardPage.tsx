@@ -1,6 +1,25 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Row, Col, Card, Statistic, Table, Button, Space, Typography, List, Tag, Spin, Image } from 'antd';
-import { UserOutlined, TeamOutlined, CalendarOutlined, DollarOutlined, HeartOutlined, ApartmentOutlined, ShopOutlined, InfoCircleOutlined, EyeOutlined } from '@ant-design/icons';
+import { Row, Col, Card, Statistic, Table, Button, Space, Typography, List, Tag, Spin, Image, Progress, Badge, Avatar } from 'antd';
+import { 
+  UserOutlined, 
+  TeamOutlined, 
+  CalendarOutlined, 
+  DollarOutlined, 
+  HeartOutlined, 
+  ApartmentOutlined, 
+  ShopOutlined, 
+  InfoCircleOutlined, 
+  EyeOutlined,
+  TrophyOutlined,
+  CrownOutlined,
+  MailOutlined,
+  PhoneOutlined,
+  EnvironmentOutlined,
+  GlobalOutlined,
+  DashboardOutlined,
+  FilterOutlined,
+  ClearOutlined
+} from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { useMemberStore } from '@/store/memberStore';
 import { Member, ChapterSettings } from '@/types';
@@ -186,35 +205,90 @@ const DashboardPage: React.FC = () => {
   ];
 
   return (
-    <div>
-      <Title level={2} style={{ marginBottom: 24 }}>
-        仪表板
-      </Title>
+    <div style={{ padding: '24px', background: '#f5f5f5', minHeight: '100vh' }}>
+      {/* 头部仪表板标题卡片 */}
+      <Card 
+        style={{ 
+          marginBottom: '24px',
+          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+          color: 'white',
+          border: 'none'
+        }}
+        styles={{ body: { padding: '24px' } }}
+      >
+        <Row align="middle" justify="space-between">
+          <Col>
+            <div style={{ display: 'flex', alignItems: 'center' }}>
+              <DashboardOutlined style={{ fontSize: '32px', marginRight: '16px', color: 'white' }} />
+              <div>
+                <Title level={2} style={{ margin: 0, color: 'white' }}>
+                  仪表板
+                </Title>
+                <p style={{ margin: '8px 0 0 0', fontSize: '16px', opacity: 0.9 }}>
+                  JCI KL 会员管理系统
+                </p>
+              </div>
+            </div>
+          </Col>
+          <Col>
+            <Space direction="vertical" align="end">
+              <div style={{ textAlign: 'right', color: 'white', opacity: 0.9 }}>
+                <div style={{ fontSize: '14px', marginBottom: '4px' }}>系统状态</div>
+                <Progress 
+                  percent={100} 
+                  size="small" 
+                  strokeColor="white"
+                  trailColor="rgba(255,255,255,0.3)"
+                  style={{ width: '120px' }}
+                />
+              </div>
+            </Space>
+          </Col>
+        </Row>
+      </Card>
 
       {/* 分会信息卡片 */}
       {chapterLoading ? (
-        <Card style={{ marginBottom: 24 }}>
+        <Card style={{ marginBottom: '24px' }}>
           <Spin />
         </Card>
       ) : chapterSettings ? (
-        <Card style={{ marginBottom: 24 }}>
-          <Row gutter={[16, 16]} align="middle">
+        <Card 
+          title={<><TrophyOutlined /> 分会信息</>} 
+          style={{ marginBottom: '24px' }}
+          extra={
+            <Button 
+              type="primary"
+              onClick={() => navigate('/system-settings')}
+              style={{ 
+                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                border: 'none'
+              }}
+            >
+              编辑分会设置
+            </Button>
+          }
+        >
+          <Row gutter={[24, 24]} align="middle">
             <Col xs={24} sm={12} md={6}>
               {chapterSettings.logoUrl && (
-                <div style={{ textAlign: 'center', marginBottom: 16 }}>
-                  <Image
-                    src={chapterSettings.logoUrl}
-                    alt="分会Logo"
-                    style={{
-                      width: 80,
-                      height: 80,
-                      objectFit: 'contain',
-                      borderRadius: 8,
-                    }}
-                    preview={{
-                      mask: <EyeOutlined style={{ fontSize: 16 }} />
-                    }}
-                  />
+                <div style={{ textAlign: 'center' }}>
+                  <Badge dot color="#52c41a" offset={[-5, 5]}>
+                    <Image
+                      src={chapterSettings.logoUrl}
+                      alt="分会Logo"
+                      style={{
+                        width: 80,
+                        height: 80,
+                        objectFit: 'contain',
+                        borderRadius: '50%',
+                        border: '3px solid #f0f0f0'
+                      }}
+                      preview={{
+                        mask: <EyeOutlined style={{ fontSize: 16 }} />
+                      }}
+                    />
+                  </Badge>
                 </div>
               )}
             </Col>
@@ -225,6 +299,7 @@ const DashboardPage: React.FC = () => {
                   {chapterSettings.chapterName}
                 </Title>
                 <Typography.Text type="secondary">
+                  <CalendarOutlined style={{ marginRight: 8 }} />
                   成立年份：{chapterSettings.establishmentYear}
                 </Typography.Text>
                 {chapterSettings.description && (
@@ -234,42 +309,44 @@ const DashboardPage: React.FC = () => {
                 )}
               </Space>
             </Col>
-            <Col xs={24} sm={12} md={8}>
+            <Col xs={24} sm={12} md={6}>
               <Space direction="vertical" size="small">
                 {chapterSettings.contactEmail && (
-                  <Typography.Text>
-                    <strong>邮箱：</strong>{chapterSettings.contactEmail}
-                  </Typography.Text>
+                  <div style={{ display: 'flex', alignItems: 'center' }}>
+                    <MailOutlined style={{ marginRight: 8, color: '#1890ff' }} />
+                    <Typography.Text>
+                      {chapterSettings.contactEmail}
+                    </Typography.Text>
+                  </div>
                 )}
                 {chapterSettings.contactPhone && (
-                  <Typography.Text>
-                    <strong>电话：</strong>{chapterSettings.contactPhone}
-                  </Typography.Text>
+                  <div style={{ display: 'flex', alignItems: 'center' }}>
+                    <PhoneOutlined style={{ marginRight: 8, color: '#1890ff' }} />
+                    <Typography.Text>
+                      {chapterSettings.contactPhone}
+                    </Typography.Text>
+                  </div>
                 )}
                 {chapterSettings.website && (
-                  <Typography.Text>
-                    <strong>网站：</strong>
+                  <div style={{ display: 'flex', alignItems: 'center' }}>
+                    <GlobalOutlined style={{ marginRight: 8, color: '#1890ff' }} />
                     <a href={chapterSettings.website} target="_blank" rel="noopener noreferrer">
                       {chapterSettings.website}
                     </a>
-                  </Typography.Text>
+                  </div>
                 )}
               </Space>
             </Col>
-            <Col xs={24} sm={24} md={8}>
+            <Col xs={24} sm={12} md={6}>
               <Space direction="vertical" size="small">
                 {chapterSettings.address && (
-                  <Typography.Text>
-                    <strong>地址：</strong>{chapterSettings.address}
-                  </Typography.Text>
+                  <div style={{ display: 'flex', alignItems: 'center' }}>
+                    <EnvironmentOutlined style={{ marginRight: 8, color: '#1890ff' }} />
+                    <Typography.Text>
+                      {chapterSettings.address}
+                    </Typography.Text>
+                  </div>
                 )}
-                <Button 
-                  type="link" 
-                  onClick={() => navigate('/system-settings')}
-                  style={{ padding: 0, height: 'auto' }}
-                >
-                  编辑分会设置 →
-                </Button>
               </Space>
             </Col>
           </Row>
@@ -277,62 +354,114 @@ const DashboardPage: React.FC = () => {
       ) : null}
 
       {/* 统计卡片 */}
-      <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
+      <Row gutter={[24, 24]} style={{ marginBottom: '24px' }}>
         <Col xs={24} sm={12} lg={6}>
-          <Card>
+          <Card 
+            style={{ 
+              background: 'linear-gradient(135deg, #52c41a 0%, #3f8600 100%)',
+              color: 'white',
+              border: 'none'
+            }}
+            styles={{ body: { padding: '24px' } }}
+          >
             <Statistic
-              title="总会员数"
+              title={<span style={{ color: 'white', opacity: 0.9 }}>总会员数</span>}
               value={stats.totalMembers}
-              prefix={<UserOutlined />}
-              valueStyle={{ color: '#3f8600' }}
+              prefix={<UserOutlined style={{ color: 'white' }} />}
+              valueStyle={{ color: 'white', fontSize: '32px', fontWeight: 'bold' }}
             />
+            <div style={{ marginTop: '8px', color: 'white', opacity: 0.8, fontSize: '14px' }}>
+              全部注册会员
+            </div>
           </Card>
         </Col>
         <Col xs={24} sm={12} lg={6}>
-          <Card>
+          <Card 
+            style={{ 
+              background: 'linear-gradient(135deg, #1890ff 0%, #096dd9 100%)',
+              color: 'white',
+              border: 'none'
+            }}
+            styles={{ body: { padding: '24px' } }}
+          >
             <Statistic
-              title="活跃会员"
+              title={<span style={{ color: 'white', opacity: 0.9 }}>活跃会员</span>}
               value={stats.activeMembers}
-              prefix={<TeamOutlined />}
-              valueStyle={{ color: '#1890ff' }}
+              prefix={<TeamOutlined style={{ color: 'white' }} />}
+              valueStyle={{ color: 'white', fontSize: '32px', fontWeight: 'bold' }}
             />
+            <div style={{ marginTop: '8px', color: 'white', opacity: 0.8, fontSize: '14px' }}>
+              当前活跃状态
+            </div>
           </Card>
         </Col>
         <Col xs={24} sm={12} lg={6}>
-          <Card>
+          <Card 
+            style={{ 
+              background: 'linear-gradient(135deg, #fa8c16 0%, #d46b08 100%)',
+              color: 'white',
+              border: 'none'
+            }}
+            styles={{ body: { padding: '24px' } }}
+          >
             <Statistic
-              title="待审核"
+              title={<span style={{ color: 'white', opacity: 0.9 }}>待审核</span>}
               value={stats.pendingMembers}
-              prefix={<CalendarOutlined />}
-              valueStyle={{ color: '#fa8c16' }}
+              prefix={<CalendarOutlined style={{ color: 'white' }} />}
+              valueStyle={{ color: 'white', fontSize: '32px', fontWeight: 'bold' }}
             />
+            <div style={{ marginTop: '8px', color: 'white', opacity: 0.8, fontSize: '14px' }}>
+              等待审核通过
+            </div>
           </Card>
         </Col>
         <Col xs={24} sm={12} lg={6}>
-          <Card>
+          <Card 
+            style={{ 
+              background: 'linear-gradient(135deg, #722ed1 0%, #531dab 100%)',
+              color: 'white',
+              border: 'none'
+            }}
+            styles={{ body: { padding: '24px' } }}
+          >
             <Statistic
-              title="本月新增"
+              title={<span style={{ color: 'white', opacity: 0.9 }}>本月新增</span>}
               value={stats.newMembersThisMonth}
-              prefix={<DollarOutlined />}
-              valueStyle={{ color: '#722ed1' }}
+              prefix={<TrophyOutlined style={{ color: 'white' }} />}
+              valueStyle={{ color: 'white', fontSize: '32px', fontWeight: 'bold' }}
             />
+            <div style={{ marginTop: '8px', color: 'white', opacity: 0.8, fontSize: '14px' }}>
+              本月新加入会员
+            </div>
           </Card>
         </Col>
       </Row>
 
       {/* 分析卡片和用户名单 */}
-      <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
+      <Row gutter={[24, 24]} style={{ marginBottom: '24px' }}>
         <Col xs={24} sm={12} lg={6}>
           <Card 
             title={
               <Space>
-                <HeartOutlined />
-                兴趣分析
-                {selectedHobby && <Tag color="blue">筛选中</Tag>}
+                <HeartOutlined style={{ color: '#ff4d4f' }} />
+                <span>兴趣分析</span>
+                {selectedHobby && <Tag color="blue" icon={<FilterOutlined />}>筛选中</Tag>}
               </Space>
             }
             style={{ height: '500px' }}
-            styles={{ body: { height: 'calc(100% - 57px)', overflow: 'auto' } }}
+            styles={{ body: { height: 'calc(100% - 57px)', overflow: 'auto', padding: '16px' } }}
+            extra={
+              selectedHobby && (
+                <Button 
+                  type="text" 
+                  size="small" 
+                  icon={<ClearOutlined />}
+                  onClick={() => setSelectedHobby('')}
+                >
+                  清除
+                </Button>
+              )
+            }
           >
             <List
               dataSource={hobbyAnalysis.slice(0, 6)} // 显示前6个最受欢迎的兴趣
@@ -341,21 +470,35 @@ const DashboardPage: React.FC = () => {
                 <List.Item
                   style={{ 
                     cursor: 'pointer',
-                    backgroundColor: selectedHobby === item.hobby ? '#f0f0f0' : 'transparent',
-                    borderRadius: '4px',
-                    padding: '4px 8px',
-                    margin: '2px 0'
+                    backgroundColor: selectedHobby === item.hobby ? '#e6f7ff' : 'transparent',
+                    borderRadius: '8px',
+                    padding: '12px 16px',
+                    margin: '4px 0',
+                    border: selectedHobby === item.hobby ? '1px solid #1890ff' : '1px solid transparent',
+                    transition: 'all 0.3s ease'
                   }}
                   onClick={() => handleHobbyFilter(item.hobby)}
                 >
                   <List.Item.Meta
                     title={
                       <Space>
-                        <span>{item.hobby}</span>
-                        {selectedHobby === item.hobby && <Tag color="blue">已选择</Tag>}
+                        <span style={{ fontWeight: 'bold' }}>{item.hobby}</span>
+                        {selectedHobby === item.hobby && (
+                          <Tag color="blue" icon={<FilterOutlined />}>已选择</Tag>
+                        )}
                       </Space>
                     }
-                    description={`${item.count} 位会员`}
+                    description={
+                      <Space>
+                        <span style={{ color: '#666' }}>{item.count} 位会员</span>
+                        <Progress 
+                          percent={Math.round((item.count / stats.totalMembers) * 100)} 
+                          size="small" 
+                          showInfo={false}
+                          strokeColor="#1890ff"
+                        />
+                      </Space>
+                    }
                   />
                 </List.Item>
               )}
@@ -366,13 +509,25 @@ const DashboardPage: React.FC = () => {
           <Card 
             title={
               <Space>
-                <ApartmentOutlined />
-                类别分析
-                {selectedCategory && <Tag color="green">筛选中</Tag>}
+                <ApartmentOutlined style={{ color: '#52c41a' }} />
+                <span>类别分析</span>
+                {selectedCategory && <Tag color="green" icon={<FilterOutlined />}>筛选中</Tag>}
               </Space>
             }
             style={{ height: '500px' }}
-            styles={{ body: { height: 'calc(100% - 57px)', overflow: 'auto' } }}
+            styles={{ body: { height: 'calc(100% - 57px)', overflow: 'auto', padding: '16px' } }}
+            extra={
+              selectedCategory && (
+                <Button 
+                  type="text" 
+                  size="small" 
+                  icon={<ClearOutlined />}
+                  onClick={() => setSelectedCategory('')}
+                >
+                  清除
+                </Button>
+              )
+            }
           >
             <List
               dataSource={categoryAnalysis}
@@ -381,21 +536,35 @@ const DashboardPage: React.FC = () => {
                 <List.Item
                   style={{ 
                     cursor: 'pointer',
-                    backgroundColor: selectedCategory === item.category ? '#f0f0f0' : 'transparent',
-                    borderRadius: '4px',
-                    padding: '4px 8px',
-                    margin: '2px 0'
+                    backgroundColor: selectedCategory === item.category ? '#f6ffed' : 'transparent',
+                    borderRadius: '8px',
+                    padding: '12px 16px',
+                    margin: '4px 0',
+                    border: selectedCategory === item.category ? '1px solid #52c41a' : '1px solid transparent',
+                    transition: 'all 0.3s ease'
                   }}
                   onClick={() => handleCategoryFilter(item.category)}
                 >
                   <List.Item.Meta
                     title={
                       <Space>
-                        <span>{item.category}</span>
-                        {selectedCategory === item.category && <Tag color="green">已选择</Tag>}
+                        <span style={{ fontWeight: 'bold' }}>{item.category}</span>
+                        {selectedCategory === item.category && (
+                          <Tag color="green" icon={<FilterOutlined />}>已选择</Tag>
+                        )}
                       </Space>
                     }
-                    description={`${item.count} 位会员`}
+                    description={
+                      <Space>
+                        <span style={{ color: '#666' }}>{item.count} 位会员</span>
+                        <Progress 
+                          percent={Math.round((item.count / stats.totalMembers) * 100)} 
+                          size="small" 
+                          showInfo={false}
+                          strokeColor="#52c41a"
+                        />
+                      </Space>
+                    }
                   />
                 </List.Item>
               )}
@@ -406,13 +575,25 @@ const DashboardPage: React.FC = () => {
           <Card 
             title={
               <Space>
-                <ShopOutlined />
-                行业分析
-                {selectedIndustry && <Tag color="orange">筛选中</Tag>}
+                <ShopOutlined style={{ color: '#fa8c16' }} />
+                <span>行业分析</span>
+                {selectedIndustry && <Tag color="orange" icon={<FilterOutlined />}>筛选中</Tag>}
               </Space>
             }
             style={{ height: '500px' }}
-            styles={{ body: { height: 'calc(100% - 57px)', overflow: 'auto' } }}
+            styles={{ body: { height: 'calc(100% - 57px)', overflow: 'auto', padding: '16px' } }}
+            extra={
+              selectedIndustry && (
+                <Button 
+                  type="text" 
+                  size="small" 
+                  icon={<ClearOutlined />}
+                  onClick={() => setSelectedIndustry('')}
+                >
+                  清除
+                </Button>
+              )
+            }
           >
             <List
               dataSource={industryAnalysis.slice(0, 6)} // 显示前6个最受欢迎的行业
@@ -421,21 +602,35 @@ const DashboardPage: React.FC = () => {
                 <List.Item
                   style={{ 
                     cursor: 'pointer',
-                    backgroundColor: selectedIndustry === item.industry ? '#f0f0f0' : 'transparent',
-                    borderRadius: '4px',
-                    padding: '4px 8px',
-                    margin: '2px 0'
+                    backgroundColor: selectedIndustry === item.industry ? '#fff7e6' : 'transparent',
+                    borderRadius: '8px',
+                    padding: '12px 16px',
+                    margin: '4px 0',
+                    border: selectedIndustry === item.industry ? '1px solid #fa8c16' : '1px solid transparent',
+                    transition: 'all 0.3s ease'
                   }}
                   onClick={() => handleIndustryFilter(item.industry)}
                 >
                   <List.Item.Meta
                     title={
                       <Space>
-                        <span>{item.industry}</span>
-                        {selectedIndustry === item.industry && <Tag color="orange">已选择</Tag>}
+                        <span style={{ fontWeight: 'bold' }}>{item.industry}</span>
+                        {selectedIndustry === item.industry && (
+                          <Tag color="orange" icon={<FilterOutlined />}>已选择</Tag>
+                        )}
                       </Space>
                     }
-                    description={`${item.count} 位会员`}
+                    description={
+                      <Space>
+                        <span style={{ color: '#666' }}>{item.count} 位会员</span>
+                        <Progress 
+                          percent={Math.round((item.count / stats.totalMembers) * 100)} 
+                          size="small" 
+                          showInfo={false}
+                          strokeColor="#fa8c16"
+                        />
+                      </Space>
+                    }
                   />
                 </List.Item>
               )}
@@ -446,30 +641,44 @@ const DashboardPage: React.FC = () => {
           <Card 
             title={
               <Space>
-                <TeamOutlined />
-                所有用户名单
+                <TeamOutlined style={{ color: '#722ed1' }} />
+                <span>所有用户名单</span>
                 {(selectedHobby || selectedCategory || selectedIndustry) && (
-                  <Tag color="purple">已筛选</Tag>
+                  <Tag color="purple" icon={<FilterOutlined />}>已筛选</Tag>
                 )}
               </Space>
             }
             extra={
-              <Space>
-                <Button type="primary" onClick={() => navigate('/members')}>
+              <Space size="small">
+                <Button 
+                  type="primary" 
+                  onClick={() => navigate('/members')}
+                  style={{ 
+                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                    border: 'none'
+                  }}
+                >
                   管理会员
                 </Button>
-                <Button onClick={() => navigate('/register')}>
+                <Button 
+                  onClick={() => navigate('/register')}
+                  style={{ color: '#1890ff', borderColor: '#1890ff' }}
+                >
                   添加会员
                 </Button>
                 {(selectedHobby || selectedCategory || selectedIndustry) && (
-                  <Button onClick={clearAllFilters}>
+                  <Button 
+                    onClick={clearAllFilters}
+                    icon={<ClearOutlined />}
+                    danger
+                  >
                     清除筛选
                   </Button>
                 )}
               </Space>
             }
             style={{ height: '500px' }}
-            styles={{ body: { height: 'calc(100% - 57px)', overflow: 'auto' } }}
+            styles={{ body: { height: 'calc(100% - 57px)', overflow: 'auto', padding: '16px' } }}
           >
             <Table
               columns={allUsersColumns}
@@ -485,11 +694,29 @@ const DashboardPage: React.FC = () => {
                 pageSizeOptions: ['5', '10', '20', '50'],
               }}
               size="small"
+              rowClassName={(record, index) => 
+                index % 2 === 0 ? 'table-row-light' : 'table-row-dark'
+              }
             />
           </Card>
         </Col>
       </Row>
 
+      {/* 添加自定义样式 */}
+      <style>{`
+        .table-row-light {
+          background-color: #fafafa;
+        }
+        .table-row-dark {
+          background-color: #ffffff;
+        }
+        .ant-table-tbody > tr:hover > td {
+          background-color: #e6f7ff !important;
+        }
+        .ant-list-item:hover {
+          background-color: #f0f0f0 !important;
+        }
+      `}</style>
     </div>
   );
 };

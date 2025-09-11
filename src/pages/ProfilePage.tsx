@@ -105,7 +105,7 @@ const ProfilePage: React.FC = () => {
           color: 'white',
           border: 'none'
         }}
-        bodyStyle={{ padding: '32px' }}
+        styles={{ body: { padding: '32px' } }}
       >
         <Row align="middle" justify="space-between">
           <Col>
@@ -492,7 +492,7 @@ const ProfilePage: React.FC = () => {
         onCancel={() => setEditing(false)}
         footer={null}
         width={1200}
-        destroyOnClose
+        destroyOnHidden
         style={{ top: 20 }}
       >
         {editing && member && (

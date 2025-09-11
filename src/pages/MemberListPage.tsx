@@ -13,7 +13,9 @@ import {
   Modal,
   Form,
   message,
-  Tabs
+  Tabs,
+  Badge,
+  Statistic
 } from 'antd';
 import { 
   PlusOutlined, 
@@ -21,7 +23,13 @@ import {
   EditOutlined, 
   DeleteOutlined,
   UserOutlined,
-  UploadOutlined
+  UploadOutlined,
+  TeamOutlined,
+  FilterOutlined,
+  CrownOutlined,
+  TrophyOutlined,
+  CheckCircleOutlined,
+  ClockCircleOutlined
 } from '@ant-design/icons';
 import { useForm, Controller } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
@@ -253,75 +261,246 @@ const MemberListPage: React.FC = () => {
   ];
 
   const MemberListContent = () => (
-    <div>
-      <Row justify="space-between" align="middle" style={{ marginBottom: 16 }}>
-        <Col>
-          <Title level={4} style={{ margin: 0 }}>
-            会员列表
-          </Title>
-        </Col>
-        <Col>
-          <Space>
-            <Button 
-              icon={<UploadOutlined />}
-              onClick={handleBatchImport}
-            >
-              批量导入
-            </Button>
-            <Button 
-              type="primary" 
-              icon={<PlusOutlined />}
-              onClick={handleAddMember}
-            >
-              添加会员
-            </Button>
-          </Space>
-        </Col>
-      </Row>
-
-      <Row gutter={16} style={{ marginBottom: 16 }}>
-        <Col span={12}>
-          <Search
-            placeholder="搜索会员姓名或邮箱"
-            allowClear
-            enterButton={<SearchOutlined />}
-            size="large"
-            onSearch={handleSearch}
-          />
-        </Col>
-        <Col span={6}>
-          <Select
-            placeholder="选择用户户口类别"
-            style={{ width: '100%' }}
-            size="large"
-            value={accountTypeFilter}
-            onChange={handleAccountTypeFilter}
-          >
-            <Option value="all">全部类别</Option>
-            {getAccountTypeFormOptions().map(option => (
-              <Option key={option.value} value={option.value}>
-                {option.label}
-              </Option>
-            ))}
-          </Select>
-        </Col>
-      </Row>
-
-      <Table
-        columns={columns}
-        dataSource={members}
-        loading={isLoading}
-        rowKey="id"
-        pagination={{
-          current: pagination.page,
-          pageSize: pagination.limit,
-          total: pagination.total,
-          showSizeChanger: true,
-          showQuickJumper: true,
-          showTotal: (total, range) => 
-            `第 ${range[0]}-${range[1]} 条/共 ${total} 条`,
+    <div style={{ padding: '24px', background: '#f5f5f5', minHeight: '100vh' }}>
+      {/* 头部标题卡片 */}
+      <Card 
+        style={{ 
+          marginBottom: '24px',
+          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+          color: 'white',
+          border: 'none'
         }}
-      />
+        styles={{ body: { padding: '24px' } }}
+      >
+        <Row align="middle" justify="space-between">
+          <Col>
+            <div style={{ display: 'flex', alignItems: 'center' }}>
+              <TeamOutlined style={{ fontSize: '32px', marginRight: '16px', color: 'white' }} />
+              <div>
+                <Title level={2} style={{ margin: 0, color: 'white' }}>
+                  会员管理
+                </Title>
+                <p style={{ margin: '8px 0 0 0', fontSize: '16px', opacity: 0.9 }}>
+                  管理所有会员信息、状态和权限
+                </p>
+              </div>
+            </div>
+          </Col>
+          <Col>
+            <Space direction="vertical" align="end">
+              <Space>
+                <Button 
+                  icon={<UploadOutlined />}
+                  onClick={handleBatchImport}
+                  style={{ 
+                    background: 'rgba(255,255,255,0.2)', 
+                    border: '1px solid rgba(255,255,255,0.3)',
+                    color: 'white'
+                  }}
+                >
+                  批量导入
+                </Button>
+                <Button 
+                  type="primary" 
+                  icon={<PlusOutlined />}
+                  onClick={handleAddMember}
+                  style={{ 
+                    background: 'rgba(255,255,255,0.9)', 
+                    border: '1px solid rgba(255,255,255,0.9)',
+                    color: '#667eea'
+                  }}
+                >
+                  添加会员
+                </Button>
+              </Space>
+              <div style={{ textAlign: 'right', color: 'white', opacity: 0.9 }}>
+                <div style={{ fontSize: '14px', marginBottom: '4px' }}>会员总数</div>
+                <div style={{ fontSize: '20px', fontWeight: 'bold' }}>{pagination.total}</div>
+              </div>
+            </Space>
+          </Col>
+        </Row>
+      </Card>
+
+      {/* 统计卡片 */}
+      <Row gutter={[24, 24]} style={{ marginBottom: '24px' }}>
+        <Col xs={12} sm={6}>
+          <Card 
+            style={{ 
+              background: 'linear-gradient(135deg, #52c41a 0%, #3f8600 100%)',
+              color: 'white',
+              border: 'none'
+            }}
+            styles={{ body: { padding: '24px' } }}
+          >
+            <Statistic 
+              title={<span style={{ color: 'white', opacity: 0.9 }}>总会员数</span>}
+              value={pagination.total} 
+              prefix={<UserOutlined style={{ color: 'white' }} />}
+              valueStyle={{ color: 'white', fontSize: '28px', fontWeight: 'bold' }}
+            />
+            <div style={{ marginTop: '8px', color: 'white', opacity: 0.8, fontSize: '14px' }}>
+              全部注册会员
+            </div>
+          </Card>
+        </Col>
+        <Col xs={12} sm={6}>
+          <Card 
+            style={{ 
+              background: 'linear-gradient(135deg, #1890ff 0%, #096dd9 100%)',
+              color: 'white',
+              border: 'none'
+            }}
+            styles={{ body: { padding: '24px' } }}
+          >
+            <Statistic 
+              title={<span style={{ color: 'white', opacity: 0.9 }}>活跃会员</span>}
+              value={members.filter(m => m.status === 'active').length} 
+              prefix={<CheckCircleOutlined style={{ color: 'white' }} />}
+              valueStyle={{ color: 'white', fontSize: '28px', fontWeight: 'bold' }}
+            />
+            <div style={{ marginTop: '8px', color: 'white', opacity: 0.8, fontSize: '14px' }}>
+              当前活跃状态
+            </div>
+          </Card>
+        </Col>
+        <Col xs={12} sm={6}>
+          <Card 
+            style={{ 
+              background: 'linear-gradient(135deg, #fa8c16 0%, #d46b08 100%)',
+              color: 'white',
+              border: 'none'
+            }}
+            styles={{ body: { padding: '24px' } }}
+          >
+            <Statistic 
+              title={<span style={{ color: 'white', opacity: 0.9 }}>待审核</span>}
+              value={members.filter(m => m.status === 'pending').length} 
+              prefix={<ClockCircleOutlined style={{ color: 'white' }} />}
+              valueStyle={{ color: 'white', fontSize: '28px', fontWeight: 'bold' }}
+            />
+            <div style={{ marginTop: '8px', color: 'white', opacity: 0.8, fontSize: '14px' }}>
+              等待审核通过
+            </div>
+          </Card>
+        </Col>
+        <Col xs={12} sm={6}>
+          <Card 
+            style={{ 
+              background: 'linear-gradient(135deg, #722ed1 0%, #531dab 100%)',
+              color: 'white',
+              border: 'none'
+            }}
+            styles={{ body: { padding: '24px' } }}
+          >
+            <Statistic 
+              title={<span style={{ color: 'white', opacity: 0.9 }}>本月新增</span>}
+              value={members.filter(m => {
+                const joinDate = new Date(m.joinDate);
+                const now = new Date();
+                return joinDate.getMonth() === now.getMonth() && joinDate.getFullYear() === now.getFullYear();
+              }).length} 
+              prefix={<TrophyOutlined style={{ color: 'white' }} />}
+              valueStyle={{ color: 'white', fontSize: '28px', fontWeight: 'bold' }}
+            />
+            <div style={{ marginTop: '8px', color: 'white', opacity: 0.8, fontSize: '14px' }}>
+              本月新加入会员
+            </div>
+          </Card>
+        </Col>
+      </Row>
+
+      {/* 搜索和筛选区域 */}
+      <Card 
+        title={
+          <Space>
+            <FilterOutlined style={{ color: '#1890ff' }} />
+            <span>搜索和筛选</span>
+          </Space>
+        }
+        style={{ marginBottom: '24px' }}
+      >
+        <Row gutter={[24, 24]}>
+          <Col xs={24} sm={12} md={8}>
+            <Search
+              placeholder="搜索会员姓名或邮箱"
+              allowClear
+              enterButton={<SearchOutlined />}
+              size="large"
+              onSearch={handleSearch}
+              style={{ width: '100%' }}
+            />
+          </Col>
+          <Col xs={24} sm={12} md={8}>
+            <Select
+              placeholder="选择用户户口类别"
+              style={{ width: '100%' }}
+              size="large"
+              value={accountTypeFilter}
+              onChange={handleAccountTypeFilter}
+            >
+              <Option value="all">全部类别</Option>
+              {getAccountTypeFormOptions().map(option => (
+                <Option key={option.value} value={option.value}>
+                  {option.label}
+                </Option>
+              ))}
+            </Select>
+          </Col>
+          <Col xs={24} sm={12} md={8}>
+            <div style={{ textAlign: 'right' }}>
+              <Badge count={members.length} style={{ backgroundColor: '#52c41a' }}>
+                <Tag color="blue" style={{ fontSize: '16px', padding: '8px 16px' }}>
+                  当前显示 {members.length} 条记录
+                </Tag>
+              </Badge>
+            </div>
+          </Col>
+        </Row>
+      </Card>
+
+      {/* 会员列表表格 */}
+      <Card 
+        title={
+          <Space>
+            <TeamOutlined style={{ color: '#1890ff' }} />
+            <span>会员列表</span>
+            <Badge count={pagination.total} style={{ backgroundColor: '#52c41a' }} />
+          </Space>
+        }
+      >
+        <Table
+          columns={columns}
+          dataSource={members}
+          loading={isLoading}
+          rowKey="id"
+          pagination={{
+            current: pagination.page,
+            pageSize: pagination.limit,
+            total: pagination.total,
+            showSizeChanger: true,
+            showQuickJumper: true,
+            showTotal: (total, range) => 
+              `第 ${range[0]}-${range[1]} 条/共 ${total} 条`,
+          }}
+          rowClassName={(_, index) => 
+            index % 2 === 0 ? 'table-row-light' : 'table-row-dark'
+          }
+        />
+      </Card>
+
+      {/* 添加自定义样式 */}
+      <style>{`
+        .table-row-light {
+          background-color: #fafafa;
+        }
+        .table-row-dark {
+          background-color: #ffffff;
+        }
+        .ant-table-tbody > tr:hover > td {
+          background-color: #e6f7ff !important;
+        }
+      `}</style>
     </div>
   );
 
@@ -331,30 +510,56 @@ const MemberListPage: React.FC = () => {
         <Title level={3} style={{ marginBottom: 16 }}>会员管理</Title>
         <Tabs
           defaultActiveKey="member-list"
+          size="large"
           items={[
             {
               key: 'member-list',
-              label: '会员列表',
+              label: (
+                <span>
+                  <TeamOutlined />
+                  会员列表
+                </span>
+              ),
               children: <MemberListContent />
             },
             {
               key: 'senators',
-              label: '参议员管理',
+              label: (
+                <span>
+                  <CheckCircleOutlined />
+                  参议员管理
+                </span>
+              ),
               children: <SenatorManagement />
             },
             {
               key: 'visiting-membership',
-              label: '拜访会员管理',
+              label: (
+                <span>
+                  <TrophyOutlined />
+                  拜访会员管理
+                </span>
+              ),
               children: <VisitingMembershipManager />
             },
             {
               key: 'associate-membership',
-              label: '准会员管理',
+              label: (
+                <span>
+                  <UserOutlined />
+                  准会员管理
+                </span>
+              ),
               children: <AssociateMembershipManager />
             },
             {
               key: 'official-membership',
-              label: '正式会员管理',
+              label: (
+                <span>
+                  <CrownOutlined />
+                  正式会员管理
+                </span>
+              ),
               children: <OfficialMembershipManager />
             }
           ]}

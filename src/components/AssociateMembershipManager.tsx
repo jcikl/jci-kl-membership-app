@@ -1,5 +1,16 @@
 import React from 'react';
-import { Card, Table, Tag, Space, Button, Row, Col, Statistic, message, Typography } from 'antd';
+import { Card, Table, Tag, Space, Button, Row, Col, Statistic, message, Typography, Progress, Badge } from 'antd';
+import { 
+  UserOutlined, 
+  TeamOutlined, 
+  CrownOutlined,
+  TrophyOutlined,
+  ReloadOutlined,
+  CheckCircleOutlined,
+  ClockCircleOutlined,
+  CloseCircleOutlined,
+  FileTextOutlined
+} from '@ant-design/icons';
 import { getMembers } from '@/services/memberService';
 import { Member } from '@/types';
 import dayjs from 'dayjs';
@@ -185,102 +196,236 @@ const AssociateMembershipManager: React.FC = () => {
   }, [members]);
 
   return (
-    <Card title="准会员管理（40岁以上）" extra={<Button onClick={fetchAssociateMembers} loading={loading}>刷新</Button>}>
+    <div style={{ padding: '24px', background: '#f5f5f5', minHeight: '100vh' }}>
+      {/* 头部标题卡片 */}
+      <Card 
+        style={{ 
+          marginBottom: '24px',
+          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+          color: 'white',
+          border: 'none'
+        }}
+        styles={{ body: { padding: '24px' } }}
+      >
+        <Row align="middle" justify="space-between">
+          <Col>
+            <div style={{ display: 'flex', alignItems: 'center' }}>
+              <CrownOutlined style={{ fontSize: '32px', marginRight: '16px', color: 'white' }} />
+              <div>
+                <Typography.Title level={2} style={{ margin: 0, color: 'white' }}>
+                  准会员管理（40岁以上）
+                </Typography.Title>
+                <p style={{ margin: '8px 0 0 0', fontSize: '16px', opacity: 0.9 }}>
+                  管理40岁以上的准会员申请和付费状态
+                </p>
+              </div>
+            </div>
+          </Col>
+          <Col>
+            <Space direction="vertical" align="end">
+              <Button 
+                type="primary"
+                icon={<ReloadOutlined />}
+                onClick={fetchAssociateMembers} 
+                loading={loading}
+                style={{ 
+                  background: 'rgba(255,255,255,0.2)', 
+                  border: '1px solid rgba(255,255,255,0.3)',
+                  color: 'white'
+                }}
+              >
+                刷新数据
+              </Button>
+              <div style={{ textAlign: 'right', color: 'white', opacity: 0.9 }}>
+                <div style={{ fontSize: '14px', marginBottom: '4px' }}>数据完整性</div>
+                <Progress 
+                  percent={Math.round((stats.verified / Math.max(stats.total, 1)) * 100)} 
+                  size="small" 
+                  strokeColor="white"
+                  trailColor="rgba(255,255,255,0.3)"
+                  style={{ width: '120px' }}
+                />
+              </div>
+            </Space>
+          </Col>
+        </Row>
+      </Card>
+
       {/* 统计卡片 */}
-      <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
+      <Row gutter={[24, 24]} style={{ marginBottom: '24px' }}>
         <Col xs={12} sm={6}>
-          <Card size="small">
-            <Statistic title="总准会员(40+)" value={stats.total} />
+          <Card 
+            style={{ 
+              background: 'linear-gradient(135deg, #52c41a 0%, #3f8600 100%)',
+              color: 'white',
+              border: 'none'
+            }}
+            styles={{ body: { padding: '24px' } }}
+          >
+            <Statistic 
+              title={<span style={{ color: 'white', opacity: 0.9 }}>总准会员(40+)</span>}
+              value={stats.total} 
+              prefix={<UserOutlined style={{ color: 'white' }} />}
+              valueStyle={{ color: 'white', fontSize: '28px', fontWeight: 'bold' }}
+            />
+            <div style={{ marginTop: '8px', color: 'white', opacity: 0.8, fontSize: '14px' }}>
+              40岁以上准会员总数
+            </div>
           </Card>
         </Col>
         <Col xs={12} sm={6}>
-          <Card size="small">
-            <Statistic title="已付费验证" value={stats.verified} valueStyle={{ color: '#3f8600' }} />
+          <Card 
+            style={{ 
+              background: 'linear-gradient(135deg, #1890ff 0%, #096dd9 100%)',
+              color: 'white',
+              border: 'none'
+            }}
+            styles={{ body: { padding: '24px' } }}
+          >
+            <Statistic 
+              title={<span style={{ color: 'white', opacity: 0.9 }}>已付费验证</span>}
+              value={stats.verified} 
+              prefix={<CheckCircleOutlined style={{ color: 'white' }} />}
+              valueStyle={{ color: 'white', fontSize: '28px', fontWeight: 'bold' }}
+            />
+            <div style={{ marginTop: '8px', color: 'white', opacity: 0.8, fontSize: '14px' }}>
+              已完成付费验证
+            </div>
           </Card>
         </Col>
         <Col xs={12} sm={6}>
-          <Card size="small">
-            <Statistic title="待验证" value={stats.pending} valueStyle={{ color: '#cf1322' }} />
+          <Card 
+            style={{ 
+              background: 'linear-gradient(135deg, #fa8c16 0%, #d46b08 100%)',
+              color: 'white',
+              border: 'none'
+            }}
+            styles={{ body: { padding: '24px' } }}
+          >
+            <Statistic 
+              title={<span style={{ color: 'white', opacity: 0.9 }}>待验证</span>}
+              value={stats.pending} 
+              prefix={<ClockCircleOutlined style={{ color: 'white' }} />}
+              valueStyle={{ color: 'white', fontSize: '28px', fontWeight: 'bold' }}
+            />
+            <div style={{ marginTop: '8px', color: 'white', opacity: 0.8, fontSize: '14px' }}>
+              等待付费验证
+            </div>
           </Card>
         </Col>
         <Col xs={12} sm={6}>
-          <Card size="small">
-            <Statistic title="未付费" value={stats.unpaid} valueStyle={{ color: '#cf1322' }} />
+          <Card 
+            style={{ 
+              background: 'linear-gradient(135deg, #ff4d4f 0%, #cf1322 100%)',
+              color: 'white',
+              border: 'none'
+            }}
+            styles={{ body: { padding: '24px' } }}
+          >
+            <Statistic 
+              title={<span style={{ color: 'white', opacity: 0.9 }}>未付费</span>}
+              value={stats.unpaid} 
+              prefix={<CloseCircleOutlined style={{ color: 'white' }} />}
+              valueStyle={{ color: 'white', fontSize: '28px', fontWeight: 'bold' }}
+            />
+            <div style={{ marginTop: '8px', color: 'white', opacity: 0.8, fontSize: '14px' }}>
+              尚未提交付费
+            </div>
           </Card>
         </Col>
       </Row>
 
       {/* 年龄分组统计 */}
-      <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
+      <Row gutter={[24, 24]} style={{ marginBottom: '24px' }}>
         <Col xs={8}>
-          <Card size="small">
-            <Statistic title="41-45岁" value={stats.ageGroups['41-45']} valueStyle={{ color: '#1890ff' }} />
+          <Card 
+            title={<><UserOutlined style={{ color: '#1890ff' }} /> 41-45岁</>}
+            style={{ textAlign: 'center' }}
+          >
+            <Statistic 
+              value={stats.ageGroups['41-45']} 
+              valueStyle={{ color: '#1890ff', fontSize: '24px', fontWeight: 'bold' }}
+            />
+            <div style={{ marginTop: '8px', color: '#666', fontSize: '14px' }}>
+              {Math.round((stats.ageGroups['41-45'] / Math.max(stats.total, 1)) * 100)}% 占比
+            </div>
           </Card>
         </Col>
         <Col xs={8}>
-          <Card size="small">
-            <Statistic title="46-50岁" value={stats.ageGroups['46-50']} valueStyle={{ color: '#fa8c16' }} />
+          <Card 
+            title={<><TeamOutlined style={{ color: '#fa8c16' }} /> 46-50岁</>}
+            style={{ textAlign: 'center' }}
+          >
+            <Statistic 
+              value={stats.ageGroups['46-50']} 
+              valueStyle={{ color: '#fa8c16', fontSize: '24px', fontWeight: 'bold' }}
+            />
+            <div style={{ marginTop: '8px', color: '#666', fontSize: '14px' }}>
+              {Math.round((stats.ageGroups['46-50'] / Math.max(stats.total, 1)) * 100)}% 占比
+            </div>
           </Card>
         </Col>
         <Col xs={8}>
-          <Card size="small">
-            <Statistic title="50岁以上" value={stats.ageGroups['50+']} valueStyle={{ color: '#f5222d' }} />
+          <Card 
+            title={<><TrophyOutlined style={{ color: '#ff4d4f' }} /> 50岁以上</>}
+            style={{ textAlign: 'center' }}
+          >
+            <Statistic 
+              value={stats.ageGroups['50+']} 
+              valueStyle={{ color: '#ff4d4f', fontSize: '24px', fontWeight: 'bold' }}
+            />
+            <div style={{ marginTop: '8px', color: '#666', fontSize: '14px' }}>
+              {Math.round((stats.ageGroups['50+'] / Math.max(stats.total, 1)) * 100)}% 占比
+            </div>
           </Card>
         </Col>
       </Row>
 
-      {/* 准会员列表 - 两列布局 */}
-      <Row gutter={[16, 16]}>
-        <Col xs={24} lg={12}>
-          <Card 
-            title={
-              <Space>
-                <Typography.Title level={5} style={{ margin: 0 }}>准会员列表</Typography.Title>
-                <Tag color="blue">{members.length}</Tag>
-              </Space>
-            }
-            size="small"
-            style={{ height: '600px', display: 'flex', flexDirection: 'column' }}
-            styles={{ body: { flex: 1, display: 'flex', flexDirection: 'column', padding: '12px' } }}
-          >
-            <Table
-              rowKey="id"
-              dataSource={members.slice(0, Math.ceil(members.length / 2))}
-              columns={columns}
-              loading={loading}
-              pagination={{ pageSize: 8, size: 'small' }}
-              size="small"
-              style={{ flex: 1 }}
-              scroll={{ x: 600 }}
-            />
-          </Card>
-        </Col>
-        <Col xs={24} lg={12}>
-          <Card 
-            title={
-              <Space>
-                <Typography.Title level={5} style={{ margin: 0 }}>准会员列表</Typography.Title>
-                <Tag color="blue">{members.length}</Tag>
-              </Space>
-            }
-            size="small"
-            style={{ height: '600px', display: 'flex', flexDirection: 'column' }}
-            styles={{ body: { flex: 1, display: 'flex', flexDirection: 'column', padding: '12px' } }}
-          >
-            <Table
-              rowKey="id"
-              dataSource={members.slice(Math.ceil(members.length / 2))}
-              columns={columns}
-              loading={loading}
-              pagination={{ pageSize: 8, size: 'small' }}
-              size="small"
-              style={{ flex: 1 }}
-              scroll={{ x: 600 }}
-            />
-          </Card>
-        </Col>
-      </Row>
-    </Card>
+      {/* 准会员列表 */}
+      <Card 
+        title={
+          <Space>
+            <FileTextOutlined style={{ color: '#1890ff' }} />
+            <span>准会员列表</span>
+            <Badge count={members.length} style={{ backgroundColor: '#52c41a' }} />
+          </Space>
+        }
+        style={{ marginBottom: '24px' }}
+      >
+        <Table
+          rowKey="id"
+          dataSource={members}
+          columns={columns}
+          loading={loading}
+          pagination={{ 
+            pageSize: 10, 
+            showSizeChanger: true,
+            showQuickJumper: true,
+            showTotal: (total, range) => 
+              `第 ${range[0]}-${range[1]} 条，共 ${total} 条记录`,
+            pageSizeOptions: ['5', '10', '20', '50'],
+          }}
+          size="middle"
+          scroll={{ x: 800 }}
+          rowClassName={(_, index) => 
+            index % 2 === 0 ? 'table-row-light' : 'table-row-dark'
+          }
+        />
+      </Card>
+
+      {/* 添加自定义样式 */}
+      <style>{`
+        .table-row-light {
+          background-color: #fafafa;
+        }
+        .table-row-dark {
+          background-color: #ffffff;
+        }
+        .ant-table-tbody > tr:hover > td {
+          background-color: #e6f7ff !important;
+        }
+      `}</style>
+    </div>
   );
 };
 

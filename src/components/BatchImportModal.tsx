@@ -11,15 +11,19 @@ import {
   Tag,
   Tooltip,
   Input,
+  Tabs,
 } from 'antd';
 import { 
   CopyOutlined, 
   DeleteOutlined, 
   CheckCircleOutlined,
   CloseCircleOutlined,
-  PlusOutlined
+  PlusOutlined,
+  FileExcelOutlined,
+  TableOutlined
 } from '@ant-design/icons';
 import { Member, MemberStatus, MemberLevel } from '@/types';
+import ExcelUpload from './ExcelUpload';
 
 const { Text } = Typography;
 
@@ -97,6 +101,7 @@ const BatchImportModal: React.FC<BatchImportModalProps> = ({
   const [members, setMembers] = useState<ParsedMember[]>([]);
   const [isImporting, setIsImporting] = useState(false);
   const [importResult, setImportResult] = useState<{ success: number; failed: number; errors: string[] } | null>(null);
+  const [activeTab, setActiveTab] = useState('manual');
 
   // 创建空行数据
   const createEmptyMember = (): ParsedMember => ({
@@ -426,6 +431,14 @@ const BatchImportModal: React.FC<BatchImportModalProps> = ({
     }).catch(() => {
       message.error('复制失败');
     });
+  };
+
+  // 处理Excel数据导入
+  const handleExcelDataParsed = (excelMembers: ParsedMember[]) => {
+    setMembers(excelMembers);
+    setImportResult(null);
+    setActiveTab('manual'); // 切换到手动编辑标签页
+    message.success(`成功导入 ${excelMembers.length} 条记录，请检查数据后点击导入`);
   };
 
   const columns = [
@@ -1186,6 +1199,110 @@ const BatchImportModal: React.FC<BatchImportModalProps> = ({
   const validCount = members.filter(m => m.isValid).length;
   const invalidCount = members.filter(m => !m.isValid).length;
 
+  const tabItems = [
+    {
+      key: 'excel',
+      label: (
+        <span>
+          <FileExcelOutlined />
+          Excel导入
+        </span>
+      ),
+      children: (
+        <ExcelUpload 
+          onDataParsed={handleExcelDataParsed}
+          onTemplateDownload={handleCopyTemplate}
+        />
+      ),
+    },
+    {
+      key: 'manual',
+      label: (
+        <span>
+          <TableOutlined />
+          手动编辑
+        </span>
+      ),
+      children: (
+        <div>
+          <div style={{ marginBottom: 16 }}>
+            <Space>
+              <Button 
+                type="primary" 
+                icon={<PlusOutlined />}
+                onClick={addNewRow}
+              >
+                添加新行
+              </Button>
+              <Button 
+                onClick={handleLoadExample}
+              >
+                加载示例数据
+              </Button>
+              <Button 
+                onClick={handleCopyTemplate}
+                icon={<CopyOutlined />}
+              >
+                复制模板
+              </Button>
+              <Button 
+                onClick={handleClear}
+                icon={<DeleteOutlined />}
+                danger
+              >
+                清空数据
+              </Button>
+            </Space>
+          </div>
+          
+          <Alert
+            message="使用说明"
+            description={
+              <div>
+                <p>1. 您可以直接在表格中编辑数据</p>
+                <p>2. 也可以从Excel复制数据粘贴到此处</p>
+                <p>3. 点击"加载示例数据"查看数据格式示例</p>
+                <p>4. 点击"复制模板"获取Excel模板</p>
+                <p>5. 支持添加新行和删除行操作，删除所有行后会自动添加一行空数据</p>
+                <p><strong>注意：</strong>粘贴数据时请确保使用制表符分隔，不是空格。如果只有14个字段，请检查数据格式。</p>
+                <details style={{ marginTop: 8 }}>
+                  <summary><strong>字段列表（按ProfileEditForm顺序）：</strong></summary>
+                  <div style={{ marginTop: 8, fontSize: '12px', lineHeight: '1.4' }}>
+                    1.姓名 2.手机号 3.完整姓名(NRIC) 4.参议员编号 5.性别 6.种族 7.地址 8.NRIC/护照号 9.出生日期 10.LinkedIn 11.公司网站 12.公司 13.行业详情 14.自身行业 15.职位 16.类别 17.关注行业 18.兴趣爱好 19.JCI活动兴趣 20.JCI期望收益 21.公司简介 22.介绍人 23.五年愿景 24.如何成为活跃会员 25.刺绣姓名 26.T恤尺码 27.外套尺码 28.T恤版型 29.T恤领取状态 30.接受国际商务 31.付款日期 32.背书日期 33.核验日期 34.头像链接 35.付款凭证链接 36.入会日期 37.JCI职位 38.职位开始日期 39.职位结束日期 40.任期开始日期 41.任期结束日期 42.会员编号 43.邮箱 44.状态 45.等级 46.户口类别 47.WhatsApp群组
+                  </div>
+                </details>
+              </div>
+            }
+            type="info"
+            showIcon
+            style={{ marginBottom: 16 }}
+          />
+
+          <div style={{ marginBottom: 16 }}>
+            <Space>
+              <Text strong>有效记录: {validCount}</Text>
+              <Text strong>无效记录: {invalidCount}</Text>
+            </Space>
+          </div>
+
+          <div style={{ marginBottom: 16, fontSize: '12px', color: '#666' }}>
+                可以直接在表格中编辑，或从Excel复制数据粘贴到此处
+              </div>
+              <div onPaste={handlePaste}>
+                <Table
+                  columns={columns}
+                  dataSource={members}
+                  pagination={false}
+                  size="small"
+                  scroll={{ x: 2000, y: 400 }}
+                  rowKey={(record) => record.rowIndex?.toString() || '0'}
+                />
+              </div>
+        </div>
+      ),
+    },
+  ];
+
   return (
     <Modal
       title="批量导入会员"
@@ -1197,79 +1314,11 @@ const BatchImportModal: React.FC<BatchImportModalProps> = ({
       destroyOnHidden
     >
       <div style={{ maxHeight: '80vh', overflowY: 'auto' }}>
-        <div style={{ marginBottom: 16 }}>
-          <Space>
-            <Button 
-              type="primary" 
-              icon={<PlusOutlined />}
-              onClick={addNewRow}
-            >
-              添加新行
-            </Button>
-            <Button 
-              onClick={handleLoadExample}
-            >
-              加载示例数据
-            </Button>
-            <Button 
-              onClick={handleCopyTemplate}
-              icon={<CopyOutlined />}
-            >
-              复制模板
-            </Button>
-            <Button 
-              onClick={handleClear}
-              icon={<DeleteOutlined />}
-              danger
-            >
-              清空数据
-            </Button>
-          </Space>
-        </div>
-        
-        <Alert
-          message="使用说明"
-          description={
-            <div>
-              <p>1. 您可以直接在表格中编辑数据</p>
-              <p>2. 也可以从Excel复制数据粘贴到此处</p>
-              <p>3. 点击"加载示例数据"查看数据格式示例</p>
-              <p>4. 点击"复制模板"获取Excel模板</p>
-              <p>5. 支持添加新行和删除行操作，删除所有行后会自动添加一行空数据</p>
-              <p><strong>注意：</strong>粘贴数据时请确保使用制表符分隔，不是空格。如果只有14个字段，请检查数据格式。</p>
-              <details style={{ marginTop: 8 }}>
-                <summary><strong>字段列表（按ProfileEditForm顺序）：</strong></summary>
-                <div style={{ marginTop: 8, fontSize: '12px', lineHeight: '1.4' }}>
-                  1.姓名 2.手机号 3.完整姓名(NRIC) 4.参议员编号 5.性别 6.种族 7.地址 8.NRIC/护照号 9.出生日期 10.LinkedIn 11.公司网站 12.公司 13.行业详情 14.自身行业 15.职位 16.类别 17.关注行业 18.兴趣爱好 19.JCI活动兴趣 20.JCI期望收益 21.公司简介 22.介绍人 23.五年愿景 24.如何成为活跃会员 25.刺绣姓名 26.T恤尺码 27.外套尺码 28.T恤版型 29.T恤领取状态 30.接受国际商务 31.付款日期 32.背书日期 33.核验日期 34.头像链接 35.付款凭证链接 36.入会日期 37.JCI职位 38.职位开始日期 39.职位结束日期 40.任期开始日期 41.任期结束日期 42.会员编号 43.邮箱 44.状态 45.等级 46.户口类别 47.WhatsApp群组
-                </div>
-              </details>
-            </div>
-          }
-          type="info"
-          showIcon
-          style={{ marginBottom: 16 }}
+        <Tabs 
+          activeKey={activeTab} 
+          onChange={setActiveTab}
+          items={tabItems}
         />
-
-        <div style={{ marginBottom: 16 }}>
-          <Space>
-            <Text strong>有效记录: {validCount}</Text>
-            <Text strong>无效记录: {invalidCount}</Text>
-          </Space>
-        </div>
-
-        <div style={{ marginBottom: 16, fontSize: '12px', color: '#666' }}>
-              可以直接在表格中编辑，或从Excel复制数据粘贴到此处
-            </div>
-            <div onPaste={handlePaste}>
-              <Table
-                columns={columns}
-                dataSource={members}
-                pagination={false}
-                size="small"
-                scroll={{ x: 2000, y: 400 }}
-                rowKey={(_, index) => index?.toString() || '0'}
-              />
-            </div>
 
         {importResult && (
           <Card style={{ marginTop: 16 }}>
