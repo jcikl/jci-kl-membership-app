@@ -280,11 +280,85 @@ export const applyAgeRule = async (): Promise<RuleExecutionResult> => {
   return result;
 };
 
+// 规则0: 经理事团审核预检查（荣誉/拜访/正式）
+export const applyCouncilPrecheckRules = async (): Promise<RuleExecutionResult> => {
+  const result: RuleExecutionResult = {
+    ruleId: 'council_precheck_rule',
+    ruleName: '经理事团审核预检查规则',
+    affectedMembers: 0,
+    successCount: 0,
+    failedCount: 0,
+    errors: [],
+    executedAt: new Date().toISOString()
+  };
+
+  try {
+    // 拉取需要审核的数据：
+    // - 荣誉会员：有 senatorId，且未标记为已审核通过
+    // - 拜访会员：proposedMembershipCategory === 'visitor'，检查 nationality 存在
+    // - 正式会员：proposedMembershipCategory === 'active'，检查入会>=6个月且 requiredTasksCompleted
+
+    const q = query(collection(db, MEMBERS_COLLECTION));
+    const snapshot = await getDocs(q);
+    const members = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Member[];
+
+    const batch = writeBatch(db);
+    let toProcess = 0;
+
+    for (const member of members) {
+      const profile = member.profile || {} as any;
+
+      // 计算是否入会>=6个月
+      let sixMonthsOk = false;
+      if (member.joinDate) {
+        const join = new Date(member.joinDate);
+        const now = new Date();
+        const monthDiff = (now.getFullYear() - join.getFullYear()) * 12 + (now.getMonth() - join.getMonth());
+        sixMonthsOk = monthDiff >= 6 || (monthDiff === 5 && now.getDate() >= join.getDate());
+      }
+
+      // 条件识别
+      const wantsVisitor = profile.proposedMembershipCategory === 'visitor' && !!profile.nationality;
+      const wantsOfficial = profile.proposedMembershipCategory === 'active' && sixMonthsOk && profile.requiredTasksCompleted === true;
+      const wantsHonorary = !!profile.senatorId && (profile.membershipCategory as any) !== 'honorary' && profile.categoryReviewStatus !== 'approved';
+
+      if (wantsVisitor || wantsOfficial || wantsHonorary) {
+        toProcess++;
+        const memberRef = doc(db, MEMBERS_COLLECTION, member.id);
+        batch.update(memberRef, {
+          'profile.categoryReviewStatus': 'pending',
+          'profile.categoryReviewNotes': wantsHonorary
+            ? `荣誉会员审核：检测到参议员编号 ${profile.senatorId}`
+            : wantsVisitor
+              ? `拜访会员审核：检测到国籍 ${profile.nationality}`
+              : `正式会员审核：入会>=6个月且已完成指定任务`,
+          updatedAt: new Date().toISOString()
+        });
+      }
+    }
+
+    result.affectedMembers = toProcess;
+    if (toProcess > 0) {
+      await batch.commit();
+      result.successCount = toProcess;
+    }
+
+  } catch (error) {
+    result.errors.push(`执行经理事团审核预检查失败: ${error instanceof Error ? error.message : '未知错误'}`);
+  }
+
+  return result;
+};
+
 // 执行所有自动化规则
 export const executeAllAutoRules = async (): Promise<RuleExecutionResult[]> => {
   const results: RuleExecutionResult[] = [];
 
   try {
+    // 执行理事团审核预检查规则
+    const councilPrecheckResult = await applyCouncilPrecheckRules();
+    results.push(councilPrecheckResult);
+
     // 执行参议员规则
     const senatorResult = await applySenatorRule();
     results.push(senatorResult);
@@ -361,6 +435,8 @@ export const getRuleStats = async (): Promise<{
 // 手动触发规则执行
 export const triggerRuleExecution = async (ruleId: string): Promise<RuleExecutionResult> => {
   switch (ruleId) {
+    case 'council_precheck_rule':
+      return await applyCouncilPrecheckRules();
     case 'senator_rule':
       return await applySenatorRule();
     case 'age_rule':
@@ -478,6 +554,7 @@ export const executeRuleForMembers = async (ruleId: string, memberIds: string[])
 // 获取规则名称
 const getRuleName = (ruleId: string): string => {
   const ruleNames: Record<string, string> = {
+    'council_precheck_rule': '经理事团审核预检查规则',
     'senator_rule': '参议员编号规则',
     'age_rule': '年龄规则'
   };
@@ -487,6 +564,7 @@ const getRuleName = (ruleId: string): string => {
 // 获取目标分类
 const getTargetCategory = (ruleId: string): string => {
   const categories: Record<string, string> = {
+    'council_precheck_rule': 'associate',
     'senator_rule': 'honorary',
     'age_rule': 'affiliate'
   };
@@ -496,6 +574,8 @@ const getTargetCategory = (ruleId: string): string => {
 // 获取分类原因
 const getCategoryReason = (ruleId: string, member: any): string => {
   switch (ruleId) {
+    case 'council_precheck_rule':
+      return `经理事团审核预检查：已生成待审核记录`;
     case 'senator_rule':
       return `拥有参议员编号 ${member.profile?.senatorId}，自动升级为荣誉会员`;
     case 'age_rule':
@@ -534,12 +614,20 @@ export const initializeDefaultRules = async (): Promise<void> => {
   try {
     const defaultRules: Omit<AutoRule, 'id' | 'createdAt' | 'updatedAt'>[] = [
       {
+        name: '经理事团审核预检查规则',
+        description: '根据条件识别需要经理事团审核的类别申请，生成待审核记录',
+        condition: '荣誉/拜访/正式会员申请',
+        action: '生成待审核记录，设置categoryReviewStatus=pending',
+        isActive: true,
+        priority: 1
+      },
+      {
         name: '新用户准会员规则',
         description: '所有新用户默认为准会员',
         condition: '新用户注册',
         action: '设置为准会员',
         isActive: true,
-        priority: 1
+        priority: 2
       },
       {
         name: '参议员编号规则',
@@ -547,7 +635,7 @@ export const initializeDefaultRules = async (): Promise<void> => {
         condition: 'profile.senatorId 不为空',
         action: '设置为荣誉会员',
         isActive: true,
-        priority: 2
+        priority: 3
       },
       {
         name: '年龄规则',
@@ -555,7 +643,7 @@ export const initializeDefaultRules = async (): Promise<void> => {
         condition: '年龄 >= 40岁',
         action: '设置为联合会员',
         isActive: true,
-        priority: 3
+        priority: 4
       }
     ];
 

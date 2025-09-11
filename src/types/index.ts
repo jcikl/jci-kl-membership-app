@@ -110,6 +110,7 @@ export interface MemberProfile {
 
   // IDs
   nricOrPassport?: string;
+  nationality?: string; // 国籍（用于拜访会员审核）
 
   // Business profile
   companyIntro?: string; // Briefly share your company’s operations and your role
@@ -155,6 +156,14 @@ export interface MemberProfile {
   categoryReason?: string; // 分类原因
   categoryAssignedBy?: string; // 分类分配人
   categoryAssignedDate?: string; // 分类分配日期
+  // 分类审核（经理事团）工作流
+  proposedMembershipCategory?: 'active' | 'associate' | 'honorary' | 'affiliate' | 'visitor' | 'alumni' | 'corporate' | 'student'; // 系统或用户提交的待审核类别
+  categoryReviewStatus?: 'pending' | 'approved' | 'rejected';
+  categoryReviewNotes?: string;
+  categoryReviewerId?: string;
+  categoryReviewedAt?: string;
+  // 正式会员指定任务完成标志
+  requiredTasksCompleted?: boolean;
   
   // 权限相关
   effectivePermissions?: string[];
@@ -163,6 +172,16 @@ export interface MemberProfile {
     scopes?: Record<string, any>;
     expiresAt?: string;
     delegationRef?: string;
+  }>;
+
+  // 自定义任务完成情况（由管理员/开发员定义）
+  taskCompletions?: Array<{
+    taskId: string;
+    title: string;
+    type: 'event_participation' | 'committee_role' | 'council_meeting' | 'course_completion' | 'other';
+    completed: boolean;
+    completedAt?: string;
+    metadata?: Record<string, any>; // 例如活动ID、会议日期、课程ID等
   }>;
   
   // 任期管理
