@@ -6,6 +6,7 @@ import RBACBindings from '@/components/rbac/RBACBindings';
 import RBACAudit from '@/components/rbac/RBACAudit';
 import ChapterSettings from '@/components/ChapterSettings';
 import StorageTest from '@/components/StorageTest';
+import CouncilTasksManager from '@/components/CouncilTasksManager';
 
 const { Title } = Typography;
 
@@ -23,6 +24,11 @@ const SystemSettingsPage: React.FC = () => {
             key: 'chapter',
             label: '分会设置',
             children: <ChapterSettings />
+          },
+          {
+            key: 'council-tasks',
+            label: '理事团任务',
+            children: <CouncilTasksManager />
           },
           {
             key: 'storage-test',

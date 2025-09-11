@@ -12,6 +12,7 @@ import {
 } from 'firebase/firestore';
 import { db } from './firebase';
 import { Member } from '@/types';
+import { getMemberTaskCompletions } from '@/services/taskService';
 
 // 自动化规则类型定义
 export interface AutoRule {
@@ -319,7 +320,19 @@ export const applyCouncilPrecheckRules = async (): Promise<RuleExecutionResult> 
 
       // 条件识别
       const wantsVisitor = profile.proposedMembershipCategory === 'visitor' && !!profile.nationality;
-      const wantsOfficial = profile.proposedMembershipCategory === 'active' && sixMonthsOk && profile.requiredTasksCompleted === true;
+
+      // 计算是否满足正式会员的任务要求：至少一项活动、筹委、理事会议、课程
+      let tasksOk = false;
+      try {
+        const completions = await getMemberTaskCompletions(member.id);
+        const hasEvent = completions.some(c => c.type === 'event_participation' && c.completed);
+        const hasCommittee = completions.some(c => c.type === 'committee_role' && c.completed);
+        const hasCouncil = completions.some(c => c.type === 'council_meeting' && c.completed);
+        const hasCourse = completions.some(c => c.type === 'course_completion' && c.completed);
+        tasksOk = hasEvent && hasCommittee && hasCouncil && hasCourse;
+      } catch {}
+
+      const wantsOfficial = profile.proposedMembershipCategory === 'active' && sixMonthsOk && (profile.requiredTasksCompleted === true || tasksOk);
       const wantsHonorary = !!profile.senatorId && (profile.membershipCategory as any) !== 'honorary' && profile.categoryReviewStatus !== 'approved';
 
       if (wantsVisitor || wantsOfficial || wantsHonorary) {
