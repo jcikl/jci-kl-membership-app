@@ -286,3 +286,49 @@ export const createMembersBatch = async (membersData: Omit<Member, 'id' | 'creat
     throw error;
   }
 };
+
+// 批量更新会员
+export const updateMembersBatch = async (
+  memberIds: string[], 
+  updates: Partial<Member>, 
+  reason?: string
+): Promise<{ success: number; failed: number; errors: string[] }> => {
+  try {
+    const batch = writeBatch(db);
+    let successCount = 0;
+    const errors: string[] = [];
+
+    // 准备更新数据
+    const updateData = {
+      ...cleanUndefinedValues(updates),
+      updatedAt: new Date().toISOString(),
+      ...(reason && { lastUpdateReason: reason })
+    };
+
+    for (const memberId of memberIds) {
+      try {
+        const memberRef = doc(db, MEMBERS_COLLECTION, memberId);
+        
+        // 添加到批量操作
+        batch.update(memberRef, updateData);
+        successCount++;
+      } catch (error) {
+        console.error(`Error updating member ${memberId}:`, error);
+        errors.push(`会员 ${memberId} 更新失败: ${error instanceof Error ? error.message : '未知错误'}`);
+      }
+    }
+
+    if (successCount > 0) {
+      await batch.commit();
+    }
+
+    return {
+      success: successCount,
+      failed: memberIds.length - successCount,
+      errors
+    };
+  } catch (error) {
+    console.error('Batch update members error:', error);
+    throw new Error(`批量更新会员失败: ${error instanceof Error ? error.message : '未知错误'}`);
+  }
+};

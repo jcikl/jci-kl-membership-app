@@ -29,7 +29,9 @@ import {
   CrownOutlined,
   TrophyOutlined,
   CheckCircleOutlined,
-  ClockCircleOutlined
+  ClockCircleOutlined,
+  SettingOutlined,
+  CalendarOutlined
 } from '@ant-design/icons';
 import { useForm, Controller } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
@@ -37,12 +39,16 @@ import * as yup from 'yup';
 import { useMemberStore } from '@/store/memberStore';
 import { Member, MemberLevel } from '@/types';
 import { getAccountTypeTagProps, getAccountTypeFormOptions, isValidAccountType } from '@/utils/accountType';
+import { updateMembersBatch } from '@/services/memberService';
 import ProfileEditForm from '@/components/ProfileEditForm';
 import BatchImportModal from '@/components/BatchImportModal';
 import SenatorManagement from '@/components/SenatorManagement';
 import VisitingMembershipManager from '@/components/VisitingMembershipManager';
 import AssociateMembershipManager from '@/components/AssociateMembershipManager';
 import OfficialMembershipManager from '@/components/OfficialMembershipManager';
+import NricToBirthDateConverter from '@/components/NricToBirthDateConverter';
+import FieldSelector, { FieldOption, FieldPreset } from '@/components/FieldSelector';
+import BatchSettingsModal, { BatchSettings } from '@/components/BatchSettingsModal';
 
 const { Title } = Typography;
 const { Search } = Input;
@@ -79,6 +85,127 @@ const MemberListPage: React.FC = () => {
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [isBatchImportVisible, setIsBatchImportVisible] = useState(false);
   const [editingMember, setEditingMember] = useState<Member | null>(null);
+  const [isFieldSelectorVisible, setIsFieldSelectorVisible] = useState(false);
+  const [selectedFields, setSelectedFields] = useState<string[]>([]);
+  const [isBatchSettingsVisible, setIsBatchSettingsVisible] = useState(false);
+  const [selectedMembers, setSelectedMembers] = useState<Member[]>([]);
+  const [isNricConverterVisible, setIsNricConverterVisible] = useState(false);
+
+  // 定义可用的字段选项
+  const availableFields: FieldOption[] = [
+    // 基本信息
+    { key: 'name', label: '姓名', category: '基本信息', required: true },
+    { key: 'email', label: '邮箱', category: '基本信息', required: true },
+    { key: 'phone', label: '手机号', category: '基本信息', required: true },
+    { key: 'memberId', label: '会员编号', category: '基本信息', required: true },
+    { key: 'accountType', label: '用户户口类别', category: '基本信息' },
+    { key: 'level', label: '等级', category: '基本信息' },
+    { key: 'joinDate', label: '加入时间', category: '基本信息' },
+    
+    // 个人资料
+    { key: 'profile.birthDate', label: '出生日期', category: '个人资料' },
+    { key: 'profile.gender', label: '性别', category: '个人资料' },
+    { key: 'profile.race', label: '种族', category: '个人资料' },
+    { key: 'profile.nationality', label: '国籍', category: '个人资料' },
+    { key: 'profile.address', label: '地址', category: '个人资料' },
+    { key: 'profile.fullNameNric', label: '身份证全名', category: '个人资料' },
+    { key: 'profile.nricOrPassport', label: '身份证/护照号', category: '个人资料' },
+    
+    // 职业信息
+    { key: 'profile.company', label: '公司名称', category: '职业信息' },
+    { key: 'profile.departmentAndPosition', label: '部门职位', category: '职业信息' },
+    { key: 'profile.industryDetail', label: '行业详情', category: '职业信息' },
+    { key: 'profile.ownIndustry', label: '所属行业', category: '职业信息' },
+    { key: 'profile.categories', label: '业务类别', category: '职业信息' },
+    { key: 'profile.companyIntro', label: '公司介绍', category: '职业信息' },
+    
+    // JCI相关信息
+    { key: 'profile.senatorId', label: '参议员编号', category: 'JCI信息' },
+    { key: 'profile.introducerName', label: '介绍人姓名', category: 'JCI信息' },
+    { key: 'profile.jciEventInterests', label: 'JCI活动兴趣', category: 'JCI信息' },
+    { key: 'profile.jciBenefitsExpectation', label: 'JCI期望收益', category: 'JCI信息' },
+    { key: 'profile.activeMemberHow', label: '活跃会员方式', category: 'JCI信息' },
+    { key: 'profile.fiveYearsVision', label: '五年愿景', category: 'JCI信息' },
+    
+    // 服装信息
+    { key: 'profile.nameToBeEmbroidered', label: '刺绣姓名', category: '服装信息' },
+    { key: 'profile.shirtSize', label: 'T恤尺寸', category: '服装信息' },
+    { key: 'profile.jacketSize', label: '夹克尺寸', category: '服装信息' },
+    { key: 'profile.cutting', label: '剪裁', category: '服装信息' },
+    { key: 'profile.tshirtReceivingStatus', label: 'T恤接收状态', category: '服装信息' },
+    
+    // 社交网络
+    { key: 'profile.linkedin', label: 'LinkedIn', category: '社交网络' },
+    { key: 'profile.companyWebsite', label: '公司网站', category: '社交网络' },
+    { key: 'profile.whatsappGroup', label: 'WhatsApp群组', category: '社交网络' },
+    
+    // 兴趣爱好
+    { key: 'profile.hobbies', label: '兴趣爱好', category: '兴趣爱好' },
+    { key: 'profile.interestedIndustries', label: '感兴趣的行业', category: '兴趣爱好' },
+    { key: 'profile.acceptInternationalBusiness', label: '接受国际业务', category: '兴趣爱好' },
+    
+    // 职位信息
+    { key: 'profile.jciPosition', label: 'JCI职位', category: '职位信息' },
+    { key: 'profile.positionStartDate', label: '职位开始日期', category: '职位信息' },
+    { key: 'profile.positionEndDate', label: '职位结束日期', category: '职位信息' },
+    { key: 'profile.vpDivision', label: '副总裁部门', category: '职位信息' },
+    { key: 'profile.isActingPosition', label: '代理职位', category: '职位信息' },
+    { key: 'profile.actingForPosition', label: '代理职位类型', category: '职位信息' },
+    
+    // 文件资料
+    { key: 'profile.profilePhotoUrl', label: '头像', category: '文件资料' },
+    { key: 'profile.paymentSlipUrl', label: '付款单', category: '文件资料' },
+    
+    // 日期信息
+    { key: 'profile.paymentDate', label: '付款日期', category: '日期信息' },
+    { key: 'profile.endorsementDate', label: '背书日期', category: '日期信息' },
+    { key: 'profile.paymentVerifiedDate', label: '付款验证日期', category: '日期信息' },
+  ];
+
+  // 定义字段预设
+  const fieldPresets: FieldPreset[] = [
+    {
+      name: '基本信息',
+      description: '显示会员的基本信息字段',
+      fields: ['name', 'email', 'phone', 'memberId', 'accountType', 'level', 'joinDate']
+    },
+    {
+      name: '完整信息',
+      description: '显示所有可用字段',
+      fields: availableFields.map(field => field.key)
+    },
+    {
+      name: '职业信息',
+      description: '显示职业相关字段',
+      fields: [
+        'name', 'email', 'phone', 'memberId',
+        'profile.company', 'profile.departmentAndPosition', 
+        'profile.industryDetail', 'profile.ownIndustry',
+        'profile.categories', 'profile.companyIntro',
+        'profile.linkedin', 'profile.companyWebsite'
+      ]
+    },
+    {
+      name: 'JCI信息',
+      description: '显示JCI相关字段',
+      fields: [
+        'name', 'email', 'phone', 'memberId', 'accountType', 'level',
+        'profile.senatorId', 'profile.introducerName',
+        'profile.jciEventInterests', 'profile.jciBenefitsExpectation',
+        'profile.activeMemberHow', 'profile.fiveYearsVision',
+        'profile.jciPosition', 'profile.positionStartDate', 'profile.positionEndDate'
+      ]
+    },
+    {
+      name: '服装信息',
+      description: '显示服装相关字段',
+      fields: [
+        'name', 'email', 'phone', 'memberId',
+        'profile.nameToBeEmbroidered', 'profile.shirtSize',
+        'profile.jacketSize', 'profile.cutting', 'profile.tshirtReceivingStatus'
+      ]
+    }
+  ];
 
   const {
     control,
@@ -91,7 +218,119 @@ const MemberListPage: React.FC = () => {
 
   useEffect(() => {
     fetchMembers({ page: 1, limit: 10 });
+    
+    // 从本地存储加载字段选择
+    const savedFields = localStorage.getItem('memberListSelectedFields');
+    if (savedFields) {
+      try {
+        const parsedFields = JSON.parse(savedFields);
+        // 验证保存的字段是否仍然有效
+        const validFields = parsedFields.filter((fieldKey: string) => 
+          availableFields.some(field => field.key === fieldKey)
+        );
+        if (validFields.length > 0) {
+          setSelectedFields(validFields);
+        } else {
+          // 如果没有有效字段，使用默认字段
+          const defaultFields = availableFields.filter(field => field.required).map(field => field.key);
+          setSelectedFields(defaultFields);
+        }
+      } catch (error) {
+        console.error('Failed to parse saved fields:', error);
+        const defaultFields = availableFields.filter(field => field.required).map(field => field.key);
+        setSelectedFields(defaultFields);
+      }
+    } else {
+      // 初始化默认选中的字段
+      const defaultFields = availableFields.filter(field => field.required).map(field => field.key);
+      setSelectedFields(defaultFields);
+    }
   }, [fetchMembers]);
+
+  // 字段选择处理函数
+  const handleFieldSelection = (fields: string[]) => {
+    setSelectedFields(fields);
+    // 保存到本地存储
+    localStorage.setItem('memberListSelectedFields', JSON.stringify(fields));
+  };
+
+  const handleOpenFieldSelector = () => {
+    setIsFieldSelectorVisible(true);
+  };
+
+  // 批量设置处理函数
+  const handleBatchSettings = () => {
+    if (selectedMembers.length === 0) {
+      message.warning('请先选择要批量设置的会员');
+      return;
+    }
+    setIsBatchSettingsVisible(true);
+  };
+
+  const handleBatchSettingsConfirm = async (settings: BatchSettings) => {
+    try {
+      const memberIds = selectedMembers.map(member => member.id);
+      
+      // 构建更新数据
+      let updateData: Partial<Member> = {};
+      
+      // 处理日期字段
+      let processedValue = settings.value;
+      if (settings.field === 'joinDate' && settings.value) {
+        // 如果是日期选择器，转换为ISO字符串
+        processedValue = settings.value.format ? settings.value.format('YYYY-MM-DD') : settings.value;
+      }
+      
+      if (settings.field.startsWith('profile.')) {
+        const profileKey = settings.field.replace('profile.', '');
+        updateData = {
+          profile: {
+            [profileKey]: processedValue
+          }
+        };
+      } else {
+        updateData = {
+          [settings.field]: processedValue
+        };
+      }
+      
+      // 调用批量更新API
+      const result = await updateMembersBatch(memberIds, updateData, settings.reason);
+      
+      if (result.success > 0) {
+        message.success(`成功批量设置 ${result.success} 个会员`);
+        
+        // 如果有失败的，显示错误信息
+        if (result.failed > 0) {
+          message.warning(`${result.failed} 个会员设置失败`);
+          console.error('Batch update errors:', result.errors);
+        }
+        
+        // 清空选择
+        setSelectedMembers([]);
+        
+        // 刷新会员列表
+        await fetchMembers({ page: pagination.page, limit: pagination.limit });
+      } else {
+        message.error('批量设置失败');
+        throw new Error('没有会员被成功更新');
+      }
+    } catch (error) {
+      console.error('Batch settings error:', error);
+      message.error('批量设置失败');
+      throw error;
+    }
+  };
+
+  const handleRowSelection = {
+    selectedRowKeys: selectedMembers.map(member => member.id),
+    onChange: (_: React.Key[], selectedRows: Member[]) => {
+      setSelectedMembers(selectedRows);
+    },
+    getCheckboxProps: (record: Member) => ({
+      name: record.name,
+    }),
+  };
 
   const handleSearch = async (value: string) => {
     setSearchQuery(value);
@@ -208,47 +447,31 @@ const MemberListPage: React.FC = () => {
     }
   };
 
-  const columns = [
-    {
-      title: '姓名',
-      dataIndex: 'name',
-      key: 'name',
-      render: (text: string) => (
-        <Space>
-          <UserOutlined />
-          {text}
-        </Space>
-      ),
-    },
-    {
-      title: '邮箱',
-      dataIndex: 'email',
-      key: 'email',
-    },
-    {
-      title: '手机号',
-      dataIndex: 'phone',
-      key: 'phone',
-    },
-    {
-      title: '会员编号',
-      dataIndex: 'memberId',
-      key: 'memberId',
-    },
-    {
-      title: '用户户口类别',
-      dataIndex: 'accountType',
-      key: 'accountType',
-      render: (accountType: string) => {
-        const tagProps = getAccountTypeTagProps(accountType);
+  // 获取字段值
+  const getFieldValue = (member: Member, fieldKey: string) => {
+    if (fieldKey.startsWith('profile.')) {
+      const profileKey = fieldKey.replace('profile.', '');
+      return member.profile?.[profileKey as keyof typeof member.profile];
+    }
+    return member[fieldKey as keyof Member];
+  };
+
+  // 渲染字段值
+  const renderFieldValue = (member: Member, fieldKey: string): React.ReactNode => {
+    const value = getFieldValue(member, fieldKey);
+    
+    switch (fieldKey) {
+      case 'name':
+        return (
+          <Space>
+            <UserOutlined />
+            {value as string}
+          </Space>
+        );
+      case 'accountType':
+        const tagProps = getAccountTypeTagProps(value as string);
         return <Tag {...tagProps} />;
-      },
-    },
-    {
-      title: '等级',
-      dataIndex: 'level',
-      key: 'level',
-      render: (level: MemberLevel) => {
+      case 'level':
         const levelMap = {
           bronze: { color: '#cd7f32', text: '铜牌' },
           silver: { color: '#c0c0c0', text: '银牌' },
@@ -256,25 +479,92 @@ const MemberListPage: React.FC = () => {
           platinum: { color: '#e5e4e2', text: '白金' },
           diamond: { color: '#b9f2ff', text: '钻石' },
         };
-        const config = levelMap[level];
-        return <Tag color={config.color}>{config.text}</Tag>;
-      },
-    },
-    {
-      title: '加入时间',
-      dataIndex: 'joinDate',
-      key: 'joinDate',
-      render: (date: string) => new Date(date).toLocaleDateString(),
-    },
-    {
+        const config = levelMap[value as MemberLevel];
+        return config ? <Tag color={config.color}>{config.text}</Tag> : (value as string);
+      case 'joinDate':
+        return value ? new Date(value as string).toLocaleDateString() : '-';
+      case 'profile.birthDate':
+      case 'profile.paymentDate':
+      case 'profile.endorsementDate':
+      case 'profile.paymentVerifiedDate':
+      case 'profile.positionStartDate':
+      case 'profile.positionEndDate':
+        return value ? new Date(value as string).toLocaleDateString() : '-';
+      case 'profile.gender':
+        return value === 'Male' ? '男' : value === 'Female' ? '女' : (value as string) || '-';
+      case 'profile.race':
+        return value === 'Chinese' ? '华人' : 
+               value === 'Malay' ? '马来人' : 
+               value === 'Indian' ? '印度人' : 
+               value === 'Other' ? '其他' : (value as string) || '-';
+      case 'profile.tshirtReceivingStatus':
+        const statusMap = {
+          'Pending': '待处理',
+          'Requested': '已申请',
+          'Processing': '处理中',
+          'Delivered': '已送达'
+        };
+        return statusMap[value as keyof typeof statusMap] || (value as string) || '-';
+      case 'profile.acceptInternationalBusiness':
+        return value === 'Yes' ? '是' : 
+               value === 'No' ? '否' : 
+               value === 'Willing to explore' ? '愿意探索' : (value as string) || '-';
+      case 'profile.whatsappGroup':
+        return value === true ? '是' : value === false ? '否' : '-';
+      case 'profile.isActingPosition':
+        return value === true ? '是' : value === false ? '否' : '-';
+      case 'profile.ownIndustry':
+      case 'profile.categories':
+      case 'profile.interestedIndustries':
+      case 'profile.hobbies':
+        return Array.isArray(value) ? value.join(', ') : (value as string) || '-';
+      default:
+        return (value as string) || '-';
+    }
+  };
+
+  // 动态生成表格列
+  const generateColumns = () => {
+    const visibleFields = selectedFields.length > 0 ? selectedFields : 
+      availableFields.filter(field => field.required).map(field => field.key);
+    
+    const columns: any[] = visibleFields.map(fieldKey => {
+      const field = availableFields.find(f => f.key === fieldKey);
+      return {
+        title: field?.label || fieldKey,
+        dataIndex: fieldKey,
+        key: fieldKey,
+        render: (_: any, record: Member) => renderFieldValue(record, fieldKey),
+        width: fieldKey === 'name' ? 120 : 
+               fieldKey === 'email' ? 200 : 
+               fieldKey === 'phone' ? 120 : 
+               fieldKey === 'memberId' ? 120 : 
+               fieldKey === 'profile.company' ? 150 : 
+               fieldKey === 'profile.departmentAndPosition' ? 150 : 
+               fieldKey === 'profile.address' ? 200 : 
+               fieldKey === 'profile.companyIntro' ? 200 : 
+               fieldKey === 'profile.jciEventInterests' ? 200 : 
+               fieldKey === 'profile.jciBenefitsExpectation' ? 200 : 
+               fieldKey === 'profile.activeMemberHow' ? 200 : 
+               fieldKey === 'profile.fiveYearsVision' ? 200 : 
+               fieldKey === 'profile.linkedin' ? 150 : 
+               fieldKey === 'profile.companyWebsite' ? 150 : 100,
+      };
+    });
+
+    // 添加操作列
+    columns.push({
       title: '操作',
       key: 'action',
+      fixed: 'right' as const,
+      width: 120,
       render: (_: any, record: Member) => (
-        <Space size="middle">
+        <Space size="small">
           <Button 
             type="link" 
             icon={<EditOutlined />}
             onClick={() => handleEditMember(record)}
+            size="small"
           >
             编辑
           </Button>
@@ -283,13 +573,18 @@ const MemberListPage: React.FC = () => {
             icon={<DeleteOutlined />}
             danger
             onClick={() => handleDeleteMember(record.id)}
+            size="small"
           >
             删除
           </Button>
         </Space>
       ),
-    },
-  ];
+    });
+
+    return columns;
+  };
+
+  const columns = generateColumns();
 
   const MemberListContent = () => (
     <div style={{ padding: '24px', background: '#f5f5f5', minHeight: '100vh' }}>
@@ -321,6 +616,29 @@ const MemberListPage: React.FC = () => {
             <Space direction="vertical" align="end">
               <Space>
                 <Button 
+                  icon={<SettingOutlined />}
+                  onClick={handleOpenFieldSelector}
+                  style={{ 
+                    background: 'rgba(255,255,255,0.2)', 
+                    border: '1px solid rgba(255,255,255,0.3)',
+                    color: 'white'
+                  }}
+                >
+                  字段设置
+                </Button>
+                <Button 
+                  icon={<SettingOutlined />}
+                  onClick={handleBatchSettings}
+                  disabled={selectedMembers.length === 0}
+                  style={{ 
+                    background: selectedMembers.length > 0 ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.1)', 
+                    border: '1px solid rgba(255,255,255,0.3)',
+                    color: selectedMembers.length > 0 ? 'white' : 'rgba(255,255,255,0.5)'
+                  }}
+                >
+                  批量设置 {selectedMembers.length > 0 && `(${selectedMembers.length})`}
+                </Button>
+                <Button 
                   icon={<UploadOutlined />}
                   onClick={handleBatchImport}
                   style={{ 
@@ -330,6 +648,17 @@ const MemberListPage: React.FC = () => {
                   }}
                 >
                   批量导入
+                </Button>
+                <Button 
+                  icon={<CalendarOutlined />}
+                  onClick={() => setIsNricConverterVisible(true)}
+                  style={{ 
+                    background: 'rgba(255,255,255,0.2)', 
+                    border: '1px solid rgba(255,255,255,0.3)',
+                    color: 'white'
+                  }}
+                >
+                  NRIC转生日
                 </Button>
                 <Button 
                   type="primary" 
@@ -567,6 +896,7 @@ const MemberListPage: React.FC = () => {
           dataSource={members}
           loading={isLoading}
           rowKey="id"
+          rowSelection={handleRowSelection}
           pagination={{
             current: pagination.page,
             pageSize: pagination.limit,
@@ -815,6 +1145,40 @@ const MemberListPage: React.FC = () => {
         visible={isBatchImportVisible}
         onCancel={() => setIsBatchImportVisible(false)}
         onImport={handleBatchImportSubmit}
+      />
+
+      {/* NRIC转生日工具 */}
+      {isNricConverterVisible && (
+        <Modal
+          title="NRIC/Passport 转生日日期工具"
+          open={isNricConverterVisible}
+          onCancel={() => setIsNricConverterVisible(false)}
+          width={900}
+          footer={null}
+          destroyOnClose
+        >
+          <NricToBirthDateConverter onClose={() => setIsNricConverterVisible(false)} />
+        </Modal>
+      )}
+
+      {/* 字段选择器 */}
+      <FieldSelector
+        visible={isFieldSelectorVisible}
+        onClose={() => setIsFieldSelectorVisible(false)}
+        onConfirm={handleFieldSelection}
+        availableFields={availableFields}
+        selectedFields={selectedFields}
+        presets={fieldPresets}
+        title="选择显示字段"
+      />
+
+      {/* 批量设置模态框 */}
+      <BatchSettingsModal
+        visible={isBatchSettingsVisible}
+        onClose={() => setIsBatchSettingsVisible(false)}
+        onConfirm={handleBatchSettingsConfirm}
+        selectedMembers={selectedMembers}
+        title="批量设置"
       />
     </div>
   );
