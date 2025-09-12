@@ -38,6 +38,7 @@ export const FIELD_GROUPS: FieldGroup[] = [
       'fullNameNric', 
       'gender',
       'race',
+      'nationality',
       'birthDate',
       'nricOrPassport',
       'address'
