@@ -1535,7 +1535,7 @@ const BatchImportModal: React.FC<BatchImportModalProps> = ({
                   pagination={false}
                   size="small"
                   scroll={{ x: 2000, y: 400 }}
-                  rowKey={(record, index) => record.rowIndex?.toString() || index?.toString() || '0'}
+                  rowKey={(record) => 'row-' + (record.rowIndex || 0) + '-' + (record.email || 'unknown')}
                 />
               </div>
         </div>
