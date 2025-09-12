@@ -14,8 +14,16 @@ interface MemberState {
     totalPages: number;
   };
   
+  // Search and filter state
+  searchQuery: string;
+  filters: {
+    status?: string;
+    level?: string;
+    accountType?: string;
+  };
+  
   // Actions
-  fetchMembers: (params?: PaginationParams) => Promise<void>;
+  fetchMembers: (params?: PaginationParams & { search?: string; filters?: any }) => Promise<void>;
   fetchMemberById: (id: string) => Promise<void>;
   addMember: (memberData: Omit<Member, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
   addMembersBatch: (membersData: Omit<Member, 'id' | 'createdAt' | 'updatedAt'>[], developerMode?: boolean) => Promise<{ success: number; failed: number; errors: string[] }>;
@@ -24,6 +32,12 @@ interface MemberState {
   setCurrentMember: (member: Member | null) => void;
   setError: (error: string | null) => void;
   clearError: () => void;
+  
+  // Search and filter actions
+  setSearchQuery: (query: string) => void;
+  setFilters: (filters: { status?: string; level?: string; accountType?: string }) => void;
+  clearFilters: () => void;
+  applySearchAndFilters: () => Promise<void>;
 }
 
 export const useMemberStore = create<MemberState>((set, get) => ({
@@ -37,6 +51,10 @@ export const useMemberStore = create<MemberState>((set, get) => ({
     total: 0,
     totalPages: 0,
   },
+  
+  // Search and filter state
+  searchQuery: '',
+  filters: {},
 
   fetchMembers: async (params) => {
     set({ isLoading: true, error: null });
@@ -156,4 +174,22 @@ export const useMemberStore = create<MemberState>((set, get) => ({
   setError: (error) => set({ error }),
   
   clearError: () => set({ error: null }),
+  
+  // Search and filter actions
+  setSearchQuery: (query) => set({ searchQuery: query }),
+  
+  setFilters: (filters) => set({ filters }),
+  
+  clearFilters: () => set({ filters: {} }),
+  
+  applySearchAndFilters: async () => {
+    const { searchQuery, filters } = get();
+    const params = {
+      page: 1, // Reset to first page when searching/filtering
+      limit: get().pagination.limit,
+      search: searchQuery,
+      filters
+    };
+    await get().fetchMembers(params);
+  },
 }));

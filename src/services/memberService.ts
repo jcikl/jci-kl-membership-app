@@ -9,7 +9,7 @@ import {
   query,
   where,
   orderBy,
-  limit,
+  limit as firestoreLimit,
   QueryConstraint,
   writeBatch,
 } from 'firebase/firestore';
@@ -40,32 +40,68 @@ const cleanUndefinedValues = (obj: any): any => {
 };
 
 // 获取所有会员
-export const getMembers = async (params?: PaginationParams): Promise<PaginatedResponse<Member>> => {
+export const getMembers = async (params?: PaginationParams & { search?: string; filters?: any }): Promise<PaginatedResponse<Member>> => {
   try {
     const constraints: QueryConstraint[] = [];
+    
+    // Apply filters
+    if (params?.filters) {
+      const { status, level, accountType } = params.filters;
+      
+      if (status && status !== 'all') {
+        constraints.push(where('status', '==', status));
+      }
+      
+      if (level && level !== 'all') {
+        constraints.push(where('level', '==', level));
+      }
+      
+      if (accountType && accountType !== 'all') {
+        constraints.push(where('accountType', '==', accountType));
+      }
+    }
     
     if (params?.sortBy) {
       constraints.push(orderBy(params.sortBy, params.sortOrder || 'asc'));
     }
     
     if (params?.limit) {
-      constraints.push(limit(params.limit));
+      constraints.push(firestoreLimit(params.limit));
     }
 
     const q = query(collection(db, MEMBERS_COLLECTION), ...constraints);
     const snapshot = await getDocs(q);
     
-    const members = snapshot.docs.map(doc => ({
+    let members = snapshot.docs.map(doc => ({
       id: doc.id,
       ...doc.data()
     })) as Member[];
 
+    // Apply search filter (client-side for text search)
+    if (params?.search && params.search.trim()) {
+      const searchTerm = params.search.toLowerCase();
+      members = members.filter(member => 
+        member.name?.toLowerCase().includes(searchTerm) ||
+        member.email?.toLowerCase().includes(searchTerm) ||
+        member.phone?.toLowerCase().includes(searchTerm) ||
+        member.memberId?.toLowerCase().includes(searchTerm)
+      );
+    }
+
+    // Calculate pagination
+    const total = members.length;
+    const page = params?.page || 1;
+    const limit = params?.limit || 10;
+    const startIndex = (page - 1) * limit;
+    const endIndex = startIndex + limit;
+    const paginatedMembers = members.slice(startIndex, endIndex);
+
     return {
-      data: members,
-      total: members.length,
-      page: params?.page || 1,
-      limit: params?.limit || 10,
-      totalPages: Math.ceil(members.length / (params?.limit || 10))
+      data: paginatedMembers,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit)
     };
   } catch (error) {
     console.error('获取会员列表失败:', error);

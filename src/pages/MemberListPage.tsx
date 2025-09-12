@@ -64,13 +64,18 @@ const MemberListPage: React.FC = () => {
     members, 
     isLoading, 
     pagination, 
+    searchQuery,
+    filters,
     fetchMembers, 
     addMember, 
     addMembersBatch,
-    deleteMemberById 
+    deleteMemberById,
+    setSearchQuery,
+    setFilters,
+    clearFilters,
+    applySearchAndFilters
   } = useMemberStore();
   
-  const [accountTypeFilter, setAccountTypeFilter] = useState<string | 'all'>('all');
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [isBatchImportVisible, setIsBatchImportVisible] = useState(false);
   const [editingMember, setEditingMember] = useState<Member | null>(null);
@@ -88,14 +93,40 @@ const MemberListPage: React.FC = () => {
     fetchMembers({ page: 1, limit: 10 });
   }, [fetchMembers]);
 
-  const handleSearch = (value: string) => {
-    // 这里可以实现搜索逻辑
-    console.log('Search:', value);
+  const handleSearch = async (value: string) => {
+    setSearchQuery(value);
+    await applySearchAndFilters();
   };
 
-  const handleAccountTypeFilter = (value: string | 'all') => {
-    setAccountTypeFilter(value);
-    // 这里可以实现用户户口类别过滤逻辑
+  const handleAccountTypeFilter = async (value: string | 'all') => {
+    setFilters({ ...filters, accountType: value });
+    await applySearchAndFilters();
+  };
+
+  const handleStatusFilter = async (value: string | 'all') => {
+    setFilters({ ...filters, status: value });
+    await applySearchAndFilters();
+  };
+
+  const handleLevelFilter = async (value: string | 'all') => {
+    setFilters({ ...filters, level: value });
+    await applySearchAndFilters();
+  };
+
+  const handleClearFilters = async () => {
+    clearFilters();
+    setSearchQuery('');
+    await applySearchAndFilters();
+  };
+
+  const handlePaginationChange = async (page: number, pageSize?: number) => {
+    const params = {
+      page,
+      limit: pageSize || pagination.limit,
+      search: searchQuery,
+      filters
+    };
+    await fetchMembers(params);
   };
 
   const handleAddMember = () => {
@@ -419,24 +450,35 @@ const MemberListPage: React.FC = () => {
           </Space>
         }
         style={{ marginBottom: '24px' }}
+        extra={
+          <Button 
+            onClick={handleClearFilters}
+            type="default"
+            size="small"
+          >
+            清除筛选
+          </Button>
+        }
       >
-        <Row gutter={[24, 24]}>
-          <Col xs={24} sm={12} md={8}>
+        <Row gutter={[16, 16]}>
+          <Col xs={24} sm={12} md={6}>
             <Search
-              placeholder="搜索会员姓名或邮箱"
+              placeholder="搜索姓名、邮箱、手机号或会员编号"
               allowClear
               enterButton={<SearchOutlined />}
               size="large"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
               onSearch={handleSearch}
               style={{ width: '100%' }}
             />
           </Col>
-          <Col xs={24} sm={12} md={8}>
+          <Col xs={24} sm={12} md={6}>
             <Select
               placeholder="选择用户户口类别"
               style={{ width: '100%' }}
               size="large"
-              value={accountTypeFilter}
+              value={filters.accountType || 'all'}
               onChange={handleAccountTypeFilter}
             >
               <Option value="all">全部类别</Option>
@@ -447,16 +489,67 @@ const MemberListPage: React.FC = () => {
               ))}
             </Select>
           </Col>
-          <Col xs={24} sm={12} md={8}>
-            <div style={{ textAlign: 'right' }}>
-              <Badge count={members.length} style={{ backgroundColor: '#52c41a' }}>
-                <Tag color="blue" style={{ fontSize: '16px', padding: '8px 16px' }}>
-                  当前显示 {members.length} 条记录
-                </Tag>
-              </Badge>
-            </div>
+          <Col xs={24} sm={12} md={6}>
+            <Select
+              placeholder="选择状态"
+              style={{ width: '100%' }}
+              size="large"
+              value={filters.status || 'all'}
+              onChange={handleStatusFilter}
+            >
+              <Option value="all">全部状态</Option>
+              <Option value="active">活跃</Option>
+              <Option value="inactive">不活跃</Option>
+              <Option value="pending">待审核</Option>
+              <Option value="suspended">暂停</Option>
+            </Select>
+          </Col>
+          <Col xs={24} sm={12} md={6}>
+            <Select
+              placeholder="选择等级"
+              style={{ width: '100%' }}
+              size="large"
+              value={filters.level || 'all'}
+              onChange={handleLevelFilter}
+            >
+              <Option value="all">全部等级</Option>
+              <Option value="bronze">铜牌</Option>
+              <Option value="silver">银牌</Option>
+              <Option value="gold">金牌</Option>
+              <Option value="platinum">白金</Option>
+              <Option value="diamond">钻石</Option>
+            </Select>
           </Col>
         </Row>
+        
+        {/* 筛选结果显示 */}
+        {(searchQuery || Object.values(filters).some(v => v && v !== 'all')) && (
+          <div style={{ marginTop: '16px', padding: '12px', background: '#f0f9ff', borderRadius: '6px' }}>
+            <Space wrap>
+              <span style={{ fontWeight: 'bold', color: '#1890ff' }}>当前筛选：</span>
+              {searchQuery && (
+                <Tag closable onClose={() => handleSearch('')} color="blue">
+                  搜索: {searchQuery}
+                </Tag>
+              )}
+              {filters.accountType && filters.accountType !== 'all' && (
+                <Tag closable onClose={() => handleAccountTypeFilter('all')} color="green">
+                  类别: {getAccountTypeFormOptions().find(opt => opt.value === filters.accountType)?.label}
+                </Tag>
+              )}
+              {filters.status && filters.status !== 'all' && (
+                <Tag closable onClose={() => handleStatusFilter('all')} color="orange">
+                  状态: {filters.status === 'active' ? '活跃' : filters.status === 'inactive' ? '不活跃' : filters.status === 'pending' ? '待审核' : '暂停'}
+                </Tag>
+              )}
+              {filters.level && filters.level !== 'all' && (
+                <Tag closable onClose={() => handleLevelFilter('all')} color="purple">
+                  等级: {filters.level === 'bronze' ? '铜牌' : filters.level === 'silver' ? '银牌' : filters.level === 'gold' ? '金牌' : filters.level === 'platinum' ? '白金' : '钻石'}
+                </Tag>
+              )}
+            </Space>
+          </div>
+        )}
       </Card>
 
       {/* 会员列表表格 */}
@@ -482,10 +575,15 @@ const MemberListPage: React.FC = () => {
             showQuickJumper: true,
             showTotal: (total, range) => 
               `第 ${range[0]}-${range[1]} 条/共 ${total} 条`,
+            pageSizeOptions: ['10', '20', '50', '100'],
+            size: 'default',
+            onChange: handlePaginationChange,
+            onShowSizeChange: handlePaginationChange,
           }}
           rowClassName={(_, index) => 
             index % 2 === 0 ? 'table-row-light' : 'table-row-dark'
           }
+          scroll={{ x: 1200 }}
         />
       </Card>
 
