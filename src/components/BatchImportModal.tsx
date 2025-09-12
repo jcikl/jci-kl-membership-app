@@ -520,12 +520,12 @@ const BatchImportModal: React.FC<BatchImportModalProps> = ({
         joinDate: new Date().toISOString(),
         profile: {
           // 个人身份信息
-          fullNameNric: m.fullNameNric || undefined,
+          fullNameNric: m.fullNameNric || '',
           gender: m.gender === 'Male' ? 'male' : m.gender === 'Female' ? 'female' : undefined,
           race: m.race,
-          birthDate: m.birthDate || undefined,
-          nricOrPassport: m.nricOrPassport || undefined,
-          address: m.address || undefined,
+          birthDate: m.birthDate || '',
+          nricOrPassport: m.nricOrPassport || '',
+          address: m.address || '',
           
           // 联系方式
           whatsappGroup: m.whatsappGroup,
@@ -534,36 +534,36 @@ const BatchImportModal: React.FC<BatchImportModalProps> = ({
           hobbies: (m.hobbies || []) as any,
           
           // 文件资料
-          profilePhotoUrl: m.profilePhotoUrl || undefined,
+          profilePhotoUrl: m.profilePhotoUrl || '',
           
           // ========== 职业信息标签页 ==========
           
           // 公司信息
-          company: m.company || undefined,
-          departmentAndPosition: m.departmentAndPosition || undefined,
-          industryDetail: m.industryDetail || undefined,
+          company: m.company || '',
+          departmentAndPosition: m.departmentAndPosition || '',
+          industryDetail: m.industryDetail || '',
           categories: (m.categories || []) as any,
           ownIndustry: (m.ownIndustry || []) as any,
-          companyIntro: m.companyIntro || undefined,
+          companyIntro: m.companyIntro || '',
           acceptInternationalBusiness: m.acceptInternationalBusiness,
           interestedIndustries: (m.interestedIndustries || []) as any,
           
           // 社交网络
-          linkedin: m.linkedin || undefined,
-          companyWebsite: m.companyWebsite || undefined,
+          linkedin: m.linkedin || '',
+          companyWebsite: m.companyWebsite || '',
           
           // ========== JCI 相关标签页 ==========
           
           // 入会信息
-          senatorId: m.senatorId || undefined,
-          introducerName: m.introducerName || undefined,
-          jciEventInterests: m.jciEventInterests || undefined,
-          jciBenefitsExpectation: m.jciBenefitsExpectation || undefined,
-          activeMemberHow: m.activeMemberHow || undefined,
-          fiveYearsVision: m.fiveYearsVision || undefined,
+          senatorId: m.senatorId || '',
+          introducerName: m.introducerName || '',
+          jciEventInterests: m.jciEventInterests || '',
+          jciBenefitsExpectation: m.jciBenefitsExpectation || '',
+          activeMemberHow: m.activeMemberHow || '',
+          fiveYearsVision: m.fiveYearsVision || '',
           
           // 服装信息
-          nameToBeEmbroidered: m.nameToBeEmbroidered || undefined,
+          nameToBeEmbroidered: m.nameToBeEmbroidered || '',
           shirtSize: m.shirtSize,
           jacketSize: m.jacketSize,
           cutting: m.cutting,
@@ -572,19 +572,19 @@ const BatchImportModal: React.FC<BatchImportModalProps> = ({
           // ========== JCI职位标签页 ==========
           
           // 职位信息
-          jciPosition: m.jciPosition as any || undefined,
-          positionStartDate: m.positionStartDate || undefined,
-          positionEndDate: m.positionEndDate || undefined,
+          jciPosition: m.jciPosition as any || '',
+          positionStartDate: m.positionStartDate || '',
+          positionEndDate: m.positionEndDate || '',
           
           // 其他字段
-          accountType: m.accountType || undefined,
-          joinedDate: m.joinedDate || undefined,
-          paymentDate: m.paymentDate || undefined,
-          endorsementDate: m.endorsementDate || undefined,
-          paymentVerifiedDate: m.paymentVerifiedDate || undefined,
-          paymentSlipUrl: m.paymentSlipUrl || undefined,
-          termStartDate: m.termStartDate || undefined,
-          termEndDate: m.termEndDate || undefined,
+          accountType: m.accountType || '',
+          joinedDate: m.joinedDate || '',
+          paymentDate: m.paymentDate || '',
+          endorsementDate: m.endorsementDate || '',
+          paymentVerifiedDate: m.paymentVerifiedDate || '',
+          paymentSlipUrl: m.paymentSlipUrl || '',
+          termStartDate: m.termStartDate || '',
+          termEndDate: m.termEndDate || '',
         },
         // 系统字段
         email: m.email,
