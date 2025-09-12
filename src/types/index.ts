@@ -8,6 +8,7 @@ export interface Member {
   joinDate: string;
   status: MemberStatus;
   level: MemberLevel;
+  accountType?: string; // 用户户口类别（用于权限控制）
   profile: MemberProfile;
   createdAt: string;
   updatedAt: string;

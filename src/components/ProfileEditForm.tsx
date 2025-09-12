@@ -23,6 +23,7 @@ import { } from '@/types/rbac';
 import { useIsAdmin } from '@/hooks/usePermissions';
 import { uploadFileAndGetUrl } from '@/services/firebase';
 import { positionService } from '@/services/positionService';
+import { getAccountTypeFormOptions } from '@/utils/accountType';
 
 interface ProfileEditFormProps {
   member: Member;
@@ -103,9 +104,7 @@ const ProfileEditForm: React.FC<ProfileEditFormProps> = ({ member, onSubmit, onC
       // 入会信息（仅开发者可编辑）
       status: member?.status,
       level: member?.level,
-      // 会员分类相关（已迁移到分类管理系统）
-      // 注意：accountType 和 membershipCategory 现在通过分类管理系统管理
-      // 如需修改，请使用分类管理页面
+      accountType: member?.accountType || 'member',
       // 任期管理
       termStartDate: safeParseDate(member?.profile?.termStartDate),
       termEndDate: safeParseDate(member?.profile?.termEndDate),
@@ -531,8 +530,25 @@ const ProfileEditForm: React.FC<ProfileEditFormProps> = ({ member, onSubmit, onC
             <Col span={12}>
               <Form.Item label="用户户口类别">
                 <FieldPermissionController field={field} userRole={userRole} memberData={member}>
-                  <Controller name="accountType" control={control} render={({ field }) => <Input {...field} disabled />} />
+                  <Controller 
+                    name="accountType" 
+                    control={control} 
+                    render={({ field }) => (
+                      <Select 
+                        {...field} 
+                        placeholder="请选择用户户口类别"
+                        disabled={!isAdmin}
+                        options={getAccountTypeFormOptions() as any}
+                        allowClear
+                      />
+                    )} 
+                  />
                 </FieldPermissionController>
+                {!isAdmin && (
+                  <div style={{ fontSize: '12px', color: '#999', marginTop: '4px' }}>
+                    只有管理员可以修改用户户口类别
+                  </div>
+                )}
               </Form.Item>
             </Col>
           );
@@ -846,6 +862,7 @@ const ProfileEditForm: React.FC<ProfileEditFormProps> = ({ member, onSubmit, onC
         joinDate: values.joinedDate ? values.joinedDate.toISOString() : member.joinDate,
         status: cleanValue(values.status),
         level: cleanValue(values.level),
+        accountType: cleanValue(values.accountType),
         profile: {
           ...member.profile,
           fullNameNric: cleanValue(values.fullNameNric),
