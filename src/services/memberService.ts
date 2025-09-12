@@ -9,7 +9,6 @@ import {
   query,
   where,
   orderBy,
-  limit as firestoreLimit,
   QueryConstraint,
   writeBatch,
 } from 'firebase/firestore';
@@ -65,10 +64,8 @@ export const getMembers = async (params?: PaginationParams & { search?: string; 
       constraints.push(orderBy(params.sortBy, params.sortOrder || 'asc'));
     }
     
-    if (params?.limit) {
-      constraints.push(firestoreLimit(params.limit));
-    }
-
+    // 移除 Firestore limit，获取所有符合条件的记录
+    // 这样可以确保搜索和分页在完整数据集上进行
     const q = query(collection(db, MEMBERS_COLLECTION), ...constraints);
     const snapshot = await getDocs(q);
     
@@ -88,7 +85,7 @@ export const getMembers = async (params?: PaginationParams & { search?: string; 
       );
     }
 
-    // Calculate pagination
+    // Calculate pagination on the filtered results
     const total = members.length;
     const page = params?.page || 1;
     const limit = params?.limit || 10;

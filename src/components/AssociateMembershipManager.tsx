@@ -23,24 +23,51 @@ const AssociateMembershipManager: React.FC = () => {
     setLoading(true);
     try {
       const res = await getMembers({ page: 1, limit: 500 });
+      console.log('总会员数:', res.data.length);
+      
+      // 调试：查看所有会员的 proposedMembershipCategory
+      const allCategories = res.data.map(m => ({
+        name: m.name,
+        proposedCategory: m.profile?.proposedMembershipCategory,
+        birthDate: m.profile?.birthDate,
+        categoryReviewStatus: m.profile?.categoryReviewStatus
+      }));
+      console.log('所有会员的类别信息:', allCategories);
+      
       // 过滤出准会员且超过40岁的用户
       const associateMembers = res.data.filter(m => {
         const proposedCategory = m.profile?.proposedMembershipCategory;
         const isAssociate = (proposedCategory as any) === 'associate' || 
                            (m.profile?.categoryReviewStatus === 'approved' && (proposedCategory as any) === 'associate');
         
-        if (!isAssociate) return false;
+        if (!isAssociate) {
+          console.log(`会员 ${m.name} 不是准会员，类别: ${proposedCategory}`);
+          return false;
+        }
         
         // 计算年龄
         const birthDate = m.profile?.birthDate;
-        if (!birthDate) return false;
+        if (!birthDate) {
+          console.log(`会员 ${m.name} 没有出生日期`);
+          return false;
+        }
         
         const age = dayjs().diff(dayjs(birthDate, 'DD-MMM-YYYY'), 'year');
-        return age > 40;
+        const isOver40 = age > 40;
+        
+        if (!isOver40) {
+          console.log(`会员 ${m.name} 年龄不足40岁，当前年龄: ${age}`);
+        }
+        
+        return isOver40;
       });
+      
+      console.log('过滤后的准会员数量:', associateMembers.length);
+      console.log('准会员列表:', associateMembers.map(m => ({ name: m.name, age: dayjs().diff(dayjs(m.profile?.birthDate, 'DD-MMM-YYYY'), 'year') })));
       
       setMembers(associateMembers);
     } catch (e) {
+      console.error('加载准会员数据失败:', e);
       message.error('加载准会员数据失败');
     } finally {
       setLoading(false);
