@@ -502,7 +502,8 @@ const BatchImportModal: React.FC<BatchImportModalProps> = ({
       return;
     }
 
-    const validMembers = members.filter(m => m.isValid);
+    // 在开发者模式下，允许导入所有记录（忽略isValid检查）
+    const validMembers = developerMode ? members : members.filter(m => m.isValid);
     if (validMembers.length === 0) {
       message.error('没有有效的数据可以导入');
       return;
