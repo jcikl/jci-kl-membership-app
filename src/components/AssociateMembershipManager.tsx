@@ -35,16 +35,9 @@ const AssociateMembershipManager: React.FC = () => {
       console.log('所有会员的类别信息:', allCategories);
       
       // 过滤出准会员且超过40岁的用户
+      // 由于所有会员的 proposedMembershipCategory 都是 undefined，
+      // 我们暂时使用年龄作为主要过滤条件，并添加手动标记功能
       const associateMembers = res.data.filter(m => {
-        const proposedCategory = m.profile?.proposedMembershipCategory;
-        const isAssociate = (proposedCategory as any) === 'associate' || 
-                           (m.profile?.categoryReviewStatus === 'approved' && (proposedCategory as any) === 'associate');
-        
-        if (!isAssociate) {
-          console.log(`会员 ${m.name} 不是准会员，类别: ${proposedCategory}`);
-          return false;
-        }
-        
         // 计算年龄
         const birthDate = m.profile?.birthDate;
         if (!birthDate) {
@@ -52,14 +45,46 @@ const AssociateMembershipManager: React.FC = () => {
           return false;
         }
         
-        const age = dayjs().diff(dayjs(birthDate, 'DD-MMM-YYYY'), 'year');
+        // 尝试多种日期格式解析
+        let age = 0;
+        try {
+          // 尝试 DD-MMM-YYYY 格式 (如 "08-May-1963")
+          if (birthDate.includes('-')) {
+            age = dayjs().diff(dayjs(birthDate, 'DD-MMM-YYYY'), 'year');
+          }
+          // 尝试 M/D/YYYY 格式 (如 "7/16/1999")
+          else if (birthDate.includes('/')) {
+            age = dayjs().diff(dayjs(birthDate, 'M/D/YYYY'), 'year');
+          }
+          // 尝试其他格式
+          else {
+            age = dayjs().diff(dayjs(birthDate), 'year');
+          }
+        } catch (e) {
+          console.log(`会员 ${m.name} 出生日期格式无法解析: ${birthDate}`);
+          return false;
+        }
+        
         const isOver40 = age > 40;
         
         if (!isOver40) {
-          console.log(`会员 ${m.name} 年龄不足40岁，当前年龄: ${age}`);
+          console.log(`会员 ${m.name} 年龄不足40岁，当前年龄: ${age}，出生日期: ${birthDate}`);
+          return false;
         }
         
-        return isOver40;
+        // 检查是否有明确的准会员标记
+        const proposedCategory = m.profile?.proposedMembershipCategory;
+        const hasAssociateCategory = (proposedCategory as any) === 'associate' || 
+                                   (m.profile?.categoryReviewStatus === 'approved' && (proposedCategory as any) === 'associate');
+        
+        if (hasAssociateCategory) {
+          console.log(`会员 ${m.name} 有明确的准会员类别标记，年龄: ${age}`);
+          return true;
+        }
+        
+        // 如果没有明确的类别标记，但年龄超过40岁，也显示（供手动分类）
+        console.log(`会员 ${m.name} 年龄超过40岁但无类别标记，年龄: ${age}，出生日期: ${birthDate}`);
+        return true;
       });
       
       console.log('过滤后的准会员数量:', associateMembers.length);
@@ -79,7 +104,24 @@ const AssociateMembershipManager: React.FC = () => {
   }, [fetchAssociateMembers]);
 
   const calculateAge = (birthDate: string) => {
-    return dayjs().diff(dayjs(birthDate, 'DD-MMM-YYYY'), 'year');
+    if (!birthDate) return 0;
+    
+    try {
+      // 尝试多种日期格式解析
+      if (birthDate.includes('-')) {
+        // DD-MMM-YYYY 格式 (如 "08-May-1963")
+        return dayjs().diff(dayjs(birthDate, 'DD-MMM-YYYY'), 'year');
+      } else if (birthDate.includes('/')) {
+        // M/D/YYYY 格式 (如 "7/16/1999")
+        return dayjs().diff(dayjs(birthDate, 'M/D/YYYY'), 'year');
+      } else {
+        // 其他格式，让 dayjs 自动解析
+        return dayjs().diff(dayjs(birthDate), 'year');
+      }
+    } catch (e) {
+      console.warn(`无法解析出生日期: ${birthDate}`);
+      return 0;
+    }
   };
 
   const getPaymentStatus = (member: Member) => {
@@ -408,12 +450,36 @@ const AssociateMembershipManager: React.FC = () => {
         </Col>
       </Row>
 
+      {/* 说明卡片 */}
+      <Card 
+        title={
+          <Space>
+            <span style={{ color: '#fa8c16' }}>📋</span>
+            <span>过滤说明</span>
+          </Space>
+        }
+        style={{ marginBottom: '24px', background: '#fff7e6', border: '1px solid #ffd591' }}
+      >
+        <div style={{ color: '#d46b08', fontSize: '14px', lineHeight: '1.6' }}>
+          <p><strong>当前过滤逻辑：</strong></p>
+          <ul style={{ margin: '8px 0', paddingLeft: '20px' }}>
+            <li>显示所有年龄超过40岁的会员</li>
+            <li>由于会员数据中缺少 <code>proposedMembershipCategory</code> 字段，暂时使用年龄作为主要判断标准</li>
+            <li>支持多种出生日期格式：DD-MMM-YYYY (如 08-May-1963) 和 M/D/YYYY (如 7/16/1999)</li>
+            <li>管理员可以手动为这些会员分配正确的会员类别</li>
+          </ul>
+          <p style={{ margin: '8px 0 0 0' }}>
+            <strong>建议：</strong>在批量导入时设置正确的 <code>proposedMembershipCategory</code> 字段值
+          </p>
+        </div>
+      </Card>
+
       {/* 准会员列表 */}
       <Card 
         title={
           <Space>
             <FileTextOutlined style={{ color: '#1890ff' }} />
-            <span>准会员列表</span>
+            <span>准会员列表（40岁以上）</span>
             <Badge count={members.length} style={{ backgroundColor: '#52c41a' }} />
           </Space>
         }
