@@ -35,6 +35,9 @@ interface BatchImportModalProps {
 }
 
 interface ParsedMember {
+  // 唯一标识符
+  id: string;
+  
   // ========== 基本信息标签页 ==========
   
   // 个人身份信息
@@ -129,6 +132,9 @@ const BatchImportModal: React.FC<BatchImportModalProps> = ({
 
   // 创建空行数据
   const createEmptyMember = (): ParsedMember => ({
+    // 唯一标识符
+    id: `member-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+    
     // ========== 基本信息标签页 ==========
     
     // 个人身份信息
@@ -218,7 +224,7 @@ const BatchImportModal: React.FC<BatchImportModalProps> = ({
   }, [visible]);
 
   // 验证单个会员数据
-  const validateMember = (member: Omit<ParsedMember, 'rowIndex' | 'isValid' | 'errors'>): { isValid: boolean; errors: string[] } => {
+  const validateMember = (member: Omit<ParsedMember, 'id' | 'rowIndex' | 'isValid' | 'errors'>): { isValid: boolean; errors: string[] } => {
     const errors: string[] = [];
     
     // 检查必填字段（开发者模式可以绕过）
@@ -424,6 +430,7 @@ const BatchImportModal: React.FC<BatchImportModalProps> = ({
       
       const member: ParsedMember = {
         ...memberData,
+        id: `member-${Date.now()}-${i}-${Math.random().toString(36).substr(2, 9)}`,
         rowIndex: i,
         isValid: validation.isValid,
         errors: validation.errors,
@@ -618,8 +625,17 @@ const BatchImportModal: React.FC<BatchImportModalProps> = ({
   };
 
   // 处理Excel数据导入
-  const handleExcelDataParsed = (excelMembers: ParsedMember[]) => {
-    setMembers(excelMembers);
+  const handleExcelDataParsed = (excelMembers: any[]) => {
+    // 为Excel数据添加唯一ID和rowIndex
+    const membersWithIds = excelMembers.map((member, index) => ({
+      ...member,
+      id: `excel-member-${Date.now()}-${index}-${Math.random().toString(36).substr(2, 9)}`,
+      rowIndex: index + 1,
+      isValid: true, // Excel数据假设是有效的，后续会重新验证
+      errors: [],
+    }));
+    
+    setMembers(membersWithIds);
     setImportResult(null);
     setActiveTab('manual'); // 切换到手动编辑标签页
     message.success(`成功导入 ${excelMembers.length} 条记录，请检查数据后点击导入`);
@@ -1535,7 +1551,7 @@ const BatchImportModal: React.FC<BatchImportModalProps> = ({
                   pagination={false}
                   size="small"
                   scroll={{ x: 2000, y: 400 }}
-                  rowKey={(record) => 'row-' + (record.rowIndex || 0) + '-' + (record.email || 'unknown')}
+                  rowKey={(record) => record.id}
                 />
               </div>
         </div>
