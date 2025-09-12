@@ -12,6 +12,7 @@ import {
   Tooltip,
   Input,
   Tabs,
+  Switch,
 } from 'antd';
 import { 
   CopyOutlined, 
@@ -34,60 +35,82 @@ interface BatchImportModalProps {
 }
 
 interface ParsedMember {
+  // ========== 基本信息标签页 ==========
+  
+  // 个人身份信息
   name: string;
-  email: string;
-  phone: string;
-  memberId: string;
-  status: MemberStatus;
-  level: MemberLevel;
-  senatorId?: string;
-  // 个人基本信息
   fullNameNric?: string;
   gender?: 'Male' | 'Female';
   race?: 'Chinese' | 'Malay' | 'Indian' | 'Other';
   birthDate?: string;
-  address?: string;
   nricOrPassport?: string;
+  address?: string;
+  
+  // 联系方式
+  email: string;
+  phone: string;
   whatsappGroup?: boolean;
+  
+  // 个人兴趣
   hobbies?: string[];
+  
+  // 文件资料
   profilePhotoUrl?: string;
-  // 职业信息
+  
+  // ========== 职业信息标签页 ==========
+  
+  // 公司信息
   company?: string;
   departmentAndPosition?: string;
   industryDetail?: string;
-  linkedin?: string;
-  companyWebsite?: string;
   categories?: string[];
   ownIndustry?: string[];
   companyIntro?: string;
   acceptInternationalBusiness?: 'Yes' | 'No' | 'Willing to explore';
   interestedIndustries?: string[];
-  // JCI相关
+  
+  // 社交网络
+  linkedin?: string;
+  companyWebsite?: string;
+  
+  // ========== JCI 相关标签页 ==========
+  
+  // 入会信息
+  accountType?: string;
+  status: MemberStatus;
+  level: MemberLevel;
+  senatorId?: string;
+  memberId: string;
   introducerName?: string;
-  fiveYearsVision?: string;
-  activeMemberHow?: string;
   jciEventInterests?: string;
   jciBenefitsExpectation?: string;
+  activeMemberHow?: string;
+  fiveYearsVision?: string;
+  
+  // 服装信息
   nameToBeEmbroidered?: string;
   shirtSize?: 'XS' | 'S' | 'M' | 'L' | 'XL' | '2XL' | '3XL';
   jacketSize?: 'XS' | 'S' | 'M' | 'L' | 'XL' | '2XL' | '3XL';
   cutting?: 'Unisex' | 'Lady';
   tshirtReceivingStatus?: 'Pending' | 'Requested' | 'Processing' | 'Delivered';
-  // JCI职位相关
+  
+  // ========== JCI职位标签页 ==========
+  
+  // 职位信息
   jciPosition?: string;
   positionStartDate?: string;
   positionEndDate?: string;
+  
   // 其他字段
-  accountType?: string;
   joinedDate?: string;
-  // 日期
   paymentDate?: string;
   endorsementDate?: string;
   paymentVerifiedDate?: string;
-  // 其他字段
   paymentSlipUrl?: string;
   termStartDate?: string;
   termEndDate?: string;
+  
+  // 系统字段
   rowIndex: number;
   isValid: boolean;
   errors: string[];
@@ -102,59 +125,86 @@ const BatchImportModal: React.FC<BatchImportModalProps> = ({
   const [isImporting, setIsImporting] = useState(false);
   const [importResult, setImportResult] = useState<{ success: number; failed: number; errors: string[] } | null>(null);
   const [activeTab, setActiveTab] = useState('manual');
+  const [developerMode, setDeveloperMode] = useState(false);
 
   // 创建空行数据
   const createEmptyMember = (): ParsedMember => ({
+    // ========== 基本信息标签页 ==========
+    
+    // 个人身份信息
     name: '',
-    email: '',
-    phone: '',
-    memberId: '',
-    status: 'pending',
-    level: 'bronze',
-    senatorId: '',
-    // 个人基本信息
     fullNameNric: '',
     gender: undefined,
     race: undefined,
     birthDate: '',
-    address: '',
     nricOrPassport: '',
+    address: '',
+    
+    // 联系方式
+    email: '',
+    phone: '',
     whatsappGroup: false,
+    
+    // 个人兴趣
     hobbies: [],
+    
+    // 文件资料
     profilePhotoUrl: '',
-    // 职业信息
+    
+    // ========== 职业信息标签页 ==========
+    
+    // 公司信息
     company: '',
     departmentAndPosition: '',
     industryDetail: '',
-    linkedin: '',
-    companyWebsite: '',
     categories: [],
     ownIndustry: [],
     companyIntro: '',
     acceptInternationalBusiness: undefined,
     interestedIndustries: [],
-    // JCI相关
+    
+    // 社交网络
+    linkedin: '',
+    companyWebsite: '',
+    
+    // ========== JCI 相关标签页 ==========
+    
+    // 入会信息
+    accountType: '',
+    status: 'pending',
+    level: 'bronze',
+    senatorId: '',
+    memberId: '',
     introducerName: '',
-    fiveYearsVision: '',
-    activeMemberHow: '',
     jciEventInterests: '',
     jciBenefitsExpectation: '',
+    activeMemberHow: '',
+    fiveYearsVision: '',
+    
+    // 服装信息
     nameToBeEmbroidered: '',
     shirtSize: undefined,
     jacketSize: undefined,
     cutting: undefined,
     tshirtReceivingStatus: undefined,
-    // JCI职位相关
+    
+    // ========== JCI职位标签页 ==========
+    
+    // 职位信息
     jciPosition: '',
     positionStartDate: '',
     positionEndDate: '',
+    
     // 其他字段
-    accountType: '',
     joinedDate: '',
-    // 日期
     paymentDate: '',
     endorsementDate: '',
     paymentVerifiedDate: '',
+    paymentSlipUrl: '',
+    termStartDate: '',
+    termEndDate: '',
+    
+    // 系统字段
     rowIndex: 1,
     isValid: false,
     errors: ['请填写必填字段'],
@@ -171,27 +221,63 @@ const BatchImportModal: React.FC<BatchImportModalProps> = ({
   const validateMember = (member: Omit<ParsedMember, 'rowIndex' | 'isValid' | 'errors'>): { isValid: boolean; errors: string[] } => {
     const errors: string[] = [];
     
-    // 检查必填字段
-    if (!member.name?.trim()) errors.push('姓名不能为空');
-    if (!member.email?.trim()) errors.push('邮箱不能为空');
-    if (!member.phone?.trim()) errors.push('手机号不能为空');
-    if (!member.memberId?.trim()) errors.push('会员编号不能为空');
+    // 检查必填字段（开发者模式可以绕过）
+    if (!developerMode) {
+      if (!member.name || !String(member.name).trim()) errors.push('姓名不能为空');
+      if (!member.email || !String(member.email).trim()) errors.push('邮箱不能为空');
+      if (!member.phone || !String(member.phone).trim()) errors.push('手机号不能为空');
+      if (!member.memberId || !String(member.memberId).trim()) errors.push('会员编号不能为空');
+    }
     
     // 验证邮箱格式
-    if (member.email?.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(member.email.trim())) {
+    if (member.email && String(member.email).trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(member.email).trim())) {
       errors.push('邮箱格式不正确');
     }
 
     // 验证状态
     const validStatuses: MemberStatus[] = ['active', 'inactive', 'pending', 'suspended'];
-    if (member.status && !validStatuses.includes(member.status)) {
-      errors.push('状态必须是: active, inactive, pending, suspended');
+    
+    // 状态值映射（中文到英文）
+    const statusMapping: Record<string, MemberStatus> = {
+      '活跃': 'active',
+      '不活跃': 'inactive', 
+      '待审核': 'pending',
+      '暂停': 'suspended',
+      'active': 'active',
+      'inactive': 'inactive',
+      'pending': 'pending',
+      'suspended': 'suspended'
+    };
+    
+    if (member.status) {
+      const normalizedStatus = statusMapping[member.status] || member.status;
+      if (!validStatuses.includes(normalizedStatus)) {
+        errors.push('状态必须是: active(活跃), inactive(不活跃), pending(待审核), suspended(暂停)');
+      }
     }
 
     // 验证等级
     const validLevels: MemberLevel[] = ['bronze', 'silver', 'gold', 'platinum', 'diamond'];
-    if (member.level && !validLevels.includes(member.level)) {
-      errors.push('等级必须是: bronze, silver, gold, platinum, diamond');
+    
+    // 等级值映射（中文到英文）
+    const levelMapping: Record<string, MemberLevel> = {
+      '铜牌': 'bronze',
+      '银牌': 'silver',
+      '金牌': 'gold',
+      '白金': 'platinum',
+      '钻石': 'diamond',
+      'bronze': 'bronze',
+      'silver': 'silver',
+      'gold': 'gold',
+      'platinum': 'platinum',
+      'diamond': 'diamond'
+    };
+    
+    if (member.level) {
+      const normalizedLevel = levelMapping[member.level] || member.level;
+      if (!validLevels.includes(normalizedLevel)) {
+        errors.push('等级必须是: bronze(铜牌), silver(银牌), gold(金牌), platinum(白金), diamond(钻石)');
+      }
     }
 
     return {
@@ -199,6 +285,26 @@ const BatchImportModal: React.FC<BatchImportModalProps> = ({
       errors,
     };
   };
+
+  // 重新验证所有成员（当开发者模式切换时）
+  const revalidateAllMembers = () => {
+    const newMembers = members.map(member => {
+      const validation = validateMember(member);
+      return {
+        ...member,
+        isValid: validation.isValid,
+        errors: validation.errors,
+      };
+    });
+    setMembers(newMembers);
+  };
+
+  // 监听开发者模式变化，重新验证所有成员
+  React.useEffect(() => {
+    if (members.length > 0) {
+      revalidateAllMembers();
+    }
+  }, [developerMode]);
 
   // 解析粘贴的数据
   const parsePastedData = (data: string): ParsedMember[] => {
@@ -210,56 +316,108 @@ const BatchImportModal: React.FC<BatchImportModalProps> = ({
     for (let i = 0; i < lines.length; i++) {
       const values = lines[i].split('\t');
       const memberData = {
-        name: values[0]?.trim() || '',
-        email: values[1]?.trim() || '',
-        phone: values[2]?.trim() || '',
-        memberId: values[3]?.trim() || '',
-        status: (values[4]?.trim() as MemberStatus) || 'pending',
-        level: (values[5]?.trim() as MemberLevel) || 'bronze',
-        senatorId: values[6]?.trim() || '',
-        // 个人基本信息
-        fullNameNric: values[7]?.trim() || '',
-        gender: values[8]?.trim() as 'Male' | 'Female' || undefined,
-        race: values[9]?.trim() as 'Chinese' | 'Malay' | 'Indian' | 'Other' || undefined,
-        birthDate: values[10]?.trim() || '',
-        address: values[11]?.trim() || '',
-        nricOrPassport: values[12]?.trim() || '',
-        whatsappGroup: values[13]?.trim() === 'true' || values[13]?.trim() === '是' || false,
-        hobbies: values[14]?.trim() ? values[14].split(',').map(s => s.trim()).filter(s => s) : [],
-        profilePhotoUrl: values[15]?.trim() || '',
-        // 职业信息
-        company: values[16]?.trim() || '',
-        departmentAndPosition: values[17]?.trim() || '',
-        industryDetail: values[18]?.trim() || '',
-        linkedin: values[19]?.trim() || '',
-        companyWebsite: values[20]?.trim() || '',
-        categories: values[21]?.trim() ? values[21].split(',').map(s => s.trim()).filter(s => s) : [],
-        ownIndustry: values[22]?.trim() ? values[22].split(',').map(s => s.trim()).filter(s => s) : [],
-        companyIntro: values[23]?.trim() || '',
-        acceptInternationalBusiness: values[24]?.trim() as 'Yes' | 'No' | 'Willing to explore' || undefined,
-        interestedIndustries: values[25]?.trim() ? values[25].split(',').map(s => s.trim()).filter(s => s) : [],
-        // JCI相关
-        introducerName: values[26]?.trim() || '',
-        fiveYearsVision: values[27]?.trim() || '',
-        activeMemberHow: values[28]?.trim() || '',
-        jciEventInterests: values[29]?.trim() || '',
-        jciBenefitsExpectation: values[30]?.trim() || '',
-        nameToBeEmbroidered: values[31]?.trim() || '',
-        shirtSize: values[32]?.trim() as 'XS' | 'S' | 'M' | 'L' | 'XL' | '2XL' | '3XL' || undefined,
-        jacketSize: values[33]?.trim() as 'XS' | 'S' | 'M' | 'L' | 'XL' | '2XL' | '3XL' || undefined,
-        cutting: values[34]?.trim() as 'Unisex' | 'Lady' || undefined,
-        tshirtReceivingStatus: values[35]?.trim() as 'Pending' | 'Requested' | 'Processing' | 'Delivered' || undefined,
-        // JCI职位相关
-        jciPosition: values[36]?.trim() || '',
-        positionStartDate: values[37]?.trim() || '',
-        positionEndDate: values[38]?.trim() || '',
+        // ========== 基本信息标签页 ==========
+        
+        // 个人身份信息
+        name: values[0] ? String(values[0]).trim() : '',
+        fullNameNric: values[1] ? String(values[1]).trim() : '',
+        gender: values[2] ? (String(values[2]).trim() as 'Male' | 'Female') : undefined,
+        race: values[3] ? (String(values[3]).trim() as 'Chinese' | 'Malay' | 'Indian' | 'Other') : undefined,
+        birthDate: values[4] ? String(values[4]).trim() : '',
+        nricOrPassport: values[5] ? String(values[5]).trim() : '',
+        address: values[6] ? String(values[6]).trim() : '',
+        
+        // 联系方式
+        email: values[7] ? String(values[7]).trim() : '',
+        phone: values[8] ? String(values[8]).trim() : '',
+        whatsappGroup: values[9] ? (String(values[9]).trim() === 'true' || String(values[9]).trim() === '是') : false,
+        
+        // 个人兴趣
+        hobbies: values[10] ? (String(values[10]).trim() ? String(values[10]).split(',').map(s => s.trim()).filter(s => s) : []) : [],
+        
+        // 文件资料
+        profilePhotoUrl: values[11] ? String(values[11]).trim() : '',
+        
+        // ========== 职业信息标签页 ==========
+        
+        // 公司信息
+        company: values[12] ? String(values[12]).trim() : '',
+        departmentAndPosition: values[13] ? String(values[13]).trim() : '',
+        industryDetail: values[14] ? String(values[14]).trim() : '',
+        categories: values[15] ? (String(values[15]).trim() ? String(values[15]).split(',').map(s => s.trim()).filter(s => s) : []) : [],
+        ownIndustry: values[16] ? (String(values[16]).trim() ? String(values[16]).split(',').map(s => s.trim()).filter(s => s) : []) : [],
+        companyIntro: values[17] ? String(values[17]).trim() : '',
+        acceptInternationalBusiness: values[18] ? (String(values[18]).trim() as 'Yes' | 'No' | 'Willing to explore') : undefined,
+        interestedIndustries: values[19] ? (String(values[19]).trim() ? String(values[19]).split(',').map(s => s.trim()).filter(s => s) : []) : [],
+        
+        // 社交网络
+        linkedin: values[20] ? String(values[20]).trim() : '',
+        companyWebsite: values[21] ? String(values[21]).trim() : '',
+        
+        // ========== JCI 相关标签页 ==========
+        
+        // 入会信息
+        accountType: values[22] ? String(values[22]).trim() : '',
+        status: values[23] ? (() => {
+          const statusValue = String(values[23]).trim();
+          const statusMapping: Record<string, MemberStatus> = {
+            '活跃': 'active',
+            '不活跃': 'inactive', 
+            '待审核': 'pending',
+            '暂停': 'suspended',
+            'active': 'active',
+            'inactive': 'inactive',
+            'pending': 'pending',
+            'suspended': 'suspended'
+          };
+          return statusMapping[statusValue] || statusValue as MemberStatus;
+        })() : 'pending',
+        level: values[24] ? (() => {
+          const levelValue = String(values[24]).trim();
+          const levelMapping: Record<string, MemberLevel> = {
+            '铜牌': 'bronze',
+            '银牌': 'silver',
+            '金牌': 'gold',
+            '白金': 'platinum',
+            '钻石': 'diamond',
+            'bronze': 'bronze',
+            'silver': 'silver',
+            'gold': 'gold',
+            'platinum': 'platinum',
+            'diamond': 'diamond'
+          };
+          return levelMapping[levelValue] || levelValue as MemberLevel;
+        })() : 'bronze',
+        senatorId: values[25] ? String(values[25]).trim() : '',
+        memberId: values[26] ? String(values[26]).trim() : '',
+        introducerName: values[27] ? String(values[27]).trim() : '',
+        jciEventInterests: values[28] ? String(values[28]).trim() : '',
+        jciBenefitsExpectation: values[29] ? String(values[29]).trim() : '',
+        activeMemberHow: values[30] ? String(values[30]).trim() : '',
+        fiveYearsVision: values[31] ? String(values[31]).trim() : '',
+        
+        // 服装信息
+        nameToBeEmbroidered: values[32] ? String(values[32]).trim() : '',
+        shirtSize: values[33] ? (String(values[33]).trim() as 'XS' | 'S' | 'M' | 'L' | 'XL' | '2XL' | '3XL') : undefined,
+        jacketSize: values[34] ? (String(values[34]).trim() as 'XS' | 'S' | 'M' | 'L' | 'XL' | '2XL' | '3XL') : undefined,
+        cutting: values[35] ? (String(values[35]).trim() as 'Unisex' | 'Lady') : undefined,
+        tshirtReceivingStatus: values[36] ? (String(values[36]).trim() as 'Pending' | 'Requested' | 'Processing' | 'Delivered') : undefined,
+        
+        // ========== JCI职位标签页 ==========
+        
+        // 职位信息
+        jciPosition: values[37] ? String(values[37]).trim() : '',
+        positionStartDate: values[38] ? String(values[38]).trim() : '',
+        positionEndDate: values[39] ? String(values[39]).trim() : '',
+        
         // 其他字段
-        accountType: values[39]?.trim() || '',
-        joinedDate: values[40]?.trim() || '',
-        // 日期
-        paymentDate: values[41]?.trim() || '',
-        endorsementDate: values[42]?.trim() || '',
-        paymentVerifiedDate: values[43]?.trim() || '',
+        joinedDate: values[40] ? String(values[40]).trim() : '',
+        paymentDate: values[41] ? String(values[41]).trim() : '',
+        endorsementDate: values[42] ? String(values[42]).trim() : '',
+        paymentVerifiedDate: values[43] ? String(values[43]).trim() : '',
+        paymentSlipUrl: values[44] ? String(values[44]).trim() : '',
+        termStartDate: values[45] ? String(values[45]).trim() : '',
+        termEndDate: values[46] ? String(values[46]).trim() : '',
       };
 
       const validation = validateMember(memberData);
@@ -286,10 +444,10 @@ const BatchImportModal: React.FC<BatchImportModalProps> = ({
     const lines = pastedData.trim().split('\n');
     if (lines.length >= 1) {
       const firstLineFields = lines[0].split('\t');
-      console.log(`粘贴数据字段数量: ${firstLineFields.length}`);
+      // console.log(`粘贴数据字段数量: ${firstLineFields.length}`);
       
-      if (firstLineFields.length < 34) {
-        message.warning(`检测到只有 ${firstLineFields.length} 个字段，预期 34 个字段。请确保使用制表符分隔数据，不是空格。`);
+      if (firstLineFields.length < 47) {
+        message.warning(`检测到只有 ${firstLineFields.length} 个字段，预期 47 个字段。请确保使用制表符分隔数据，不是空格。`);
       }
     }
     
@@ -346,59 +504,85 @@ const BatchImportModal: React.FC<BatchImportModalProps> = ({
     setIsImporting(true);
     try {
       const result = await onImport(validMembers.map(m => ({
+        // ========== 基本信息标签页 ==========
+        
+        // 个人身份信息
         name: m.name,
-        email: m.email,
         phone: m.phone,
-        memberId: m.memberId,
-        status: m.status,
-        level: m.level,
         joinDate: new Date().toISOString(),
         profile: {
-          senatorId: m.senatorId || undefined,
-          // 个人基本信息
+          // 个人身份信息
           fullNameNric: m.fullNameNric || undefined,
           gender: m.gender === 'Male' ? 'male' : m.gender === 'Female' ? 'female' : undefined,
           race: m.race,
           birthDate: m.birthDate || undefined,
-          address: m.address || undefined,
           nricOrPassport: m.nricOrPassport || undefined,
+          address: m.address || undefined,
+          
+          // 联系方式
           whatsappGroup: m.whatsappGroup,
+          
+          // 个人兴趣
           hobbies: (m.hobbies || []) as any,
+          
+          // 文件资料
           profilePhotoUrl: m.profilePhotoUrl || undefined,
-          // 职业信息
+          
+          // ========== 职业信息标签页 ==========
+          
+          // 公司信息
           company: m.company || undefined,
           departmentAndPosition: m.departmentAndPosition || undefined,
           industryDetail: m.industryDetail || undefined,
-          linkedin: m.linkedin || undefined,
-          companyWebsite: m.companyWebsite || undefined,
           categories: (m.categories || []) as any,
           ownIndustry: (m.ownIndustry || []) as any,
           companyIntro: m.companyIntro || undefined,
           acceptInternationalBusiness: m.acceptInternationalBusiness,
           interestedIndustries: (m.interestedIndustries || []) as any,
-          // JCI相关
+          
+          // 社交网络
+          linkedin: m.linkedin || undefined,
+          companyWebsite: m.companyWebsite || undefined,
+          
+          // ========== JCI 相关标签页 ==========
+          
+          // 入会信息
+          senatorId: m.senatorId || undefined,
           introducerName: m.introducerName || undefined,
-          fiveYearsVision: m.fiveYearsVision || undefined,
-          activeMemberHow: m.activeMemberHow || undefined,
           jciEventInterests: m.jciEventInterests || undefined,
           jciBenefitsExpectation: m.jciBenefitsExpectation || undefined,
+          activeMemberHow: m.activeMemberHow || undefined,
+          fiveYearsVision: m.fiveYearsVision || undefined,
+          
+          // 服装信息
           nameToBeEmbroidered: m.nameToBeEmbroidered || undefined,
           shirtSize: m.shirtSize,
           jacketSize: m.jacketSize,
           cutting: m.cutting,
           tshirtReceivingStatus: m.tshirtReceivingStatus,
-          // JCI职位相关
+          
+          // ========== JCI职位标签页 ==========
+          
+          // 职位信息
           jciPosition: m.jciPosition as any || undefined,
           positionStartDate: m.positionStartDate || undefined,
           positionEndDate: m.positionEndDate || undefined,
+          
           // 其他字段
           accountType: m.accountType || undefined,
-          // 日期
           joinedDate: m.joinedDate || undefined,
           paymentDate: m.paymentDate || undefined,
           endorsementDate: m.endorsementDate || undefined,
           paymentVerifiedDate: m.paymentVerifiedDate || undefined,
+          paymentSlipUrl: m.paymentSlipUrl || undefined,
+          termStartDate: m.termStartDate || undefined,
+          termEndDate: m.termEndDate || undefined,
         },
+        // 系统字段
+        email: m.email,
+        memberId: m.memberId,
+        status: m.status,
+        level: m.level,
       })));
       
       setImportResult(result);
@@ -416,16 +600,16 @@ const BatchImportModal: React.FC<BatchImportModalProps> = ({
   };
 
   const handleLoadExample = () => {
-    const exampleData = `姓名\t邮箱\t手机号\t会员编号\t状态\t等级\t参议员编号\t全名\t性别\t种族\t出生日期\t地址\t身份证\tWhatsApp\t兴趣爱好\t头像链接\t公司\t职位\t行业\tLinkedIn\t网站\t类别\t自身行业\t公司简介\t国际商务\t关注行业\t介绍人\t五年愿景\t活跃方式\t活动兴趣\t期望收益\t刺绣名\tT恤尺码\t外套尺码\t版型\tT恤状态\tJCI职位\t职位开始日期\t职位结束日期\t户口类别\t加入日期\t付款日期\t背书日期\t核验日期
-张三\tzhangsan@example.com\t13800138001\tM001\tactive\tbronze\tSN001\tZHANG SAN\tMale\tChinese\t15-JAN-1990\t北京市朝阳区\t1234567890123456\ttrue\t编程,阅读\thttps://example.com/avatar1.jpg\tABC公司\t软件工程师\tIT\thttps://linkedin.com/in/zhangsan\thttps://abc.com\t技术,创新\t软件开发,人工智能\t专注于AI技术开发\tYes\t人工智能,区块链\t李四\t成为技术专家\t参与技术分享\t技术交流\t技术提升\t张三\tM\tL\tUnisex\tDelivered\t技术总监\t01-JAN-2024\t31-DEC-2024\t正式会员\t15-JAN-2024\t15-JAN-2024\t20-JAN-2024\t25-JAN-2024
-李四\tlisi@example.com\t13800138002\tM002\tactive\tsilver\tSN002\tLI SI\tFemale\tChinese\t20-MAR-1988\t上海市浦东区\t1234567890123457\tfalse\t设计,音乐\thttps://example.com/avatar2.jpg\tXYZ公司\t产品经理\t互联网\thttps://linkedin.com/in/lisi\thttps://xyz.com\t产品,管理\t产品设计,用户体验\t专注于用户体验优化\tWilling to explore\t产品设计,用户体验\t王五\t成为产品总监\t参与产品设计\t产品创新\t产品管理\t李四\tL\tXL\tLady\tProcessing\t产品总监\t01-MAR-2024\t28-FEB-2025\t正式会员\t20-MAR-2024\t20-MAR-2024\t25-MAR-2024\t30-MAR-2024
-王五\twangwu@example.com\t13800138003\tM003\tpending\tgold\tSN003\tWANG WU\tMale\tMalay\t10-DEC-1992\t广州市天河区\t1234567890123458\ttrue\t销售,运动\thttps://example.com/avatar3.jpg\tDEF公司\t销售经理\t金融\thttps://linkedin.com/in/wangwu\thttps://def.com\t销售,金融\t金融销售,客户关系\t专注于金融产品销售\tNo\t金融,销售\t赵六\t成为销售总监\t参与销售培训\t销售技巧\t销售业绩\t王五\tXL\t2XL\tUnisex\tRequested\t销售总监\t01-DEC-2024\t30-NOV-2025\t准会员\t10-DEC-2024\t10-DEC-2024\t15-DEC-2024\t20-DEC-2024`;
+    const exampleData = `姓名\t完整姓名(NRIC)\t性别\t种族\t出生日期\tNRIC/护照号\t地址\t邮箱\t手机号\tWhatsApp群组\t兴趣爱好\t头像链接\t公司\t职位\t行业详情\t类别\t自身行业\t公司简介\t接受国际商务\t关注行业\tLinkedIn\t公司网站\t户口类别\t状态\t等级\t参议员编号\t会员编号\t介绍人\tJCI活动兴趣\tJCI期望收益\t如何成为活跃会员\t五年愿景\t刺绣姓名\tT恤尺码\t外套尺码\tT恤版型\tT恤领取状态\tJCI职位\t职位开始日期\t职位结束日期\t入会日期\t付款日期\t背书日期\t核验日期\t付款凭证链接\t任期开始日期\t任期结束日期
+张三\tZHANG SAN\tMale\tChinese\t15-JAN-1990\t1234567890123456\t北京市朝阳区\tzhangsan@example.com\t13800138001\ttrue\t编程,阅读\thttps://example.com/avatar1.jpg\tABC公司\t软件工程师\tIT\t技术,创新\t软件开发,人工智能\t专注于AI技术开发\tYes\t人工智能,区块链\thttps://linkedin.com/in/zhangsan\thttps://abc.com\t正式会员\tactive\tbronze\tSN001\tM001\t李四\t技术交流\t技术提升\t参与技术分享\t成为技术专家\t张三\tM\tL\tUnisex\tDelivered\t技术总监\t01-JAN-2024\t31-DEC-2024\t15-JAN-2024\t15-JAN-2024\t20-JAN-2024\t25-JAN-2024\thttps://example.com/payment1.jpg\t01-JAN-2024\t31-DEC-2024
+李四\tLI SI\tFemale\tChinese\t20-MAR-1988\t1234567890123457\t上海市浦东区\tlisi@example.com\t13800138002\tfalse\t设计,音乐\thttps://example.com/avatar2.jpg\tXYZ公司\t产品经理\t互联网\t产品,管理\t产品设计,用户体验\t专注于用户体验优化\tWilling to explore\t产品设计,用户体验\thttps://linkedin.com/in/lisi\thttps://xyz.com\t正式会员\tactive\tsilver\tSN002\tM002\t王五\t产品创新\t产品管理\t参与产品设计\t成为产品总监\t李四\tL\tXL\tLady\tProcessing\t产品总监\t01-MAR-2024\t28-FEB-2025\t20-MAR-2024\t20-MAR-2024\t25-MAR-2024\t30-MAR-2024\thttps://example.com/payment2.jpg\t01-MAR-2024\t28-FEB-2025
+王五\tWANG WU\tMale\tMalay\t10-DEC-1992\t1234567890123458\t广州市天河区\twangwu@example.com\t13800138003\ttrue\t销售,运动\thttps://example.com/avatar3.jpg\tDEF公司\t销售经理\t金融\t销售,金融\t金融销售,客户关系\t专注于金融产品销售\tNo\t金融,销售\thttps://linkedin.com/in/wangwu\thttps://def.com\t准会员\tpending\tgold\tSN003\tM003\t赵六\t销售技巧\t销售业绩\t参与销售培训\t成为销售总监\t王五\tXL\t2XL\tUnisex\tRequested\t销售总监\t01-DEC-2024\t30-NOV-2025\t10-DEC-2024\t10-DEC-2024\t15-DEC-2024\t20-DEC-2024\thttps://example.com/payment3.jpg\t01-DEC-2024\t30-NOV-2025`;
     const parsedMembers = parsePastedData(exampleData);
     setMembers(parsedMembers);
   };
 
   const handleCopyTemplate = () => {
-    const template = `姓名\t邮箱\t手机号\t会员编号\t状态\t等级\t参议员编号\t完整姓名(NRIC)\t性别\t种族\t地址\tNRIC/护照号\t出生日期\tLinkedIn\t公司网站\t公司\t行业详情\t自身行业\t职位\t类别\t关注行业\t兴趣爱好\tJCI活动兴趣\tJCI期望收益\t公司简介\t介绍人\t五年愿景\t如何成为活跃会员\t刺绣姓名\tT恤尺码\t外套尺码\tT恤版型\tT恤领取状态\t接受国际商务\t付款日期\t背书日期\t核验日期\t头像链接\t付款凭证链接\t入会日期\tJCI职位\t职位开始日期\t职位结束日期\t任期开始日期\t任期结束日期\t会员编号\t邮箱\t状态\t等级\t户口类别\tWhatsApp群组`;
+    const template = `姓名\t完整姓名(NRIC)\t性别\t种族\t出生日期\tNRIC/护照号\t地址\t邮箱\t手机号\tWhatsApp群组\t兴趣爱好\t头像链接\t公司\t职位\t行业详情\t类别\t自身行业\t公司简介\t接受国际商务\t关注行业\tLinkedIn\t公司网站\t户口类别\t状态\t等级\t参议员编号\t会员编号\t介绍人\tJCI活动兴趣\tJCI期望收益\t如何成为活跃会员\t五年愿景\t刺绣姓名\tT恤尺码\t外套尺码\tT恤版型\tT恤领取状态\tJCI职位\t职位开始日期\t职位结束日期\t入会日期\t付款日期\t背书日期\t核验日期\t付款凭证链接\t任期开始日期\t任期结束日期`;
     navigator.clipboard.writeText(template).then(() => {
       message.success('模板已复制到剪贴板');
     }).catch(() => {
@@ -453,7 +637,9 @@ const BatchImportModal: React.FC<BatchImportModalProps> = ({
           <Tag color="red" icon={<CloseCircleOutlined />}>无效</Tag>
       ),
     },
-    // 基本信息 - 按ProfileEditForm顺序
+    // ========== 基本信息标签页 ==========
+    
+    // 个人身份信息
     {
       title: '姓名',
       dataIndex: 'name',
@@ -465,20 +651,6 @@ const BatchImportModal: React.FC<BatchImportModalProps> = ({
           value={text}
           onChange={(e) => updateMember(index, 'name', e.target.value)}
           placeholder="姓名"
-          size="small"
-        />
-      ),
-    },
-    {
-      title: '手机号',
-      dataIndex: 'phone',
-      key: 'phone',
-      width: 100,
-      render: (text: string, _: ParsedMember, index: number) => (
-        <Input
-          value={text}
-          onChange={(e) => updateMember(index, 'phone', e.target.value)}
-          placeholder="手机号"
           size="small"
         />
       ),
@@ -498,33 +670,19 @@ const BatchImportModal: React.FC<BatchImportModalProps> = ({
       ),
     },
     {
-      title: '参议员编号',
-      dataIndex: 'senatorId',
-      key: 'senatorId',
-      width: 100,
-      render: (text: string, _: ParsedMember, index: number) => (
-        <Input
-          value={text}
-          onChange={(e) => updateMember(index, 'senatorId', e.target.value)}
-          placeholder="参议员编号"
-          size="small"
-        />
-      ),
-    },
-    {
       title: '性别',
       dataIndex: 'gender',
       key: 'gender',
       width: 60,
-      render: (gender: 'male' | 'female' | undefined, _: ParsedMember, index: number) => (
+      render: (gender: 'Male' | 'Female' | undefined, _: ParsedMember, index: number) => (
         <select
           value={gender || ''}
-          onChange={(e) => updateMember(index, 'gender', e.target.value as 'male' | 'female' | undefined)}
+          onChange={(e) => updateMember(index, 'gender', e.target.value as 'Male' | 'Female' | undefined)}
           style={{ width: '100%', padding: '2px', border: '1px solid #d9d9d9', borderRadius: '4px', fontSize: '12px' }}
         >
           <option value="">请选择</option>
-          <option value="male">男</option>
-          <option value="female">女</option>
+          <option value="Male">男</option>
+          <option value="Female">女</option>
         </select>
       ),
     },
@@ -548,15 +706,15 @@ const BatchImportModal: React.FC<BatchImportModalProps> = ({
       ),
     },
     {
-      title: '地址',
-      dataIndex: 'address',
-      key: 'address',
-      width: 120,
+      title: '出生日期',
+      dataIndex: 'birthDate',
+      key: 'birthDate',
+      width: 100,
       render: (text: string, _: ParsedMember, index: number) => (
         <Input
           value={text}
-          onChange={(e) => updateMember(index, 'address', e.target.value)}
-          placeholder="地址"
+          onChange={(e) => updateMember(index, 'birthDate', e.target.value)}
+          placeholder="出生日期"
           size="small"
         />
       ),
@@ -576,19 +734,219 @@ const BatchImportModal: React.FC<BatchImportModalProps> = ({
       ),
     },
     {
-      title: '出生日期',
-      dataIndex: 'birthDate',
-      key: 'birthDate',
-      width: 100,
+      title: '地址',
+      dataIndex: 'address',
+      key: 'address',
+      width: 120,
       render: (text: string, _: ParsedMember, index: number) => (
         <Input
           value={text}
-          onChange={(e) => updateMember(index, 'birthDate', e.target.value)}
-          placeholder="出生日期"
+          onChange={(e) => updateMember(index, 'address', e.target.value)}
+          placeholder="地址"
           size="small"
         />
       ),
     },
+    
+    // 联系方式
+    {
+      title: '邮箱',
+      dataIndex: 'email',
+      key: 'email',
+      width: 150,
+      render: (text: string, _: ParsedMember, index: number) => (
+        <Input
+          value={text}
+          onChange={(e) => updateMember(index, 'email', e.target.value)}
+          placeholder="邮箱"
+          size="small"
+        />
+      ),
+    },
+    {
+      title: '手机号',
+      dataIndex: 'phone',
+      key: 'phone',
+      width: 100,
+      render: (text: string, _: ParsedMember, index: number) => (
+        <Input
+          value={text}
+          onChange={(e) => updateMember(index, 'phone', e.target.value)}
+          placeholder="手机号"
+          size="small"
+        />
+      ),
+    },
+    {
+      title: 'WhatsApp群组',
+      dataIndex: 'whatsappGroup',
+      key: 'whatsappGroup',
+      width: 100,
+      render: (value: boolean | undefined, _: ParsedMember, index: number) => (
+        <select
+          value={value === true ? 'true' : value === false ? 'false' : ''}
+          onChange={(e) => updateMember(index, 'whatsappGroup', e.target.value === 'true' ? true : e.target.value === 'false' ? false : undefined)}
+          style={{ width: '100%', padding: '2px', border: '1px solid #d9d9d9', borderRadius: '4px', fontSize: '12px' }}
+        >
+          <option value="">请选择</option>
+          <option value="true">是</option>
+          <option value="false">否</option>
+        </select>
+      ),
+    },
+    
+    // 个人兴趣
+    {
+      title: '兴趣爱好',
+      dataIndex: 'hobbies',
+      key: 'hobbies',
+      width: 120,
+      render: (text: string, _: ParsedMember, index: number) => (
+        <Input
+          value={text}
+          onChange={(e) => updateMember(index, 'hobbies', e.target.value)}
+          placeholder="兴趣爱好"
+          size="small"
+        />
+      ),
+    },
+    
+    // 文件资料
+    {
+      title: '头像链接',
+      dataIndex: 'profilePhotoUrl',
+      key: 'profilePhotoUrl',
+      width: 120,
+      render: (text: string, _: ParsedMember, index: number) => (
+        <Input
+          value={text}
+          onChange={(e) => updateMember(index, 'profilePhotoUrl', e.target.value)}
+          placeholder="头像链接"
+          size="small"
+        />
+      ),
+    },
+    // ========== 职业信息标签页 ==========
+    
+    // 公司信息
+    {
+      title: '公司',
+      dataIndex: 'company',
+      key: 'company',
+      width: 120,
+      render: (text: string, _: ParsedMember, index: number) => (
+        <Input
+          value={text}
+          onChange={(e) => updateMember(index, 'company', e.target.value)}
+          placeholder="公司"
+          size="small"
+        />
+      ),
+    },
+    {
+      title: '职位',
+      dataIndex: 'departmentAndPosition',
+      key: 'departmentAndPosition',
+      width: 120,
+      render: (text: string, _: ParsedMember, index: number) => (
+        <Input
+          value={text}
+          onChange={(e) => updateMember(index, 'departmentAndPosition', e.target.value)}
+          placeholder="职位"
+          size="small"
+        />
+      ),
+    },
+    {
+      title: '行业详情',
+      dataIndex: 'industryDetail',
+      key: 'industryDetail',
+      width: 120,
+      render: (text: string, _: ParsedMember, index: number) => (
+        <Input
+          value={text}
+          onChange={(e) => updateMember(index, 'industryDetail', e.target.value)}
+          placeholder="行业详情"
+          size="small"
+        />
+      ),
+    },
+    {
+      title: '类别',
+      dataIndex: 'categories',
+      key: 'categories',
+      width: 120,
+      render: (text: string, _: ParsedMember, index: number) => (
+        <Input
+          value={text}
+          onChange={(e) => updateMember(index, 'categories', e.target.value)}
+          placeholder="类别"
+          size="small"
+        />
+      ),
+    },
+    {
+      title: '自身行业',
+      dataIndex: 'ownIndustry',
+      key: 'ownIndustry',
+      width: 120,
+      render: (text: string, _: ParsedMember, index: number) => (
+        <Input
+          value={text}
+          onChange={(e) => updateMember(index, 'ownIndustry', e.target.value)}
+          placeholder="自身行业"
+          size="small"
+        />
+      ),
+    },
+    {
+      title: '公司简介',
+      dataIndex: 'companyIntro',
+      key: 'companyIntro',
+      width: 120,
+      render: (text: string, _: ParsedMember, index: number) => (
+        <Input
+          value={text}
+          onChange={(e) => updateMember(index, 'companyIntro', e.target.value)}
+          placeholder="公司简介"
+          size="small"
+        />
+      ),
+    },
+    {
+      title: '接受国际商务',
+      dataIndex: 'acceptInternationalBusiness',
+      key: 'acceptInternationalBusiness',
+      width: 120,
+      render: (value: 'Yes' | 'No' | 'Willing to explore' | undefined, _: ParsedMember, index: number) => (
+        <select
+          value={value || ''}
+          onChange={(e) => updateMember(index, 'acceptInternationalBusiness', e.target.value as 'Yes' | 'No' | 'Willing to explore' | undefined)}
+          style={{ width: '100%', padding: '2px', border: '1px solid #d9d9d9', borderRadius: '4px', fontSize: '12px' }}
+        >
+          <option value="">请选择</option>
+          <option value="Yes">Yes</option>
+          <option value="No">No</option>
+          <option value="Willing to explore">Willing to explore</option>
+        </select>
+      ),
+    },
+    {
+      title: '关注行业',
+      dataIndex: 'interestedIndustries',
+      key: 'interestedIndustries',
+      width: 120,
+      render: (text: string, _: ParsedMember, index: number) => (
+        <Input
+          value={text}
+          onChange={(e) => updateMember(index, 'interestedIndustries', e.target.value)}
+          placeholder="关注行业"
+          size="small"
+        />
+      ),
+    },
+    
+    // 社交网络
     {
       title: 'LinkedIn',
       dataIndex: 'linkedin',
@@ -617,100 +975,98 @@ const BatchImportModal: React.FC<BatchImportModalProps> = ({
         />
       ),
     },
+    // ========== JCI 相关标签页 ==========
+    
+    // 入会信息
     {
-      title: '公司',
-      dataIndex: 'company',
-      key: 'company',
-      width: 120,
+      title: '户口类别',
+      dataIndex: 'accountType',
+      key: 'accountType',
+      width: 100,
       render: (text: string, _: ParsedMember, index: number) => (
         <Input
           value={text}
-          onChange={(e) => updateMember(index, 'company', e.target.value)}
-          placeholder="公司"
+          onChange={(e) => updateMember(index, 'accountType', e.target.value)}
+          placeholder="户口类别"
           size="small"
         />
       ),
     },
     {
-      title: '行业详情',
-      dataIndex: 'industryDetail',
-      key: 'industryDetail',
-      width: 120,
+      title: '状态',
+      dataIndex: 'status',
+      key: 'status',
+      width: 80,
+      render: (status: MemberStatus, _: ParsedMember, index: number) => (
+        <select
+          value={status}
+          onChange={(e) => updateMember(index, 'status', e.target.value as MemberStatus)}
+          style={{ width: '100%', padding: '2px', border: '1px solid #d9d9d9', borderRadius: '4px', fontSize: '12px' }}
+        >
+          <option value="active">活跃</option>
+          <option value="inactive">非活跃</option>
+          <option value="pending">待审核</option>
+          <option value="suspended">已暂停</option>
+        </select>
+      ),
+    },
+    {
+      title: '等级',
+      dataIndex: 'level',
+      key: 'level',
+      width: 80,
+      render: (level: MemberLevel, _: ParsedMember, index: number) => (
+        <select
+          value={level}
+          onChange={(e) => updateMember(index, 'level', e.target.value as MemberLevel)}
+          style={{ width: '100%', padding: '2px', border: '1px solid #d9d9d9', borderRadius: '4px', fontSize: '12px' }}
+        >
+          <option value="bronze">铜牌</option>
+          <option value="silver">银牌</option>
+          <option value="gold">金牌</option>
+          <option value="platinum">白金</option>
+          <option value="diamond">钻石</option>
+        </select>
+      ),
+    },
+    {
+      title: '参议员编号',
+      dataIndex: 'senatorId',
+      key: 'senatorId',
+      width: 100,
       render: (text: string, _: ParsedMember, index: number) => (
         <Input
           value={text}
-          onChange={(e) => updateMember(index, 'industryDetail', e.target.value)}
-          placeholder="行业详情"
+          onChange={(e) => updateMember(index, 'senatorId', e.target.value)}
+          placeholder="参议员编号"
           size="small"
         />
       ),
     },
     {
-      title: '自身行业',
-      dataIndex: 'ownIndustry',
-      key: 'ownIndustry',
-      width: 120,
+      title: '会员编号',
+      dataIndex: 'memberId',
+      key: 'memberId',
+      width: 100,
       render: (text: string, _: ParsedMember, index: number) => (
         <Input
           value={text}
-          onChange={(e) => updateMember(index, 'ownIndustry', e.target.value)}
-          placeholder="自身行业"
+          onChange={(e) => updateMember(index, 'memberId', e.target.value)}
+          placeholder="会员编号"
           size="small"
         />
       ),
     },
     {
-      title: '职位',
-      dataIndex: 'departmentAndPosition',
-      key: 'departmentAndPosition',
-      width: 120,
+      title: '介绍人',
+      dataIndex: 'introducerName',
+      key: 'introducerName',
+      width: 100,
       render: (text: string, _: ParsedMember, index: number) => (
         <Input
           value={text}
-          onChange={(e) => updateMember(index, 'departmentAndPosition', e.target.value)}
-          placeholder="职位"
-          size="small"
-        />
-      ),
-    },
-    {
-      title: '类别',
-      dataIndex: 'categories',
-      key: 'categories',
-      width: 120,
-      render: (text: string, _: ParsedMember, index: number) => (
-        <Input
-          value={text}
-          onChange={(e) => updateMember(index, 'categories', e.target.value)}
-          placeholder="类别"
-          size="small"
-        />
-      ),
-    },
-    {
-      title: '关注行业',
-      dataIndex: 'interestedIndustries',
-      key: 'interestedIndustries',
-      width: 120,
-      render: (text: string, _: ParsedMember, index: number) => (
-        <Input
-          value={text}
-          onChange={(e) => updateMember(index, 'interestedIndustries', e.target.value)}
-          placeholder="关注行业"
-          size="small"
-        />
-      ),
-    },
-    {
-      title: '兴趣爱好',
-      dataIndex: 'hobbies',
-      key: 'hobbies',
-      width: 120,
-      render: (text: string, _: ParsedMember, index: number) => (
-        <Input
-          value={text}
-          onChange={(e) => updateMember(index, 'hobbies', e.target.value)}
-          placeholder="兴趣爱好"
+          onChange={(e) => updateMember(index, 'introducerName', e.target.value)}
+          placeholder="介绍人"
           size="small"
         />
       ),
@@ -744,29 +1100,15 @@ const BatchImportModal: React.FC<BatchImportModalProps> = ({
       ),
     },
     {
-      title: '公司简介',
-      dataIndex: 'companyIntro',
-      key: 'companyIntro',
+      title: '如何成为活跃会员',
+      dataIndex: 'activeMemberHow',
+      key: 'activeMemberHow',
       width: 120,
       render: (text: string, _: ParsedMember, index: number) => (
         <Input
           value={text}
-          onChange={(e) => updateMember(index, 'companyIntro', e.target.value)}
-          placeholder="公司简介"
-          size="small"
-        />
-      ),
-    },
-    {
-      title: '介绍人',
-      dataIndex: 'introducerName',
-      key: 'introducerName',
-      width: 100,
-      render: (text: string, _: ParsedMember, index: number) => (
-        <Input
-          value={text}
-          onChange={(e) => updateMember(index, 'introducerName', e.target.value)}
-          placeholder="介绍人"
+          onChange={(e) => updateMember(index, 'activeMemberHow', e.target.value)}
+          placeholder="如何成为活跃会员"
           size="small"
         />
       ),
@@ -785,20 +1127,7 @@ const BatchImportModal: React.FC<BatchImportModalProps> = ({
         />
       ),
     },
-    {
-      title: '如何成为活跃会员',
-      dataIndex: 'activeMemberHow',
-      key: 'activeMemberHow',
-      width: 120,
-      render: (text: string, _: ParsedMember, index: number) => (
-        <Input
-          value={text}
-          onChange={(e) => updateMember(index, 'activeMemberHow', e.target.value)}
-          placeholder="如何成为活跃会员"
-          size="small"
-        />
-      ),
-    },
+    // 服装信息
     {
       title: '刺绣姓名',
       dataIndex: 'nameToBeEmbroidered',
@@ -893,22 +1222,65 @@ const BatchImportModal: React.FC<BatchImportModalProps> = ({
         </select>
       ),
     },
+    
+    // ========== JCI职位标签页 ==========
+    
+    // 职位信息
     {
-      title: '接受国际商务',
-      dataIndex: 'acceptInternationalBusiness',
-      key: 'acceptInternationalBusiness',
-      width: 120,
-      render: (value: 'Yes' | 'No' | 'Willing to explore' | undefined, _: ParsedMember, index: number) => (
-        <select
-          value={value || ''}
-          onChange={(e) => updateMember(index, 'acceptInternationalBusiness', e.target.value as 'Yes' | 'No' | 'Willing to explore' | undefined)}
-          style={{ width: '100%', padding: '2px', border: '1px solid #d9d9d9', borderRadius: '4px', fontSize: '12px' }}
-        >
-          <option value="">请选择</option>
-          <option value="Yes">Yes</option>
-          <option value="No">No</option>
-          <option value="Willing to explore">Willing to explore</option>
-        </select>
+      title: 'JCI职位',
+      dataIndex: 'jciPosition',
+      key: 'jciPosition',
+      width: 100,
+      render: (text: string, _: ParsedMember, index: number) => (
+        <Input
+          value={text}
+          onChange={(e) => updateMember(index, 'jciPosition', e.target.value)}
+          placeholder="JCI职位"
+          size="small"
+        />
+      ),
+    },
+    {
+      title: '职位开始日期',
+      dataIndex: 'positionStartDate',
+      key: 'positionStartDate',
+      width: 100,
+      render: (text: string, _: ParsedMember, index: number) => (
+        <Input
+          value={text}
+          onChange={(e) => updateMember(index, 'positionStartDate', e.target.value)}
+          placeholder="职位开始日期"
+          size="small"
+        />
+      ),
+    },
+    {
+      title: '职位结束日期',
+      dataIndex: 'positionEndDate',
+      key: 'positionEndDate',
+      width: 100,
+      render: (text: string, _: ParsedMember, index: number) => (
+        <Input
+          value={text}
+          onChange={(e) => updateMember(index, 'positionEndDate', e.target.value)}
+          placeholder="职位结束日期"
+          size="small"
+        />
+      ),
+    },
+    // 其他字段
+    {
+      title: '入会日期',
+      dataIndex: 'joinedDate',
+      key: 'joinedDate',
+      width: 100,
+      render: (text: string, _: ParsedMember, index: number) => (
+        <Input
+          value={text}
+          onChange={(e) => updateMember(index, 'joinedDate', e.target.value)}
+          placeholder="入会日期"
+          size="small"
+        />
       ),
     },
     {
@@ -954,20 +1326,6 @@ const BatchImportModal: React.FC<BatchImportModalProps> = ({
       ),
     },
     {
-      title: '头像链接',
-      dataIndex: 'profilePhotoUrl',
-      key: 'profilePhotoUrl',
-      width: 120,
-      render: (text: string, _: ParsedMember, index: number) => (
-        <Input
-          value={text}
-          onChange={(e) => updateMember(index, 'profilePhotoUrl', e.target.value)}
-          placeholder="头像链接"
-          size="small"
-        />
-      ),
-    },
-    {
       title: '付款凭证链接',
       dataIndex: 'paymentSlipUrl',
       key: 'paymentSlipUrl',
@@ -977,63 +1335,6 @@ const BatchImportModal: React.FC<BatchImportModalProps> = ({
           value={text}
           onChange={(e) => updateMember(index, 'paymentSlipUrl', e.target.value)}
           placeholder="付款凭证链接"
-          size="small"
-        />
-      ),
-    },
-    {
-      title: '入会日期',
-      dataIndex: 'joinedDate',
-      key: 'joinedDate',
-      width: 100,
-      render: (text: string, _: ParsedMember, index: number) => (
-        <Input
-          value={text}
-          onChange={(e) => updateMember(index, 'joinedDate', e.target.value)}
-          placeholder="入会日期"
-          size="small"
-        />
-      ),
-    },
-    // JCI职位相关
-    {
-      title: 'JCI职位',
-      dataIndex: 'jciPosition',
-      key: 'jciPosition',
-      width: 100,
-      render: (text: string, _: ParsedMember, index: number) => (
-        <Input
-          value={text}
-          onChange={(e) => updateMember(index, 'jciPosition', e.target.value)}
-          placeholder="JCI职位"
-          size="small"
-        />
-      ),
-    },
-    {
-      title: '职位开始日期',
-      dataIndex: 'positionStartDate',
-      key: 'positionStartDate',
-      width: 100,
-      render: (text: string, _: ParsedMember, index: number) => (
-        <Input
-          value={text}
-          onChange={(e) => updateMember(index, 'positionStartDate', e.target.value)}
-          placeholder="职位开始日期"
-          size="small"
-        />
-      ),
-    },
-    {
-      title: '职位结束日期',
-      dataIndex: 'positionEndDate',
-      key: 'positionEndDate',
-      width: 100,
-      render: (text: string, _: ParsedMember, index: number) => (
-        <Input
-          value={text}
-          onChange={(e) => updateMember(index, 'positionEndDate', e.target.value)}
-          placeholder="职位结束日期"
           size="small"
         />
       ),
@@ -1064,103 +1365,6 @@ const BatchImportModal: React.FC<BatchImportModalProps> = ({
           placeholder="任期结束日期"
           size="small"
         />
-      ),
-    },
-    // 系统字段
-    {
-      title: '会员编号',
-      dataIndex: 'memberId',
-      key: 'memberId',
-      width: 100,
-      render: (text: string, _: ParsedMember, index: number) => (
-        <Input
-          value={text}
-          onChange={(e) => updateMember(index, 'memberId', e.target.value)}
-          placeholder="会员编号"
-          size="small"
-        />
-      ),
-    },
-    {
-      title: '邮箱',
-      dataIndex: 'email',
-      key: 'email',
-      width: 150,
-      render: (text: string, _: ParsedMember, index: number) => (
-        <Input
-          value={text}
-          onChange={(e) => updateMember(index, 'email', e.target.value)}
-          placeholder="邮箱"
-          size="small"
-        />
-      ),
-    },
-    {
-      title: '状态',
-      dataIndex: 'status',
-      key: 'status',
-      width: 80,
-      render: (status: MemberStatus, _: ParsedMember, index: number) => (
-        <select
-          value={status}
-          onChange={(e) => updateMember(index, 'status', e.target.value as MemberStatus)}
-          style={{ width: '100%', padding: '2px', border: '1px solid #d9d9d9', borderRadius: '4px', fontSize: '12px' }}
-        >
-          <option value="active">活跃</option>
-          <option value="inactive">非活跃</option>
-          <option value="pending">待审核</option>
-          <option value="suspended">已暂停</option>
-        </select>
-      ),
-    },
-    {
-      title: '等级',
-      dataIndex: 'level',
-      key: 'level',
-      width: 80,
-      render: (level: MemberLevel, _: ParsedMember, index: number) => (
-        <select
-          value={level}
-          onChange={(e) => updateMember(index, 'level', e.target.value as MemberLevel)}
-          style={{ width: '100%', padding: '2px', border: '1px solid #d9d9d9', borderRadius: '4px', fontSize: '12px' }}
-        >
-          <option value="bronze">铜牌</option>
-          <option value="silver">银牌</option>
-          <option value="gold">金牌</option>
-          <option value="platinum">白金</option>
-          <option value="diamond">钻石</option>
-        </select>
-      ),
-    },
-    {
-      title: '户口类别',
-      dataIndex: 'accountType',
-      key: 'accountType',
-      width: 100,
-      render: (text: string, _: ParsedMember, index: number) => (
-        <Input
-          value={text}
-          onChange={(e) => updateMember(index, 'accountType', e.target.value)}
-          placeholder="户口类别"
-          size="small"
-        />
-      ),
-    },
-    {
-      title: 'WhatsApp群组',
-      dataIndex: 'whatsappGroup',
-      key: 'whatsappGroup',
-      width: 100,
-      render: (value: boolean | undefined, _: ParsedMember, index: number) => (
-        <select
-          value={value === true ? 'true' : value === false ? 'false' : ''}
-          onChange={(e) => updateMember(index, 'whatsappGroup', e.target.value === 'true' ? true : e.target.value === 'false' ? false : undefined)}
-          style={{ width: '100%', padding: '2px', border: '1px solid #d9d9d9', borderRadius: '4px', fontSize: '12px' }}
-        >
-          <option value="">请选择</option>
-          <option value="true">是</option>
-          <option value="false">否</option>
-        </select>
       ),
     },
     // 操作和错误列
@@ -1255,6 +1459,28 @@ const BatchImportModal: React.FC<BatchImportModalProps> = ({
             </Space>
           </div>
           
+          {/* 开发者模式开关 */}
+          <Card 
+            size="small" 
+            style={{ 
+              marginBottom: 16, 
+              background: developerMode ? '#fff7e6' : '#f6ffed',
+              border: developerMode ? '1px solid #ffd591' : '1px solid #b7eb8f'
+            }}
+          >
+            <Space align="center">
+              <Switch
+                checked={developerMode}
+                onChange={setDeveloperMode}
+                checkedChildren="开发者模式"
+                unCheckedChildren="正常模式"
+              />
+              <Text type="secondary" style={{ fontSize: '12px' }}>
+                {developerMode ? '已绕过必填字段验证，所有字段变为选填' : '启用必填字段验证'}
+              </Text>
+            </Space>
+          </Card>
+
           <Alert
             message="使用说明"
             description={
@@ -1265,10 +1491,24 @@ const BatchImportModal: React.FC<BatchImportModalProps> = ({
                 <p>4. 点击"复制模板"获取Excel模板</p>
                 <p>5. 支持添加新行和删除行操作，删除所有行后会自动添加一行空数据</p>
                 <p><strong>注意：</strong>粘贴数据时请确保使用制表符分隔，不是空格。如果只有14个字段，请检查数据格式。</p>
+                <p><strong>状态值：</strong>支持中文(待审核/活跃/不活跃/暂停)或英文(pending/active/inactive/suspended)</p>
+                <p><strong>等级值：</strong>支持中文(铜牌/银牌/金牌/白金/钻石)或英文(bronze/silver/gold/platinum/diamond)</p>
+                {developerMode && (
+                  <p style={{ color: '#fa8c16', fontWeight: 'bold' }}>
+                    ⚠️ 开发者模式已启用：必填字段验证已绕过，所有字段变为选填
+                  </p>
+                )}
                 <details style={{ marginTop: 8 }}>
                   <summary><strong>字段列表（按ProfileEditForm顺序）：</strong></summary>
                   <div style={{ marginTop: 8, fontSize: '12px', lineHeight: '1.4' }}>
-                    1.姓名 2.手机号 3.完整姓名(NRIC) 4.参议员编号 5.性别 6.种族 7.地址 8.NRIC/护照号 9.出生日期 10.LinkedIn 11.公司网站 12.公司 13.行业详情 14.自身行业 15.职位 16.类别 17.关注行业 18.兴趣爱好 19.JCI活动兴趣 20.JCI期望收益 21.公司简介 22.介绍人 23.五年愿景 24.如何成为活跃会员 25.刺绣姓名 26.T恤尺码 27.外套尺码 28.T恤版型 29.T恤领取状态 30.接受国际商务 31.付款日期 32.背书日期 33.核验日期 34.头像链接 35.付款凭证链接 36.入会日期 37.JCI职位 38.职位开始日期 39.职位结束日期 40.任期开始日期 41.任期结束日期 42.会员编号 43.邮箱 44.状态 45.等级 46.户口类别 47.WhatsApp群组
+                    <strong>基本信息标签页：</strong><br/>
+                    1.姓名 2.完整姓名(NRIC) 3.性别 4.种族 5.出生日期 6.NRIC/护照号 7.地址 8.邮箱 9.手机号 10.WhatsApp群组 11.兴趣爱好 12.头像链接<br/>
+                    <strong>职业信息标签页：</strong><br/>
+                    13.公司 14.职位 15.行业详情 16.类别 17.自身行业 18.公司简介 19.接受国际商务 20.关注行业 21.LinkedIn 22.公司网站<br/>
+                    <strong>JCI 相关标签页：</strong><br/>
+                    23.户口类别 24.状态 25.等级 26.参议员编号 27.会员编号 28.介绍人 29.JCI活动兴趣 30.JCI期望收益 31.如何成为活跃会员 32.五年愿景 33.刺绣姓名 34.T恤尺码 35.外套尺码 36.T恤版型 37.T恤领取状态<br/>
+                    <strong>JCI职位标签页：</strong><br/>
+                    38.JCI职位 39.职位开始日期 40.职位结束日期 41.入会日期 42.付款日期 43.背书日期 44.核验日期 45.付款凭证链接 46.任期开始日期 47.任期结束日期
                   </div>
                 </details>
               </div>
@@ -1295,7 +1535,7 @@ const BatchImportModal: React.FC<BatchImportModalProps> = ({
                   pagination={false}
                   size="small"
                   scroll={{ x: 2000, y: 400 }}
-                  rowKey={(record) => record.rowIndex?.toString() || '0'}
+                  rowKey={(record, index) => record.rowIndex?.toString() || index?.toString() || '0'}
                 />
               </div>
         </div>
