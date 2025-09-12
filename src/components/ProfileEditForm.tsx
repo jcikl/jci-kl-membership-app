@@ -17,6 +17,7 @@ import {
   INTERNATIONAL_BIZ_OPTIONS,
   GENDER_OPTIONS,
   RACE_OPTIONS,
+  NATIONALITY_OPTIONS,
 } from '@/types/constants';
 import { } from '@/types/rbac';
 import { useIsAdmin } from '@/hooks/usePermissions';
@@ -62,6 +63,7 @@ const ProfileEditForm: React.FC<ProfileEditFormProps> = ({ member, onSubmit, onC
       senatorId: member?.profile?.senatorId || '',
       gender: member?.profile?.gender ? (member?.profile?.gender === 'Male' ? 'Male' : 'Female') : null,
       race: member?.profile?.race,
+      nationality: member?.profile?.nationality || 'Malaysia',
       address: member?.profile?.address || '',
       nricOrPassport: member?.profile?.nricOrPassport || '',
       birthDate: safeParseDate(member?.profile?.birthDate, 'DD-MMM-YYYY'),
@@ -211,6 +213,27 @@ const ProfileEditForm: React.FC<ProfileEditFormProps> = ({ member, onSubmit, onC
                     control={control}
                     render={({ field }) => (
                       <Select {...field} options={RACE_OPTIONS.map(g => ({ value: g, label: g }))} allowClear />
+                    )}
+                  />
+                </Form.Item>
+              </FieldPermissionController>
+            </Col>
+          );
+        case 'nationality':
+          return (
+            <Col span={8}>
+              <FieldPermissionController field={field} userRole={userRole} memberData={member}>
+                <Form.Item label="国籍" required>
+                  <Controller
+                    name="nationality"
+                    control={control}
+                    render={({ field }) => (
+                      <Select 
+                        {...field} 
+                        options={NATIONALITY_OPTIONS.map(n => ({ value: n, label: n }))} 
+                        allowClear 
+                        placeholder="请选择国籍"
+                      />
                     )}
                   />
                 </Form.Item>
@@ -829,6 +852,7 @@ const ProfileEditForm: React.FC<ProfileEditFormProps> = ({ member, onSubmit, onC
           senatorId: cleanValue(values.senatorId),
           gender: (values.gender === 'Male' ? 'Male' : values.gender === 'Female' ? 'Female' : null) as 'Male' | 'Female' | null,
           race: cleanValue(values.race),
+          nationality: cleanValue(values.nationality),
           address: cleanValue(values.address),
           nricOrPassport: cleanValue(values.nricOrPassport),
           birthDate: cleanValue(values.birthDate),
