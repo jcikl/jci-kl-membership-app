@@ -29,6 +29,7 @@ export interface FieldGroup {
 
 // 字段分组定义
 export const FIELD_GROUPS: FieldGroup[] = [
+  // 基本信息标签页
   {
     key: 'personal_identity',
     label: '个人身份信息',
@@ -52,16 +53,6 @@ export const FIELD_GROUPS: FieldGroup[] = [
     ]
   },
   {
-    key: 'member_info',
-    label: '会员信息',
-    fields: [
-      'status',
-      'level',
-      'joinDate',
-      'convertedDate'
-    ]
-  },
-  {
     key: 'personal_interests',
     label: '个人兴趣',
     fields: [
@@ -75,6 +66,7 @@ export const FIELD_GROUPS: FieldGroup[] = [
       'profilePhotoUrl'
     ]
   },
+  // 职业信息标签页
   {
     key: 'company_info',
     label: '公司信息',
@@ -97,13 +89,16 @@ export const FIELD_GROUPS: FieldGroup[] = [
       'companyWebsite'
     ]
   },
+  // JCI 相关标签页
   {
     key: 'jci_membership',
     label: '入会信息',
     fields: [
+      'accountType',
+      'status',
+      'level',
       'senatorId',
       'memberId',
-      'accountType',
       'introducerName',
       'jciEventInterests',
       'jciBenefitsExpectation',
@@ -122,6 +117,7 @@ export const FIELD_GROUPS: FieldGroup[] = [
       'tshirtReceivingStatus'
     ]
   },
+  // JCI职位标签页
   {
     key: 'jci_position',
     label: '职位信息',

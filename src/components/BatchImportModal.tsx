@@ -31,7 +31,7 @@ const { Text } = Typography;
 interface BatchImportModalProps {
   visible: boolean;
   onCancel: () => void;
-  onImport: (members: Omit<Member, 'id' | 'createdAt' | 'updatedAt'>[]) => Promise<{ success: number; failed: number; errors: string[] }>;
+  onImport: (members: Omit<Member, 'id' | 'createdAt' | 'updatedAt'>[], developerMode: boolean) => Promise<{ success: number; failed: number; errors: string[] }>;
 }
 
 interface ParsedMember {
@@ -43,8 +43,8 @@ interface ParsedMember {
   // 个人身份信息
   name: string;
   fullNameNric?: string;
-  gender?: 'Male' | 'Female';
-  race?: 'Chinese' | 'Malay' | 'Indian' | 'Other';
+  gender?: 'Male' | 'Female' | null;
+  race?: 'Chinese' | 'Malay' | 'Indian' | 'Other' | null;
   birthDate?: string;
   nricOrPassport?: string;
   address?: string;
@@ -52,7 +52,7 @@ interface ParsedMember {
   // 联系方式
   email: string;
   phone: string;
-  whatsappGroup?: boolean;
+  whatsappGroup?: boolean | null;
   
   // 个人兴趣
   hobbies?: string[];
@@ -69,7 +69,7 @@ interface ParsedMember {
   categories?: string[];
   ownIndustry?: string[];
   companyIntro?: string;
-  acceptInternationalBusiness?: 'Yes' | 'No' | 'Willing to explore';
+  acceptInternationalBusiness?: 'Yes' | 'No' | 'Willing to explore' | null;
   interestedIndustries?: string[];
   
   // 社交网络
@@ -92,10 +92,10 @@ interface ParsedMember {
   
   // 服装信息
   nameToBeEmbroidered?: string;
-  shirtSize?: 'XS' | 'S' | 'M' | 'L' | 'XL' | '2XL' | '3XL';
-  jacketSize?: 'XS' | 'S' | 'M' | 'L' | 'XL' | '2XL' | '3XL';
-  cutting?: 'Unisex' | 'Lady';
-  tshirtReceivingStatus?: 'Pending' | 'Requested' | 'Processing' | 'Delivered';
+  shirtSize?: 'XS' | 'S' | 'M' | 'L' | 'XL' | '2XL' | '3XL' | null;
+  jacketSize?: 'XS' | 'S' | 'M' | 'L' | 'XL' | '2XL' | '3XL' | null;
+  cutting?: 'Unisex' | 'Lady' | null;
+  tshirtReceivingStatus?: 'Pending' | 'Requested' | 'Processing' | 'Delivered' | null;
   
   // ========== JCI职位标签页 ==========
   
@@ -140,8 +140,8 @@ const BatchImportModal: React.FC<BatchImportModalProps> = ({
     // 个人身份信息
     name: '',
     fullNameNric: '',
-    gender: undefined,
-    race: undefined,
+    gender: null,
+    race: null,
     birthDate: '',
     nricOrPassport: '',
     address: '',
@@ -149,7 +149,7 @@ const BatchImportModal: React.FC<BatchImportModalProps> = ({
     // 联系方式
     email: '',
     phone: '',
-    whatsappGroup: false,
+    whatsappGroup: null,
     
     // 个人兴趣
     hobbies: [],
@@ -166,7 +166,7 @@ const BatchImportModal: React.FC<BatchImportModalProps> = ({
     categories: [],
     ownIndustry: [],
     companyIntro: '',
-    acceptInternationalBusiness: undefined,
+    acceptInternationalBusiness: null,
     interestedIndustries: [],
     
     // 社交网络
@@ -189,10 +189,10 @@ const BatchImportModal: React.FC<BatchImportModalProps> = ({
     
     // 服装信息
     nameToBeEmbroidered: '',
-    shirtSize: undefined,
-    jacketSize: undefined,
-    cutting: undefined,
-    tshirtReceivingStatus: undefined,
+    shirtSize: null,
+    jacketSize: null,
+    cutting: null,
+    tshirtReceivingStatus: null,
     
     // ========== JCI职位标签页 ==========
     
@@ -327,8 +327,8 @@ const BatchImportModal: React.FC<BatchImportModalProps> = ({
         // 个人身份信息
         name: values[0] ? String(values[0]).trim() : '',
         fullNameNric: values[1] ? String(values[1]).trim() : '',
-        gender: values[2] ? (String(values[2]).trim() as 'Male' | 'Female') : undefined,
-        race: values[3] ? (String(values[3]).trim() as 'Chinese' | 'Malay' | 'Indian' | 'Other') : undefined,
+        gender: values[2] ? (String(values[2]).trim() as 'Male' | 'Female') : null,
+        race: values[3] ? (String(values[3]).trim() as 'Chinese' | 'Malay' | 'Indian' | 'Other') : null,
         birthDate: values[4] ? String(values[4]).trim() : '',
         nricOrPassport: values[5] ? String(values[5]).trim() : '',
         address: values[6] ? String(values[6]).trim() : '',
@@ -353,7 +353,7 @@ const BatchImportModal: React.FC<BatchImportModalProps> = ({
         categories: values[15] ? (String(values[15]).trim() ? String(values[15]).split(',').map(s => s.trim()).filter(s => s) : []) : [],
         ownIndustry: values[16] ? (String(values[16]).trim() ? String(values[16]).split(',').map(s => s.trim()).filter(s => s) : []) : [],
         companyIntro: values[17] ? String(values[17]).trim() : '',
-        acceptInternationalBusiness: values[18] ? (String(values[18]).trim() as 'Yes' | 'No' | 'Willing to explore') : undefined,
+        acceptInternationalBusiness: values[18] ? (String(values[18]).trim() as 'Yes' | 'No' | 'Willing to explore') : null,
         interestedIndustries: values[19] ? (String(values[19]).trim() ? String(values[19]).split(',').map(s => s.trim()).filter(s => s) : []) : [],
         
         // 社交网络
@@ -404,10 +404,10 @@ const BatchImportModal: React.FC<BatchImportModalProps> = ({
         
         // 服装信息
         nameToBeEmbroidered: values[32] ? String(values[32]).trim() : '',
-        shirtSize: values[33] ? (String(values[33]).trim() as 'XS' | 'S' | 'M' | 'L' | 'XL' | '2XL' | '3XL') : undefined,
-        jacketSize: values[34] ? (String(values[34]).trim() as 'XS' | 'S' | 'M' | 'L' | 'XL' | '2XL' | '3XL') : undefined,
-        cutting: values[35] ? (String(values[35]).trim() as 'Unisex' | 'Lady') : undefined,
-        tshirtReceivingStatus: values[36] ? (String(values[36]).trim() as 'Pending' | 'Requested' | 'Processing' | 'Delivered') : undefined,
+        shirtSize: values[33] ? (String(values[33]).trim() as 'XS' | 'S' | 'M' | 'L' | 'XL' | '2XL' | '3XL') : null,
+        jacketSize: values[34] ? (String(values[34]).trim() as 'XS' | 'S' | 'M' | 'L' | 'XL' | '2XL' | '3XL') : null,
+        cutting: values[35] ? (String(values[35]).trim() as 'Unisex' | 'Lady') : null,
+        tshirtReceivingStatus: values[36] ? (String(values[36]).trim() as 'Pending' | 'Requested' | 'Processing' | 'Delivered') : null,
         
         // ========== JCI职位标签页 ==========
         
@@ -521,7 +521,7 @@ const BatchImportModal: React.FC<BatchImportModalProps> = ({
         profile: {
           // 个人身份信息
           fullNameNric: m.fullNameNric || '',
-          gender: m.gender === 'Male' ? 'male' : m.gender === 'Female' ? 'female' : undefined,
+          gender: m.gender === 'Male' ? 'Male' : m.gender === 'Female' ? 'Female' : null,
           race: m.race,
           birthDate: m.birthDate || '',
           nricOrPassport: m.nricOrPassport || '',
@@ -591,7 +591,7 @@ const BatchImportModal: React.FC<BatchImportModalProps> = ({
         memberId: m.memberId,
         status: m.status,
         level: m.level,
-      })));
+      })), developerMode);
       
       setImportResult(result);
       message.success(`导入完成！成功: ${result.success} 条，失败: ${result.failed} 条`);
@@ -691,10 +691,10 @@ const BatchImportModal: React.FC<BatchImportModalProps> = ({
       dataIndex: 'gender',
       key: 'gender',
       width: 60,
-      render: (gender: 'Male' | 'Female' | undefined, _: ParsedMember, index: number) => (
+      render: (gender: 'Male' | 'Female' | null, _: ParsedMember, index: number) => (
         <select
           value={gender || ''}
-          onChange={(e) => updateMember(index, 'gender', e.target.value as 'Male' | 'Female' | undefined)}
+          onChange={(e) => updateMember(index, 'gender', e.target.value as 'Male' | 'Female' | null)}
           style={{ width: '100%', padding: '2px', border: '1px solid #d9d9d9', borderRadius: '4px', fontSize: '12px' }}
         >
           <option value="">请选择</option>
@@ -708,10 +708,10 @@ const BatchImportModal: React.FC<BatchImportModalProps> = ({
       dataIndex: 'race',
       key: 'race',
       width: 80,
-      render: (race: 'Chinese' | 'Malay' | 'Indian' | 'Other' | undefined, _: ParsedMember, index: number) => (
+      render: (race: 'Chinese' | 'Malay' | 'Indian' | 'Other' | null, _: ParsedMember, index: number) => (
         <select
           value={race || ''}
-          onChange={(e) => updateMember(index, 'race', e.target.value as 'Chinese' | 'Malay' | 'Indian' | 'Other' | undefined)}
+          onChange={(e) => updateMember(index, 'race', e.target.value as 'Chinese' | 'Malay' | 'Indian' | 'Other' | null)}
           style={{ width: '100%', padding: '2px', border: '1px solid #d9d9d9', borderRadius: '4px', fontSize: '12px' }}
         >
           <option value="">请选择</option>
@@ -799,10 +799,10 @@ const BatchImportModal: React.FC<BatchImportModalProps> = ({
       dataIndex: 'whatsappGroup',
       key: 'whatsappGroup',
       width: 100,
-      render: (value: boolean | undefined, _: ParsedMember, index: number) => (
+      render: (value: boolean | null, _: ParsedMember, index: number) => (
         <select
           value={value === true ? 'true' : value === false ? 'false' : ''}
-          onChange={(e) => updateMember(index, 'whatsappGroup', e.target.value === 'true' ? true : e.target.value === 'false' ? false : undefined)}
+          onChange={(e) => updateMember(index, 'whatsappGroup', e.target.value === 'true' ? true : e.target.value === 'false' ? false : null)}
           style={{ width: '100%', padding: '2px', border: '1px solid #d9d9d9', borderRadius: '4px', fontSize: '12px' }}
         >
           <option value="">请选择</option>
@@ -935,10 +935,10 @@ const BatchImportModal: React.FC<BatchImportModalProps> = ({
       dataIndex: 'acceptInternationalBusiness',
       key: 'acceptInternationalBusiness',
       width: 120,
-      render: (value: 'Yes' | 'No' | 'Willing to explore' | undefined, _: ParsedMember, index: number) => (
+      render: (value: 'Yes' | 'No' | 'Willing to explore' | null, _: ParsedMember, index: number) => (
         <select
           value={value || ''}
-          onChange={(e) => updateMember(index, 'acceptInternationalBusiness', e.target.value as 'Yes' | 'No' | 'Willing to explore' | undefined)}
+          onChange={(e) => updateMember(index, 'acceptInternationalBusiness', e.target.value as 'Yes' | 'No' | 'Willing to explore' | null)}
           style={{ width: '100%', padding: '2px', border: '1px solid #d9d9d9', borderRadius: '4px', fontSize: '12px' }}
         >
           <option value="">请选择</option>
@@ -1164,10 +1164,10 @@ const BatchImportModal: React.FC<BatchImportModalProps> = ({
       dataIndex: 'shirtSize',
       key: 'shirtSize',
       width: 80,
-      render: (size: 'XS' | 'S' | 'M' | 'L' | 'XL' | '2XL' | '3XL' | undefined, _: ParsedMember, index: number) => (
+      render: (size: 'XS' | 'S' | 'M' | 'L' | 'XL' | '2XL' | '3XL' | null, _: ParsedMember, index: number) => (
         <select
           value={size || ''}
-          onChange={(e) => updateMember(index, 'shirtSize', e.target.value as 'XS' | 'S' | 'M' | 'L' | 'XL' | '2XL' | '3XL' | undefined)}
+          onChange={(e) => updateMember(index, 'shirtSize', e.target.value as 'XS' | 'S' | 'M' | 'L' | 'XL' | '2XL' | '3XL' | null)}
           style={{ width: '100%', padding: '2px', border: '1px solid #d9d9d9', borderRadius: '4px', fontSize: '12px' }}
         >
           <option value="">请选择</option>
@@ -1186,10 +1186,10 @@ const BatchImportModal: React.FC<BatchImportModalProps> = ({
       dataIndex: 'jacketSize',
       key: 'jacketSize',
       width: 80,
-      render: (size: 'XS' | 'S' | 'M' | 'L' | 'XL' | '2XL' | '3XL' | undefined, _: ParsedMember, index: number) => (
+      render: (size: 'XS' | 'S' | 'M' | 'L' | 'XL' | '2XL' | '3XL' | null, _: ParsedMember, index: number) => (
         <select
           value={size || ''}
-          onChange={(e) => updateMember(index, 'jacketSize', e.target.value as 'XS' | 'S' | 'M' | 'L' | 'XL' | '2XL' | '3XL' | undefined)}
+          onChange={(e) => updateMember(index, 'jacketSize', e.target.value as 'XS' | 'S' | 'M' | 'L' | 'XL' | '2XL' | '3XL' | null)}
           style={{ width: '100%', padding: '2px', border: '1px solid #d9d9d9', borderRadius: '4px', fontSize: '12px' }}
         >
           <option value="">请选择</option>
@@ -1208,10 +1208,10 @@ const BatchImportModal: React.FC<BatchImportModalProps> = ({
       dataIndex: 'cutting',
       key: 'cutting',
       width: 80,
-      render: (cutting: 'Unisex' | 'Lady' | undefined, _: ParsedMember, index: number) => (
+      render: (cutting: 'Unisex' | 'Lady' | null, _: ParsedMember, index: number) => (
         <select
           value={cutting || ''}
-          onChange={(e) => updateMember(index, 'cutting', e.target.value as 'Unisex' | 'Lady' | undefined)}
+          onChange={(e) => updateMember(index, 'cutting', e.target.value as 'Unisex' | 'Lady' | null)}
           style={{ width: '100%', padding: '2px', border: '1px solid #d9d9d9', borderRadius: '4px', fontSize: '12px' }}
         >
           <option value="">请选择</option>
@@ -1225,10 +1225,10 @@ const BatchImportModal: React.FC<BatchImportModalProps> = ({
       dataIndex: 'tshirtReceivingStatus',
       key: 'tshirtReceivingStatus',
       width: 100,
-      render: (status: 'Pending' | 'Requested' | 'Processing' | 'Delivered' | undefined, _: ParsedMember, index: number) => (
+      render: (status: 'Pending' | 'Requested' | 'Processing' | 'Delivered' | null, _: ParsedMember, index: number) => (
         <select
           value={status || ''}
-          onChange={(e) => updateMember(index, 'tshirtReceivingStatus', e.target.value as 'Pending' | 'Requested' | 'Processing' | 'Delivered' | undefined)}
+          onChange={(e) => updateMember(index, 'tshirtReceivingStatus', e.target.value as 'Pending' | 'Requested' | 'Processing' | 'Delivered' | null)}
           style={{ width: '100%', padding: '2px', border: '1px solid #d9d9d9', borderRadius: '4px', fontSize: '12px' }}
         >
           <option value="">请选择</option>

@@ -16,8 +16,8 @@ export interface Member {
 export interface MemberProfile {
   avatar?: string;
   birthDate?: string; // dd-mmm-yyyy
-  gender?: 'male' | 'female';
-  race?: 'Chinese' | 'Malay' | 'Indian' | 'Other';
+  gender?: 'Male' | 'Female' | null;
+  race?: 'Chinese' | 'Malay' | 'Indian' | 'Other' | null;
   address?: string; // Home Address
 
   // Personal names
@@ -124,14 +124,14 @@ export interface MemberProfile {
 
   // Shirt / merch
   nameToBeEmbroidered?: string;
-  shirtSize?: 'XS' | 'S' | 'M' | 'L' | 'XL' | '2XL' | '3XL'; // JCI KL Pink Shirt
-  jacketSize?: 'XS' | 'S' | 'M' | 'L' | 'XL' | '2XL' | '3XL'; // JCI KL Jacket
-  cutting?: 'Unisex' | 'Lady'; // Cutting - JCI KL Pink Shirt
-  tshirtReceivingStatus?: 'Pending' | 'Requested' | 'Processing' | 'Delivered';
+  shirtSize?: 'XS' | 'S' | 'M' | 'L' | 'XL' | '2XL' | '3XL' | null; // JCI KL Pink Shirt
+  jacketSize?: 'XS' | 'S' | 'M' | 'L' | 'XL' | '2XL' | '3XL' | null; // JCI KL Jacket
+  cutting?: 'Unisex' | 'Lady' | null; // Cutting - JCI KL Pink Shirt
+  tshirtReceivingStatus?: 'Pending' | 'Requested' | 'Processing' | 'Delivered' | null;
 
   // Preferences & consents
-  acceptInternationalBusiness?: 'Yes' | 'No' | 'Willing to explore';
-  whatsappGroup?: boolean;
+  acceptInternationalBusiness?: 'Yes' | 'No' | 'Willing to explore' | null;
+  whatsappGroup?: boolean | null;
 
   // Links & media
   profilePhotoUrl?: string; // Profile Photo

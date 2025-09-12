@@ -273,8 +273,8 @@ const MemberDetailPage: React.FC = () => {
             )}
             {currentMember.profile.gender && (
               <Descriptions.Item label={<><UserOutlined style={{ marginRight: 8, color: '#1890ff' }} />性别</>} span={1}>
-                {currentMember.profile.gender === 'male' ? '男' : 
-                 currentMember.profile.gender === 'female' ? '女' : '其他'}
+                {currentMember.profile.gender === 'Male' ? '男' :
+                  currentMember.profile.gender === 'Female' ? '女' : '其他'}
               </Descriptions.Item>
             )}
             {currentMember.profile.address && (

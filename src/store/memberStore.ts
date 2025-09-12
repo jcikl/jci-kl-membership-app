@@ -18,7 +18,7 @@ interface MemberState {
   fetchMembers: (params?: PaginationParams) => Promise<void>;
   fetchMemberById: (id: string) => Promise<void>;
   addMember: (memberData: Omit<Member, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
-  addMembersBatch: (membersData: Omit<Member, 'id' | 'createdAt' | 'updatedAt'>[]) => Promise<{ success: number; failed: number; errors: string[] }>;
+  addMembersBatch: (membersData: Omit<Member, 'id' | 'createdAt' | 'updatedAt'>[], developerMode?: boolean) => Promise<{ success: number; failed: number; errors: string[] }>;
   updateMemberById: (id: string, memberData: Partial<Member>) => Promise<void>;
   deleteMemberById: (id: string) => Promise<void>;
   setCurrentMember: (member: Member | null) => void;
@@ -90,10 +90,10 @@ export const useMemberStore = create<MemberState>((set, get) => ({
     }
   },
 
-  addMembersBatch: async (membersData) => {
+  addMembersBatch: async (membersData, developerMode = false) => {
     set({ isLoading: true, error: null });
     try {
-      const result = await createMembersBatch(membersData);
+      const result = await createMembersBatch(membersData, developerMode);
       // 重新获取会员列表
       await get().fetchMembers();
       set({ isLoading: false });

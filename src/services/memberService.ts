@@ -192,17 +192,17 @@ export const searchMembers = async (searchTerm: string): Promise<Member[]> => {
 };
 
 // 批量创建会员
-export const createMembersBatch = async (membersData: Omit<Member, 'id' | 'createdAt' | 'updatedAt'>[]): Promise<{ success: number; failed: number; errors: string[] }> => {
+export const createMembersBatch = async (membersData: Omit<Member, 'id' | 'createdAt' | 'updatedAt'>[], developerMode: boolean = false): Promise<{ success: number; failed: number; errors: string[] }> => {
   try {
     const batch = writeBatch(db);
     const errors: string[] = [];
     let successCount = 0;
     let failedCount = 0;
 
-    // 验证数据
+    // 验证数据（开发者模式可以绕过必填字段检查）
     for (let i = 0; i < membersData.length; i++) {
       const memberData = membersData[i];
-      if (!memberData.name || !memberData.email || !memberData.phone || !memberData.memberId) {
+      if (!developerMode && (!memberData.name || !memberData.email || !memberData.phone || !memberData.memberId)) {
         errors.push(`第${i + 1}行：缺少必填字段（姓名、邮箱、手机号、会员编号）`);
         failedCount++;
         continue;

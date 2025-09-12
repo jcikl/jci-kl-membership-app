@@ -108,9 +108,9 @@ const MemberListPage: React.FC = () => {
     setIsBatchImportVisible(true);
   };
 
-  const handleBatchImportSubmit = async (membersData: Omit<Member, 'id' | 'createdAt' | 'updatedAt'>[]) => {
+  const handleBatchImportSubmit = async (membersData: Omit<Member, 'id' | 'createdAt' | 'updatedAt'>[], developerMode: boolean = false) => {
     try {
-      const result = await addMembersBatch(membersData);
+      const result = await addMembersBatch(membersData, developerMode);
       return result;
     } catch (error) {
       throw error;

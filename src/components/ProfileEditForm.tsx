@@ -60,7 +60,7 @@ const ProfileEditForm: React.FC<ProfileEditFormProps> = ({ member, onSubmit, onC
       phone: member?.phone || '',
       fullNameNric: member?.profile?.fullNameNric || '',
       senatorId: member?.profile?.senatorId || '',
-      gender: member?.profile?.gender ? (member?.profile?.gender === 'male' ? 'Male' : 'Female') : undefined,
+      gender: member?.profile?.gender ? (member?.profile?.gender === 'Male' ? 'Male' : 'Female') : null,
       race: member?.profile?.race,
       address: member?.profile?.address || '',
       nricOrPassport: member?.profile?.nricOrPassport || '',
@@ -148,6 +148,9 @@ const ProfileEditForm: React.FC<ProfileEditFormProps> = ({ member, onSubmit, onC
 
     const renderField = (field: string) => {
       switch (field) {
+        // ========== 基本信息标签页 ==========
+        
+        // 个人身份信息
         case 'name':
           return (
             <Col span={12}>
@@ -175,35 +178,6 @@ const ProfileEditForm: React.FC<ProfileEditFormProps> = ({ member, onSubmit, onC
                         {...field} 
                         onChange={(e) => field.onChange(e.target.value.toUpperCase())}
                         placeholder="请输入全大写姓名"
-                      />
-                    )} 
-                  />
-                </Form.Item>
-              </FieldPermissionController>
-            </Col>
-          );
-        case 'senatorId':
-          return (
-            <Col span={12}>
-              <FieldPermissionController 
-                field={field} 
-                userRole={userRole} 
-                memberData={member}
-                showLockMessage={true}
-              >
-                <Form.Item label="参议员编号">
-                  <Controller 
-                    name="senatorId" 
-                    control={control} 
-                    render={({ field }) => (
-                      <Input 
-                        {...field} 
-                        placeholder="请输入参议员编号"
-                        onChange={(e) => {
-                          // 只保留英文字母和数字，并转换为大写
-                          const value = e.target.value.replace(/[^A-Za-z0-9]/g, '').toUpperCase();
-                          field.onChange(value);
-                        }}
                       />
                     )} 
                   />
@@ -267,16 +241,6 @@ const ProfileEditForm: React.FC<ProfileEditFormProps> = ({ member, onSubmit, onC
               </FieldPermissionController>
             </Col>
           );
-        case 'address':
-          return (
-            <Col span={24}>
-              <FieldPermissionController field={field} userRole={userRole} memberData={member}>
-                <Form.Item label="家庭住址">
-                  <Controller name="address" control={control} render={({ field }) => <Input.TextArea {...field} rows={2} />} />
-                </Form.Item>
-              </FieldPermissionController>
-            </Col>
-          );
         case 'nricOrPassport':
           return (
             <Col span={12}>
@@ -300,6 +264,18 @@ const ProfileEditForm: React.FC<ProfileEditFormProps> = ({ member, onSubmit, onC
               </FieldPermissionController>
             </Col>
           );
+        case 'address':
+          return (
+            <Col span={24}>
+              <FieldPermissionController field={field} userRole={userRole} memberData={member}>
+                <Form.Item label="家庭住址">
+                  <Controller name="address" control={control} render={({ field }) => <Input.TextArea {...field} rows={2} />} />
+                </Form.Item>
+              </FieldPermissionController>
+            </Col>
+          );
+        
+        // 联系方式
         case 'email':
           return (
             <Col span={12}>
@@ -338,6 +314,8 @@ const ProfileEditForm: React.FC<ProfileEditFormProps> = ({ member, onSubmit, onC
               </FieldPermissionController>
             </Col>
           );
+        
+        // 个人兴趣
         case 'hobbies':
           return (
             <Col span={24}>
@@ -354,6 +332,8 @@ const ProfileEditForm: React.FC<ProfileEditFormProps> = ({ member, onSubmit, onC
               </FieldPermissionController>
             </Col>
           );
+        
+        // 文件资料
         case 'profilePhotoUrl':
           return (
             <Col span={12}>
@@ -391,7 +371,9 @@ const ProfileEditForm: React.FC<ProfileEditFormProps> = ({ member, onSubmit, onC
               </FieldPermissionController>
             </Col>
           );
-        // 职业信息字段
+        // ========== 职业信息标签页 ==========
+        
+        // 公司信息
         case 'company':
           return (
             <Col span={12}>
@@ -496,6 +478,8 @@ const ProfileEditForm: React.FC<ProfileEditFormProps> = ({ member, onSubmit, onC
               </Form.Item>
             </Col>
           );
+        
+        // 社交网络
         case 'linkedin':
           return (
             <Col span={12}>
@@ -516,23 +500,115 @@ const ProfileEditForm: React.FC<ProfileEditFormProps> = ({ member, onSubmit, onC
               </Form.Item>
             </Col>
           );
-        // JCI相关字段
-        case 'memberId':
-          return (
-            <Col span={12}>
-              <Form.Item label="会员编号">
-                <FieldPermissionController field={field} userRole={userRole} memberData={member}>
-                  <Controller name="memberId" control={control} render={({ field }) => <Input {...field} disabled />} />
-                </FieldPermissionController>
-              </Form.Item>
-            </Col>
-          );
+        // ========== JCI 相关标签页 ==========
+        
+        // 入会信息
         case 'accountType':
           return (
             <Col span={12}>
               <Form.Item label="用户户口类别">
                 <FieldPermissionController field={field} userRole={userRole} memberData={member}>
                   <Controller name="accountType" control={control} render={({ field }) => <Input {...field} disabled />} />
+                </FieldPermissionController>
+              </Form.Item>
+            </Col>
+          );
+        case 'status':
+          return (
+            <Col span={12}>
+              <Form.Item label="状态">
+                <FieldPermissionController 
+                  field={field} 
+                  userRole={userRole} 
+                  memberData={member}
+                  showPermissionIndicator={true}
+                >
+                  <Controller
+                    name="status"
+                    control={control}
+                    render={({ field }) => (
+                      <Select 
+                        {...field} 
+                        options={[
+                          { value: 'active', label: '活跃' },
+                          { value: 'inactive', label: '非活跃' },
+                          { value: 'pending', label: '待审核' },
+                          { value: 'suspended', label: '暂停' }
+                        ]} 
+                        disabled={userRole !== 'developer'}
+                      />
+                    )}
+                  />
+                </FieldPermissionController>
+              </Form.Item>
+            </Col>
+          );
+        case 'level':
+          return (
+            <Col span={12}>
+              <Form.Item label="等级">
+                <FieldPermissionController 
+                  field={field} 
+                  userRole={userRole} 
+                  memberData={member}
+                  showPermissionIndicator={true}
+                >
+                  <Controller
+                    name="level"
+                    control={control}
+                    render={({ field }) => (
+                      <Select 
+                        {...field} 
+                        options={[
+                          { value: 'bronze', label: '铜级' },
+                          { value: 'silver', label: '银级' },
+                          { value: 'gold', label: '金级' },
+                          { value: 'platinum', label: '铂金级' },
+                          { value: 'diamond', label: '钻石级' }
+                        ]} 
+                        disabled={userRole !== 'developer'}
+                      />
+                    )}
+                  />
+                </FieldPermissionController>
+              </Form.Item>
+            </Col>
+          );
+        case 'senatorId':
+          return (
+            <Col span={12}>
+              <FieldPermissionController 
+                field={field} 
+                userRole={userRole} 
+                memberData={member}
+                showLockMessage={true}
+              >
+                <Form.Item label="参议员编号">
+                  <Controller 
+                    name="senatorId" 
+                    control={control} 
+                    render={({ field }) => (
+                      <Input 
+                        {...field} 
+                        placeholder="请输入参议员编号"
+                        onChange={(e) => {
+                          // 只保留英文字母和数字，并转换为大写
+                          const value = e.target.value.replace(/[^A-Za-z0-9]/g, '').toUpperCase();
+                          field.onChange(value);
+                        }}
+                      />
+                    )} 
+                  />
+                </Form.Item>
+              </FieldPermissionController>
+            </Col>
+          );
+        case 'memberId':
+          return (
+            <Col span={12}>
+              <Form.Item label="会员编号">
+                <FieldPermissionController field={field} userRole={userRole} memberData={member}>
+                  <Controller name="memberId" control={control} render={({ field }) => <Input {...field} disabled />} />
                 </FieldPermissionController>
               </Form.Item>
             </Col>
@@ -592,7 +668,7 @@ const ProfileEditForm: React.FC<ProfileEditFormProps> = ({ member, onSubmit, onC
               </Form.Item>
             </Col>
           );
-        // 服装信息字段
+        // 服装信息
         case 'nameToBeEmbroidered':
           return (
             <Col span={12}>
@@ -687,7 +763,10 @@ const ProfileEditForm: React.FC<ProfileEditFormProps> = ({ member, onSubmit, onC
               </Form.Item>
             </Col>
           );
-        // JCI职位字段
+        
+        // ========== JCI职位标签页 ==========
+        
+        // 职位信息
         case 'jciPosition':
           return (
             <Col span={12}>
@@ -714,67 +793,6 @@ const ProfileEditForm: React.FC<ProfileEditFormProps> = ({ member, onSubmit, onC
               <Form.Item label="职位结束日期">
                 <FieldPermissionController field={field} userRole={userRole} memberData={member}>
                   <Controller name="positionEndDate" control={control} render={({ field }) => <Input {...field} disabled />} />
-                </FieldPermissionController>
-              </Form.Item>
-            </Col>
-          );
-        case 'status':
-          return (
-            <Col span={12}>
-              <Form.Item label="状态">
-                <FieldPermissionController 
-                  field={field} 
-                  userRole={userRole} 
-                  memberData={member}
-                  showPermissionIndicator={true}
-                >
-                  <Controller
-                    name="status"
-                    control={control}
-                    render={({ field }) => (
-                      <Select 
-                        {...field} 
-                        options={[
-                          { value: 'active', label: '活跃' },
-                          { value: 'inactive', label: '非活跃' },
-                          { value: 'pending', label: '待审核' },
-                          { value: 'suspended', label: '暂停' }
-                        ]} 
-                        disabled={userRole !== 'developer'}
-                      />
-                    )}
-                  />
-                </FieldPermissionController>
-              </Form.Item>
-            </Col>
-          );
-        case 'level':
-          return (
-            <Col span={12}>
-              <Form.Item label="等级">
-                <FieldPermissionController 
-                  field={field} 
-                  userRole={userRole} 
-                  memberData={member}
-                  showPermissionIndicator={true}
-                >
-                  <Controller
-                    name="level"
-                    control={control}
-                    render={({ field }) => (
-                      <Select 
-                        {...field} 
-                        options={[
-                          { value: 'bronze', label: '铜级' },
-                          { value: 'silver', label: '银级' },
-                          { value: 'gold', label: '金级' },
-                          { value: 'platinum', label: '铂金级' },
-                          { value: 'diamond', label: '钻石级' }
-                        ]} 
-                        disabled={userRole !== 'developer'}
-                      />
-                    )}
-                  />
                 </FieldPermissionController>
               </Form.Item>
             </Col>
@@ -809,7 +827,7 @@ const ProfileEditForm: React.FC<ProfileEditFormProps> = ({ member, onSubmit, onC
           ...member.profile,
           fullNameNric: cleanValue(values.fullNameNric),
           senatorId: cleanValue(values.senatorId),
-          gender: (values.gender === 'Male' ? 'male' : values.gender === 'Female' ? 'female' : undefined) as 'male' | 'female' | undefined,
+          gender: (values.gender === 'Male' ? 'Male' : values.gender === 'Female' ? 'Female' : null) as 'Male' | 'Female' | null,
           race: cleanValue(values.race),
           address: cleanValue(values.address),
           nricOrPassport: cleanValue(values.nricOrPassport),
@@ -880,7 +898,6 @@ const ProfileEditForm: React.FC<ProfileEditFormProps> = ({ member, onSubmit, onC
               <div style={{ maxHeight: '60vh', overflowY: 'auto', padding: '0 8px' }}>
                 {renderFieldGroup('personal_identity')}
                 {renderFieldGroup('contact')}
-                {renderFieldGroup('member_info')}
                 {renderFieldGroup('personal_interests')}
                 {renderFieldGroup('files')}
               </div>
@@ -901,71 +918,6 @@ const ProfileEditForm: React.FC<ProfileEditFormProps> = ({ member, onSubmit, onC
             label: 'JCI 相关',
             children: (
               <div style={{ maxHeight: '60vh', overflowY: 'auto', padding: '0 8px' }}>
-                <FieldGroupSection 
-                  group={{
-                    key: 'membership_info',
-                    label: '入会信息',
-                    fields: ['status', 'level']
-                  }}
-                >
-                  <Row gutter={[16, 16]}>
-                    <Col span={12}>
-                      <Form.Item label="状态">
-                        <FieldPermissionController 
-                          field="status" 
-                          userRole={userRole} 
-                          memberData={member}
-                          showPermissionIndicator={true}
-                        >
-                          <Controller
-                            name="status"
-                            control={control}
-                            render={({ field }) => (
-                              <Select 
-                                {...field} 
-                                options={[
-                                  { value: 'active', label: '活跃' },
-                                  { value: 'inactive', label: '非活跃' },
-                                  { value: 'pending', label: '待审核' },
-                                  { value: 'suspended', label: '暂停' }
-                                ]} 
-                                disabled={userRole !== 'developer'}
-                              />
-                            )}
-                          />
-                        </FieldPermissionController>
-                      </Form.Item>
-                    </Col>
-                    <Col span={12}>
-                      <Form.Item label="等级">
-                        <FieldPermissionController 
-                          field="level" 
-                          userRole={userRole} 
-                          memberData={member}
-                          showPermissionIndicator={true}
-                        >
-                          <Controller
-                            name="level"
-                            control={control}
-                            render={({ field }) => (
-                              <Select 
-                                {...field} 
-                                options={[
-                                  { value: 'bronze', label: '铜级' },
-                                  { value: 'silver', label: '银级' },
-                                  { value: 'gold', label: '金级' },
-                                  { value: 'platinum', label: '铂金级' },
-                                  { value: 'diamond', label: '钻石级' }
-                                ]} 
-                                disabled={userRole !== 'developer'}
-                              />
-                            )}
-                          />
-                        </FieldPermissionController>
-                      </Form.Item>
-                    </Col>
-                  </Row>
-                </FieldGroupSection>
                 {renderFieldGroup('jci_membership')}
                 {renderFieldGroup('clothing_info')}
               </div>
