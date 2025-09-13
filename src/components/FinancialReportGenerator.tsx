@@ -17,16 +17,11 @@ import {
   Divider,
   Tag,
   Tooltip,
-  Progress,
 } from 'antd';
 import {
   FileTextOutlined,
   DownloadOutlined,
-  PrinterOutlined,
-  CalendarOutlined,
-  DollarOutlined,
   BarChartOutlined,
-  PieChartOutlined,
 } from '@ant-design/icons';
 import { useFiscalYear } from '@/contexts/FiscalYearContext';
 import { useAuthStore } from '@/store/authStore';
@@ -36,7 +31,6 @@ import dayjs from 'dayjs';
 
 const { Title, Text } = Typography;
 const { Option } = Select;
-const { RangePicker } = DatePicker;
 
 interface FinancialReportGeneratorProps {
   visible: boolean;
@@ -142,7 +136,7 @@ const FinancialReportGenerator: React.FC<FinancialReportGeneratorProps> = ({
   };
 
   // 导出报表
-  const handleExportReport = (report: FinancialReport, format: 'csv' | 'excel') => {
+  const handleExportReport = (report: FinancialReport) => {
     try {
       const content = financialReportService.exportReportToCSV(report.data);
       const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
@@ -180,6 +174,7 @@ const FinancialReportGenerator: React.FC<FinancialReportGeneratorProps> = ({
     if (!reportData) return null;
 
     const { summary } = reportData;
+    if (!summary) return null;
     const summaryItems = Object.entries(summary).map(([key, value]) => ({
       key,
       value: typeof value === 'number' ? value.toLocaleString() : value,
@@ -238,6 +233,7 @@ const FinancialReportGenerator: React.FC<FinancialReportGeneratorProps> = ({
     if (!reportData) return null;
 
     const { details } = reportData;
+    if (!details) return null;
 
     switch (reportData.reportType) {
       case 'income_statement':
@@ -294,7 +290,7 @@ const FinancialReportGenerator: React.FC<FinancialReportGeneratorProps> = ({
               dataSource={Object.entries(details.monthlyData || {}).map(([month, data]) => ({
                 key: month,
                 month,
-                ...data
+                ...(typeof data === 'object' && data !== null ? data : {})
               }))}
               columns={[
                 { title: '月份', dataIndex: 'month', key: 'month' },
@@ -340,7 +336,7 @@ const FinancialReportGenerator: React.FC<FinancialReportGeneratorProps> = ({
               dataSource={Object.entries(details.projectData || {}).map(([project, data]) => ({
                 key: project,
                 project,
-                ...data
+                ...(typeof data === 'object' && data !== null ? data : {})
               }))}
               columns={[
                 { title: '项目', dataIndex: 'project', key: 'project' },

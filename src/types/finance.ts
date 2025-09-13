@@ -213,6 +213,10 @@ export interface FinancialReportData {
   transactions: Transaction[]; // 交易记录
   budgetComparison: BudgetComparison[]; // 预算对比
   projectSummary?: ProjectSummary[]; // 项目汇总
+  reportType?: FinancialReportType; // 报告类型
+  period?: string; // 报告期间
+  summary?: any; // 摘要信息
+  details?: any; // 详细信息
 }
 
 // 银行余额类型

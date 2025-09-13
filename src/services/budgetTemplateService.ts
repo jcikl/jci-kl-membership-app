@@ -7,6 +7,7 @@ import {
   deleteDoc, 
   query, 
   orderBy,
+  where,
   Timestamp 
 } from 'firebase/firestore';
 import { db } from './firebase';
@@ -80,7 +81,6 @@ export const budgetTemplateService = {
 
   // 根据ID获取预算模板
   async getTemplateById(id: string): Promise<BudgetTemplate | null> {
-    const docRef = doc(db, 'budgetTemplates', id);
     const docSnap = await getDocs(query(collection(db, 'budgetTemplates'), where('id', '==', id)));
     
     if (docSnap.empty) {

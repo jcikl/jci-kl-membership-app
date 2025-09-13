@@ -1,6 +1,5 @@
 import { 
   collection, 
-  doc, 
   addDoc, 
   getDocs, 
   query, 
@@ -15,16 +14,11 @@ import {
   FinancialReportType,
   ReportStatus,
   BankAccount,
-  Transaction,
-  Budget,
-  BudgetAllocation,
-  BillPaymentRequest
+  Transaction
 } from '@/types/finance';
 import { bankAccountService } from './financeService';
 import { transactionService } from './financeService';
 import { budgetService } from './financeService';
-import { budgetAllocationService } from './financeService';
-import { billPaymentService } from './financeService';
 
 // 财政年度计算工具
 export class FiscalYearCalculator {
@@ -564,7 +558,9 @@ export const financialReportService = {
       generatedBy,
       generatedAt: new Date().toISOString(),
       data: reportData,
-      status: 'completed' as ReportStatus
+      status: 'completed' as ReportStatus,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
     };
 
     const docRef = await addDoc(collection(db, 'financial_reports'), {
@@ -584,7 +580,8 @@ export const financialReportService = {
       cash_flow: '现金流量表',
       bank_reconciliation: '银行对账单',
       monthly_summary: '月度收支报告',
-      project_summary: '项目收支报告'
+      project_summary: '项目收支报告',
+      general_ledger: '总账'
     };
 
     return `${reportNames[reportType]} - ${fiscalYear}财政年度`;
@@ -631,21 +628,21 @@ export const financialReportService = {
     switch (reportData.reportType) {
       case 'income_statement':
         rows.push(['收入', '', '']);
-        Object.entries(reportData.details.income).forEach(([category, amount]) => {
-          rows.push([category, amount.toString(), '']);
+        Object.entries(reportData.details?.income || {}).forEach(([category, amount]) => {
+          rows.push([category, (amount as number).toString(), '']);
         });
         rows.push(['支出', '', '']);
-        Object.entries(reportData.details.expense).forEach(([category, amount]) => {
-          rows.push([category, amount.toString(), '']);
+        Object.entries(reportData.details?.expense || {}).forEach(([category, amount]) => {
+          rows.push([category, (amount as number).toString(), '']);
         });
-        rows.push(['净收入', reportData.summary.netIncome.toString(), '']);
+        rows.push(['净收入', (reportData.summary?.netIncome || 0).toString(), '']);
         break;
 
       case 'balance_sheet':
-        rows.push(['期初余额', reportData.summary.openingBalance.toString(), '']);
-        rows.push(['期间收入', reportData.summary.periodIncome.toString(), '']);
-        rows.push(['期间支出', reportData.summary.periodExpense.toString(), '']);
-        rows.push(['期末余额', reportData.summary.closingBalance.toString(), '']);
+        rows.push(['期初余额', (reportData.summary?.openingBalance || 0).toString(), '']);
+        rows.push(['期间收入', (reportData.summary?.periodIncome || 0).toString(), '']);
+        rows.push(['期间支出', (reportData.summary?.periodExpense || 0).toString(), '']);
+        rows.push(['期末余额', (reportData.summary?.closingBalance || 0).toString(), '']);
         break;
 
       case 'monthly_summary':

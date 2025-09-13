@@ -15,19 +15,12 @@ import {
   Col,
   Timeline,
   Alert,
-  Badge,
-  Tooltip,
-  Divider,
+  Statistic,
 } from 'antd';
 import {
   CheckCircleOutlined,
   ClockCircleOutlined,
   ExclamationCircleOutlined,
-  UserOutlined,
-  CalendarOutlined,
-  FileTextOutlined,
-  SendOutlined,
-  EyeOutlined,
 } from '@ant-design/icons';
 import { Budget, BudgetStatus } from '@/types/finance';
 import { useFiscalYear } from '@/contexts/FiscalYearContext';
@@ -89,7 +82,7 @@ const BudgetApprovalWorkflow: React.FC<BudgetApprovalWorkflowProps> = ({
   const [isWorkflowModalVisible, setIsWorkflowModalVisible] = useState(false);
   const [selectedBudget, setSelectedBudget] = useState<Budget | null>(null);
   const [approvalWorkflows, setApprovalWorkflows] = useState<ApprovalWorkflow[]>([]);
-  const [approvalRecords, setApprovalRecords] = useState<ApprovalRecord[]>([]);
+  const [approvalRecords] = useState<ApprovalRecord[]>([]);
   const [selectedYear, setSelectedYear] = useState<number>(fiscalYear);
 
   // 表单实例
@@ -172,7 +165,7 @@ const BudgetApprovalWorkflow: React.FC<BudgetApprovalWorkflowProps> = ({
 
   // 审批状态文本映射
   const getApprovalStatusText = (status: string) => {
-    const texts = {
+    const texts: Record<string, string> = {
       pending: '待审批',
       approved: '已审批',
       rejected: '已拒绝',
@@ -183,7 +176,7 @@ const BudgetApprovalWorkflow: React.FC<BudgetApprovalWorkflowProps> = ({
 
   // 预算状态颜色映射
   const getBudgetStatusColor = (status: BudgetStatus) => {
-    const colors = {
+    const colors: Record<string, string> = {
       draft: 'default',
       approved: 'processing',
       active: 'success',
@@ -218,7 +211,7 @@ const BudgetApprovalWorkflow: React.FC<BudgetApprovalWorkflowProps> = ({
 
   const handleApprovalSubmit = async () => {
     try {
-      const values = await approvalForm.validateFields();
+      await approvalForm.validateFields();
       
       if (selectedBudget) {
         await onUpdateBudget(selectedBudget.id, {
@@ -299,7 +292,7 @@ const BudgetApprovalWorkflow: React.FC<BudgetApprovalWorkflowProps> = ({
     {
       title: '操作',
       key: 'actions',
-      render: (_, record: Budget) => (
+      render: (_: any, record: Budget) => (
         <Space>
           {record.status === 'draft' && (
             <>
@@ -506,7 +499,7 @@ const BudgetApprovalWorkflow: React.FC<BudgetApprovalWorkflowProps> = ({
             />
             
             <Timeline>
-              {mockApprovalWorkflows[0]?.steps.map((step, index) => (
+              {mockApprovalWorkflows[0]?.steps.map((step) => (
                 <Timeline.Item
                   key={step.stepNumber}
                   color={

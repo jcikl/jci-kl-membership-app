@@ -11,7 +11,6 @@ import {
   Input,
   InputNumber,
   Select,
-  DatePicker,
   message,
   Popconfirm,
   Row,
@@ -19,32 +18,20 @@ import {
   Statistic,
   Progress,
   Tabs,
-  Divider,
   Alert,
-  Tooltip,
-  Badge,
 } from 'antd';
 import {
   PlusOutlined,
   EditOutlined,
   DeleteOutlined,
-  DollarOutlined,
-  CalendarOutlined,
-  BarChartOutlined,
   CopyOutlined,
-  CheckCircleOutlined,
-  ClockCircleOutlined,
-  ExclamationCircleOutlined,
   EyeOutlined,
   FileTextOutlined,
 } from '@ant-design/icons';
 import { Budget, BudgetStatus, BudgetAllocation, TransactionPurpose } from '@/types/finance';
 import { useFiscalYear } from '@/contexts/FiscalYearContext';
-import dayjs from 'dayjs';
-
 const { Title, Text } = Typography;
 const { Option } = Select;
-const { TabPane } = Tabs;
 
 interface AnnualBudgetManagementProps {
   onCreateBudget: (budget: Omit<Budget, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
@@ -86,7 +73,7 @@ const AnnualBudgetManagement: React.FC<AnnualBudgetManagementProps> = ({
   purposes,
   loading = false,
 }) => {
-  const { fiscalYear, fiscalYearStartMonth } = useFiscalYear();
+  const { fiscalYear } = useFiscalYear();
   
   // 状态管理
   const [isBudgetModalVisible, setIsBudgetModalVisible] = useState(false);
@@ -97,7 +84,7 @@ const AnnualBudgetManagement: React.FC<AnnualBudgetManagementProps> = ({
   const [editingAllocation, setEditingAllocation] = useState<BudgetAllocation | null>(null);
   const [selectedBudget, setSelectedBudget] = useState<Budget | null>(null);
   const [budgetTemplates, setBudgetTemplates] = useState<BudgetTemplate[]>([]);
-  const [activeTab, setActiveTab] = useState('current');
+  const [activeTab] = useState('current');
   const [selectedYear, setSelectedYear] = useState<number>(fiscalYear);
 
   // 表单实例
@@ -274,7 +261,7 @@ const AnnualBudgetManagement: React.FC<AnnualBudgetManagementProps> = ({
     {
       title: '操作',
       key: 'actions',
-      render: (_, record: Budget) => (
+      render: (_: any, record: Budget) => (
         <Space>
           <Button
             type="link"
@@ -448,7 +435,7 @@ const AnnualBudgetManagement: React.FC<AnnualBudgetManagementProps> = ({
 
   const handleTemplateCreateOk = async () => {
     try {
-      const values = await templateForm.validateFields();
+      await templateForm.validateFields();
       // 这里应该保存模板到服务
       message.success('预算模板创建成功');
       setIsTemplateCreateModalVisible(false);
@@ -614,8 +601,8 @@ const AnnualBudgetManagement: React.FC<AnnualBudgetManagementProps> = ({
               min={0}
               style={{ width: '100%' }}
               placeholder="请输入总预算金额"
-              formatter={(value) => `RM ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-              parser={(value) => value!.replace(/RM\s?|(,*)/g, '')}
+              formatter={(value) => value ? `RM ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',') : ''}
+              parser={(value) => (value || '').replace(/RM\s?|(,*)/g, '')}
             />
           </Form.Item>
           
@@ -706,7 +693,7 @@ const AnnualBudgetManagement: React.FC<AnnualBudgetManagementProps> = ({
                 {
                   title: '操作',
                   key: 'actions',
-                  render: (_, record: BudgetAllocation) => (
+                  render: (_: any, record: BudgetAllocation) => (
                     <Space>
                       <Button
                         type="link"
@@ -793,7 +780,7 @@ const AnnualBudgetManagement: React.FC<AnnualBudgetManagementProps> = ({
             {
               title: '操作',
               key: 'actions',
-              render: (_, record: BudgetTemplate) => (
+              render: (_: any, record: BudgetTemplate) => (
                 <Button
                   type="primary"
                   onClick={() => handleUseTemplate(record)}
@@ -894,8 +881,8 @@ const AnnualBudgetManagement: React.FC<AnnualBudgetManagementProps> = ({
               min={0}
               style={{ width: '100%' }}
               placeholder="请输入分配金额"
-              formatter={(value) => `RM ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-              parser={(value) => value!.replace(/RM\s?|(,*)/g, '')}
+              formatter={(value) => value ? `RM ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',') : ''}
+              parser={(value) => (value || '').replace(/RM\s?|(,*)/g, '')}
             />
           </Form.Item>
         </Form>

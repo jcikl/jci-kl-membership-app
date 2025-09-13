@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Table, Card, Tag, Space, Typography, Row, Col, Statistic, Alert } from 'antd';
+import { Table, Card, Tag, Typography, Row, Col, Statistic, Alert } from 'antd';
 import { DollarOutlined, CalendarOutlined, CheckCircleOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
 import { Transaction, TransactionSplit } from '@/types/finance';
 import { Member } from '@/types';
 import { transactionSplitService } from '@/services/financeService';
 import { useFiscalYear } from '@/contexts/FiscalYearContext';
 
-const { Title, Text } = Typography;
+const { Text } = Typography;
 
 interface MembershipFeeViewerProps {
   member: Member;
@@ -56,18 +56,18 @@ const MembershipFeeViewer: React.FC<MembershipFeeViewerProps> = ({
     
     // 添加主交易记录
     transactions.forEach(transaction => {
-      const purpose = purposes.find(p => p.id === transaction.purposeId);
+      const purpose = purposes.find(p => p.id === transaction.transactionPurpose);
       if (purpose && membershipPurposes.includes(purpose)) {
         records.push({
           id: transaction.id,
           type: 'main',
-          date: transaction.date,
-          amount: transaction.amount,
+          date: transaction.transactionDate,
+          amount: transaction.income || transaction.expense,
           purpose: purpose.name,
-          description: transaction.description,
-          status: transaction.status,
-          payer: transaction.payer,
-          payee: transaction.payee,
+          description: transaction.mainDescription,
+          status: 'completed', // Default status since Transaction doesn't have status property
+          payer: transaction.payerPayee,
+          payee: transaction.payerPayee,
           transactionId: transaction.id,
           splitId: null
         });
@@ -78,26 +78,23 @@ const MembershipFeeViewer: React.FC<MembershipFeeViewerProps> = ({
     transactionSplits.forEach(split => {
       const transaction = transactions.find(t => t.id === split.transactionId);
       if (transaction) {
-        const purpose = purposes.find(p => p.id === transaction.purposeId);
+        const purpose = purposes.find(p => p.id === transaction.transactionPurpose);
         if (purpose && membershipPurposes.includes(purpose)) {
           // 检查是否与当前会员相关
           const isRelatedToMember = 
-            split.payerId === member.id || 
-            split.payeeId === member.id ||
-            (split.payerName && split.payerName.includes(member.name)) ||
-            (split.payeeName && split.payeeName.includes(member.name));
+            (split.payerPayee && split.payerPayee.includes(member.name));
 
           if (isRelatedToMember) {
             records.push({
               id: `${split.transactionId}-${split.id}`,
               type: 'split',
-              date: transaction.date,
+              date: transaction.transactionDate,
               amount: split.amount,
               purpose: purpose.name,
-              description: split.description || transaction.description,
-              status: split.status || transaction.status,
-              payer: split.payerName || transaction.payer,
-              payee: split.payeeName || transaction.payee,
+              description: split.description || transaction.mainDescription,
+              status: 'completed', // Default status
+              payer: split.payerPayee || transaction.payerPayee,
+              payee: split.payerPayee || transaction.payerPayee,
               transactionId: split.transactionId,
               splitId: split.id
             });
@@ -147,7 +144,7 @@ const MembershipFeeViewer: React.FC<MembershipFeeViewerProps> = ({
       key: 'type',
       width: 60,
       render: (type: string) => (
-        <Tag color={type === 'main' ? 'blue' : 'green'} size="small">
+        <Tag color={type === 'main' ? 'blue' : 'green'}>
           {type === 'main' ? '主记录' : '拆分'}
         </Tag>
       )
@@ -186,7 +183,7 @@ const MembershipFeeViewer: React.FC<MembershipFeeViewerProps> = ({
         const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.pending;
         
         return (
-          <Tag color={config.color} size="small" icon={config.icon}>
+          <Tag color={config.color} icon={config.icon}>
             {config.text}
           </Tag>
         );

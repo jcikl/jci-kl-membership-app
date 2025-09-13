@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import {
   Card,
   Table,
-  Button,
   Space,
   Tag,
   Typography,
@@ -11,18 +10,12 @@ import {
   Statistic,
   Progress,
   Alert,
-  Tooltip,
-  Badge,
   Select,
   DatePicker,
-  Divider,
 } from 'antd';
 import {
   BarChartOutlined,
-  PieChartOutlined,
-  LineChartOutlined,
   DollarOutlined,
-  TrendingUpOutlined,
   ArrowDownOutlined,
   ExclamationCircleOutlined,
   CheckCircleOutlined,
@@ -186,7 +179,7 @@ const BudgetMonitoringDashboard: React.FC<BudgetMonitoringDashboardProps> = ({
 
   // 获取状态文本
   const getStatusText = (status: string) => {
-    const texts = {
+    const texts: Record<string, string> = {
       'on-track': '正常',
       'over-budget': '超支',
       'under-budget': '未充分使用',
@@ -197,7 +190,7 @@ const BudgetMonitoringDashboard: React.FC<BudgetMonitoringDashboardProps> = ({
 
   // 获取状态图标
   const getStatusIcon = (status: string) => {
-    const icons = {
+    const icons: Record<string, React.ReactElement> = {
       'on-track': <CheckCircleOutlined />,
       'over-budget': <ExclamationCircleOutlined />,
       'under-budget': <WarningOutlined />,
@@ -355,7 +348,7 @@ const BudgetMonitoringDashboard: React.FC<BudgetMonitoringDashboardProps> = ({
     {
       title: '差异率',
       key: 'varianceRate',
-      render: (_, record: MonthlyTrend) => {
+      render: (_: any, record: MonthlyTrend) => {
         const rate = (record.variance / record.budgetedAmount) * 100;
         return (
           <Text type={rate > 0 ? 'danger' : 'success'}>

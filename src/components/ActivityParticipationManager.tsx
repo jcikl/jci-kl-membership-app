@@ -33,7 +33,7 @@ import { Member } from '@/types';
 import { updateMember } from '@/services/memberService';
 import dayjs from 'dayjs';
 
-const { Title, Text } = Typography;
+const { Text } = Typography;
 const { Option } = Select;
 const { TextArea } = Input;
 
@@ -98,7 +98,7 @@ const ActivityParticipationManager: React.FC<ActivityParticipationManagerProps> 
       render: (type: string) => {
         const typeConfig = activityTypes.find(t => t.value === type);
         return (
-          <Tag color={typeConfig?.color} size="small">
+          <Tag color={typeConfig?.color}>
             {typeConfig?.label}
           </Tag>
         );
@@ -123,7 +123,7 @@ const ActivityParticipationManager: React.FC<ActivityParticipationManagerProps> 
       render: (status: string) => {
         const config = statusConfig[status as keyof typeof statusConfig];
         return (
-          <Tag color={config.color} size="small" icon={config.icon}>
+          <Tag color={config.color} icon={config.icon}>
             {config.text}
           </Tag>
         );

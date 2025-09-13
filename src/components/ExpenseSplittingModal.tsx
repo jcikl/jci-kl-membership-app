@@ -11,19 +11,18 @@ import {
   Typography,
   message,
   Card,
-  Divider,
   Alert,
+  Row,
+  Col,
 } from 'antd';
 import {
   PlusOutlined,
   DeleteOutlined,
-  DollarOutlined,
-  TagOutlined,
   CalculatorOutlined,
 } from '@ant-design/icons';
 import { Transaction, TransactionPurpose, ExpenseSplit } from '@/types/finance';
 
-const { Title, Text } = Typography;
+const { Text } = Typography;
 const { Option } = Select;
 
 interface ExpenseSplittingModalProps {
@@ -141,7 +140,7 @@ const ExpenseSplittingModal: React.FC<ExpenseSplittingModalProps> = ({
       dataIndex: 'purposeId',
       key: 'purposeId',
       width: 200,
-      render: (purposeId: string, record: SplitItem, index: number) => (
+      render: (purposeId: string, record: SplitItem) => (
         <Select
           value={purposeId}
           onChange={(value) => updateSplit(record.id, 'purposeId', value)}
@@ -161,7 +160,7 @@ const ExpenseSplittingModal: React.FC<ExpenseSplittingModalProps> = ({
       dataIndex: 'amount',
       key: 'amount',
       width: 150,
-      render: (amount: number, record: SplitItem, index: number) => (
+      render: (amount: number, record: SplitItem) => (
         <InputNumber
           value={amount}
           onChange={(value) => updateSplit(record.id, 'amount', value || 0)}
@@ -169,8 +168,8 @@ const ExpenseSplittingModal: React.FC<ExpenseSplittingModalProps> = ({
           style={{ width: '100%' }}
           min={0}
           precision={2}
-          formatter={(value) => `RM ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-          parser={(value) => value!.replace(/RM\s?|(,*)/g, '')}
+          formatter={(value) => value ? `RM ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',') : ''}
+          parser={(value) => (value || '').replace(/RM\s?|(,*)/g, '')}
         />
       ),
     },
@@ -179,7 +178,7 @@ const ExpenseSplittingModal: React.FC<ExpenseSplittingModalProps> = ({
       dataIndex: 'description',
       key: 'description',
       width: 200,
-      render: (description: string, record: SplitItem, index: number) => (
+      render: (description: string, record: SplitItem) => (
         <Input
           value={description}
           onChange={(e) => updateSplit(record.id, 'description', e.target.value)}
