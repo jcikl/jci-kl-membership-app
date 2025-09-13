@@ -6,6 +6,7 @@ import { onAuthStateChanged } from '@/services/authService';
 import { getMemberByEmail } from '@/services/memberService';
 import { User } from 'firebase/auth';
 import { initChapterSettings } from '@/scripts/initChapterSettings';
+import { FiscalYearProvider } from '@/contexts/FiscalYearContext';
 
 // 页面组件
 import LoginPage from '@/pages/LoginPage';
@@ -20,6 +21,7 @@ import SurveyCreatePage from '@/pages/SurveyCreatePage';
 import SurveyEditPage from '@/pages/SurveyEditPage';
 import SurveyDetailPage from '@/pages/SurveyDetailPage';
 import SurveyResponsePage from '@/pages/SurveyResponsePage';
+import FinancePage from '@/pages/FinancePage';
 
 // RBAC组件
 import RBACManagement from '@/components/rbac/RBACManagement';
@@ -76,29 +78,32 @@ const App: React.FC = () => {
   }
 
   return (
-    <Layout style={{ minHeight: '100vh' }}>
-      <AppSider />
-      <Layout>
-        <AppHeader />
-        <Content style={{ margin: '24px 16px', padding: 24, background: '#fff' }}>
-          <Routes>
-            <Route path="/" element={<Navigate to="/dashboard" replace />} />
-            <Route path="/dashboard" element={<DashboardPage />} />
-            <Route path="/members" element={<MemberListPage />} />
-            <Route path="/members/:id" element={<MemberDetailPage />} />
-            <Route path="/surveys" element={<SurveyListPage />} />
-            <Route path="/surveys/create" element={<SurveyCreatePage />} />
-            <Route path="/surveys/:id" element={<SurveyDetailPage />} />
-            <Route path="/surveys/:id/edit" element={<SurveyEditPage />} />
-            <Route path="/surveys/:id/response" element={<SurveyResponsePage />} />
-            <Route path="/profile" element={<ProfilePage />} />
-            <Route path="/rbac-management" element={<RBACManagement />} />
-            <Route path="/system-settings" element={<SystemSettingsPage />} />
-            <Route path="*" element={<Navigate to="/dashboard" replace />} />
-          </Routes>
-        </Content>
+    <FiscalYearProvider>
+      <Layout style={{ minHeight: '100vh' }}>
+        <AppSider />
+        <Layout>
+          <AppHeader />
+          <Content style={{ margin: '24px 16px', padding: 24, background: '#fff' }}>
+            <Routes>
+              <Route path="/" element={<Navigate to="/dashboard" replace />} />
+              <Route path="/dashboard" element={<DashboardPage />} />
+              <Route path="/members" element={<MemberListPage />} />
+              <Route path="/members/:id" element={<MemberDetailPage />} />
+              <Route path="/surveys" element={<SurveyListPage />} />
+              <Route path="/surveys/create" element={<SurveyCreatePage />} />
+              <Route path="/surveys/:id" element={<SurveyDetailPage />} />
+              <Route path="/surveys/:id/edit" element={<SurveyEditPage />} />
+              <Route path="/surveys/:id/response" element={<SurveyResponsePage />} />
+              <Route path="/profile" element={<ProfilePage />} />
+              <Route path="/finance" element={<FinancePage />} />
+              <Route path="/rbac-management" element={<RBACManagement />} />
+              <Route path="/system-settings" element={<SystemSettingsPage />} />
+              <Route path="*" element={<Navigate to="/dashboard" replace />} />
+            </Routes>
+          </Content>
+        </Layout>
       </Layout>
-    </Layout>
+    </FiscalYearProvider>
   );
 };
 

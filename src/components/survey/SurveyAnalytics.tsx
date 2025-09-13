@@ -148,7 +148,6 @@ const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({ surveyId }) => {
   // 导出数据
   const handleExport = () => {
     // 实现导出功能
-    console.log('导出数据');
   };
 
   if (loading) {

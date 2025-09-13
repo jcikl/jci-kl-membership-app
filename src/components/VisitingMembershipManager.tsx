@@ -15,13 +15,11 @@ const VisitingMembershipManager: React.FC = () => {
     setLoading(true);
     try {
       const res = await getMembers({ page: 1, limit: 500 });
-      // 过滤出拜访会员且国籍非马来西亚
+      // 过滤出国籍非马来西亚的会员
       const visitingMembers = res.data.filter(m => {
-        const isVisitor = m.profile?.proposedMembershipCategory === 'visitor' as any || 
-                         (m.profile?.categoryReviewStatus === 'approved' && m.profile?.proposedMembershipCategory === 'visitor' as any);
         const isNonMalaysian = m.profile?.nationality && m.profile.nationality.toLowerCase() !== 'malaysia' && 
                               m.profile.nationality.toLowerCase() !== 'malaysian';
-        return isVisitor && isNonMalaysian;
+        return isNonMalaysian;
       });
       setMembers(visitingMembers);
     } catch (e) {

@@ -39,16 +39,21 @@ export const saveChapterSettings = async (settings: Omit<ChapterSettings, 'id' |
     const docSnap = await getDoc(docRef);
     const now = new Date().toISOString();
     
+    // 过滤掉 undefined 值，避免 Firebase 错误
+    const cleanSettings = JSON.parse(JSON.stringify(settings, (key, value) => {
+      return value === undefined ? null : value;
+    }));
+    
     if (docSnap.exists()) {
       // 更新现有设置
       await updateDoc(docRef, {
-        ...settings,
+        ...cleanSettings,
         updatedAt: now,
       });
     } else {
       // 创建新设置
       await setDoc(docRef, {
-        ...settings,
+        ...cleanSettings,
         createdAt: now,
         updatedAt: now,
       });
@@ -64,6 +69,8 @@ export const getDefaultChapterSettings = (): Omit<ChapterSettings, 'id' | 'creat
   return {
     chapterName: 'JCI Kuala Lumpur',
     establishmentYear: new Date().getFullYear(),
+    fiscalYear: new Date().getFullYear(), // 默认财政年度为当前年份
+    fiscalYearStartMonth: 1, // 默认财政年度从1月开始
     description: '',
     address: '',
     contactEmail: '',

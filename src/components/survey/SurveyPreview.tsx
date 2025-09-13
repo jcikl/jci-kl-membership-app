@@ -83,7 +83,6 @@ const SurveyPreview: React.FC<SurveyPreviewProps> = ({
       if (onSubmit) {
         await onSubmit(values);
       } else {
-        console.log('问卷答案:', values);
       }
     } catch (error) {
       console.error('表单验证失败:', error);

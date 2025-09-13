@@ -39,7 +39,7 @@ import * as yup from 'yup';
 import { useMemberStore } from '@/store/memberStore';
 import { Member, MemberLevel } from '@/types';
 import { getAccountTypeTagProps, getAccountTypeFormOptions, isValidAccountType } from '@/utils/accountType';
-import { updateMembersBatch } from '@/services/memberService';
+import { updateMembersBatch, smartImportMembersBatch, deleteMembersBatch } from '@/services/memberService';
 import ProfileEditForm from '@/components/ProfileEditForm';
 import BatchImportModal from '@/components/BatchImportModal';
 import SenatorManagement from '@/components/SenatorManagement';
@@ -65,6 +65,7 @@ const memberFormSchema = yup.object({
 
 type MemberFormData = yup.InferType<typeof memberFormSchema>;
 
+
 const MemberListPage: React.FC = () => {
   const { 
     members, 
@@ -74,7 +75,6 @@ const MemberListPage: React.FC = () => {
     filters,
     fetchMembers, 
     addMember, 
-    addMembersBatch,
     deleteMemberById,
     setSearchQuery,
     setFilters,
@@ -90,6 +90,17 @@ const MemberListPage: React.FC = () => {
   const [isBatchSettingsVisible, setIsBatchSettingsVisible] = useState(false);
   const [selectedMembers, setSelectedMembers] = useState<Member[]>([]);
   const [isNricConverterVisible, setIsNricConverterVisible] = useState(false);
+  
+  // 搜索输入状态
+  const [searchInput, setSearchInput] = useState(searchQuery);
+
+  // 同步外部搜索查询到输入框（只在清除搜索时）
+  useEffect(() => {
+    // 只有当searchQuery为空且searchInput不为空时，才同步（清除搜索的情况）
+    if (searchQuery === '' && searchInput !== '') {
+      setSearchInput('');
+    }
+  }, [searchQuery]);
 
   // 定义可用的字段选项
   const availableFields: FieldOption[] = [
@@ -322,6 +333,43 @@ const MemberListPage: React.FC = () => {
     }
   };
 
+  const handleBatchDelete = async () => {
+    if (selectedMembers.length === 0) {
+      message.warning('请先选择要删除的会员');
+      return;
+    }
+
+    try {
+      const memberIds = selectedMembers.map(member => member.id);
+      
+      // 调用批量删除API
+      const result = await deleteMembersBatch(memberIds);
+      
+      if (result.success > 0) {
+        message.success(`成功删除 ${result.success} 个会员`);
+        
+        // 如果有失败的，显示错误信息
+        if (result.failed > 0) {
+          message.warning(`${result.failed} 个会员删除失败`);
+          console.error('Delete errors:', result.errors);
+        }
+        
+        // 清空选择
+        setSelectedMembers([]);
+        
+        // 刷新会员列表
+        await fetchMembers({ page: pagination.page, limit: pagination.limit });
+      } else {
+        message.error('批量删除失败');
+        throw new Error('没有会员被成功删除');
+      }
+    } catch (error) {
+      console.error('Batch delete error:', error);
+      message.error('批量删除失败');
+      throw error;
+    }
+  };
+
   const handleRowSelection = {
     selectedRowKeys: selectedMembers.map(member => member.id),
     onChange: (_: React.Key[], selectedRows: Member[]) => {
@@ -332,30 +380,36 @@ const MemberListPage: React.FC = () => {
     }),
   };
 
-  const handleSearch = async (value: string) => {
+  const handleSearch = (value: string) => {
+    // 当用户按回车或点击搜索按钮时，立即触发搜索
+    setSearchInput(value);
     setSearchQuery(value);
-    await applySearchAndFilters();
+    applySearchAndFilters();
   };
 
   const handleAccountTypeFilter = async (value: string | 'all') => {
-    setFilters({ ...filters, accountType: value });
-    await applySearchAndFilters();
+    const newFilters = { ...filters, accountType: value };
+    setFilters(newFilters);
+    applySearchAndFilters();
   };
 
   const handleStatusFilter = async (value: string | 'all') => {
-    setFilters({ ...filters, status: value });
-    await applySearchAndFilters();
+    const newFilters = { ...filters, status: value };
+    setFilters(newFilters);
+    applySearchAndFilters();
   };
 
   const handleLevelFilter = async (value: string | 'all') => {
-    setFilters({ ...filters, level: value });
-    await applySearchAndFilters();
+    const newFilters = { ...filters, level: value };
+    setFilters(newFilters);
+    applySearchAndFilters();
   };
 
   const handleClearFilters = async () => {
     clearFilters();
+    setSearchInput('');
     setSearchQuery('');
-    await applySearchAndFilters();
+    applySearchAndFilters();
   };
 
   const handlePaginationChange = async (page: number, pageSize?: number) => {
@@ -380,7 +434,31 @@ const MemberListPage: React.FC = () => {
 
   const handleBatchImportSubmit = async (membersData: Omit<Member, 'id' | 'createdAt' | 'updatedAt'>[], developerMode: boolean = false) => {
     try {
-      const result = await addMembersBatch(membersData, developerMode);
+      // 使用智能导入功能，根据NRIC/护照号判断创建或更新
+      const result = await smartImportMembersBatch(membersData, developerMode);
+      
+      // 显示详细的导入结果
+      if (result.success > 0) {
+        let messageText = `成功处理 ${result.success} 个会员`;
+        if (result.created > 0) {
+          messageText += `（新建 ${result.created} 个`;
+        }
+        if (result.updated > 0) {
+          messageText += result.created > 0 ? `，更新 ${result.updated} 个` : `（更新 ${result.updated} 个`;
+        }
+        messageText += '）';
+        
+        message.success(messageText);
+        
+        // 如果有失败的，显示错误信息
+        if (result.failed > 0) {
+          message.warning(`${result.failed} 个会员处理失败`);
+          console.error('Import errors:', result.errors);
+        }
+      } else {
+        message.error('批量导入失败');
+      }
+      
       return result;
     } catch (error) {
       throw error;
@@ -639,6 +717,27 @@ const MemberListPage: React.FC = () => {
                   批量设置 {selectedMembers.length > 0 && `(${selectedMembers.length})`}
                 </Button>
                 <Button 
+                  icon={<DeleteOutlined />}
+                  onClick={() => {
+                    Modal.confirm({
+                      title: '确认批量删除',
+                      content: `确定要删除选中的 ${selectedMembers.length} 个会员吗？此操作不可撤销。`,
+                      okText: '确认删除',
+                      okType: 'danger',
+                      cancelText: '取消',
+                      onOk: handleBatchDelete,
+                    });
+                  }}
+                  disabled={selectedMembers.length === 0}
+                  style={{ 
+                    background: selectedMembers.length > 0 ? 'rgba(255,77,79,0.2)' : 'rgba(255,255,255,0.1)', 
+                    border: '1px solid rgba(255,77,79,0.3)',
+                    color: selectedMembers.length > 0 ? '#ff4d4f' : 'rgba(255,255,255,0.5)'
+                  }}
+                >
+                  批量删除 {selectedMembers.length > 0 && `(${selectedMembers.length})`}
+                </Button>
+                <Button 
                   icon={<UploadOutlined />}
                   onClick={handleBatchImport}
                   style={{ 
@@ -796,8 +895,8 @@ const MemberListPage: React.FC = () => {
               allowClear
               enterButton={<SearchOutlined />}
               size="large"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
               onSearch={handleSearch}
               style={{ width: '100%' }}
             />
@@ -1155,7 +1254,7 @@ const MemberListPage: React.FC = () => {
           onCancel={() => setIsNricConverterVisible(false)}
           width={900}
           footer={null}
-          destroyOnClose
+          destroyOnHidden
         >
           <NricToBirthDateConverter onClose={() => setIsNricConverterVisible(false)} />
         </Modal>

@@ -1,5 +1,6 @@
 import React from 'react';
 import { Form, Input, Select, DatePicker, Upload, Tabs, Row, Col, message, Button, Space, Alert, Switch } from 'antd';
+import { CheckCircleOutlined } from '@ant-design/icons';
 import { Controller, useForm } from 'react-hook-form';
 import dayjs from 'dayjs';
 import { Member } from '@/types';
@@ -24,11 +25,16 @@ import { useIsAdmin } from '@/hooks/usePermissions';
 import { uploadFileAndGetUrl } from '@/services/firebase';
 import { positionService } from '@/services/positionService';
 import { getAccountTypeFormOptions } from '@/utils/accountType';
+import MembershipFeeViewer from '@/components/MembershipFeeViewer';
+import SenatorScoreManager from '@/components/SenatorScoreManager';
+import ActivityParticipationManager from '@/components/ActivityParticipationManager';
 
 interface ProfileEditFormProps {
   member: Member;
   onSubmit: (updated: Partial<Member>) => Promise<void>;
   onCancel?: () => void;
+  transactions?: any[];
+  purposes?: any[];
 }
 
 // Helper function to safely parse dates
@@ -42,7 +48,7 @@ const safeParseDate = (dateString: string | undefined, format?: string): dayjs.D
   }
 };
 
-const ProfileEditForm: React.FC<ProfileEditFormProps> = ({ member, onSubmit, onCancel }) => {
+const ProfileEditForm: React.FC<ProfileEditFormProps> = ({ member, onSubmit, onCancel, transactions = [], purposes = [] }) => {
   const [positionHistory, setPositionHistory] = React.useState<any[]>([]);
   const [loadingPositions, setLoadingPositions] = React.useState(false);
   const { isAdmin } = useIsAdmin();
@@ -62,8 +68,8 @@ const ProfileEditForm: React.FC<ProfileEditFormProps> = ({ member, onSubmit, onC
       phone: member?.phone || '',
       fullNameNric: member?.profile?.fullNameNric || '',
       senatorId: member?.profile?.senatorId || '',
-      gender: member?.profile?.gender ? (member?.profile?.gender === 'Male' ? 'Male' : 'Female') : null,
-      race: member?.profile?.race,
+      gender: member?.profile?.gender ? (member?.profile?.gender === 'Male' ? 'Male' : 'Female') : undefined,
+      race: member?.profile?.race || undefined,
       nationality: member?.profile?.nationality || 'Malaysia',
       address: member?.profile?.address || '',
       nricOrPassport: member?.profile?.nricOrPassport || '',
@@ -84,35 +90,24 @@ const ProfileEditForm: React.FC<ProfileEditFormProps> = ({ member, onSubmit, onC
       fiveYearsVision: member?.profile?.fiveYearsVision || '',
       activeMemberHow: member?.profile?.activeMemberHow || '',
       nameToBeEmbroidered: member?.profile?.nameToBeEmbroidered || '',
-      shirtSize: member?.profile?.shirtSize,
-      jacketSize: member?.profile?.jacketSize,
-      cutting: member?.profile?.cutting,
-      tshirtReceivingStatus: member?.profile?.tshirtReceivingStatus,
-      acceptInternationalBusiness: member?.profile?.acceptInternationalBusiness,
+      shirtSize: member?.profile?.shirtSize || undefined,
+      jacketSize: member?.profile?.jacketSize || undefined,
+      cutting: member?.profile?.cutting || undefined,
+      tshirtReceivingStatus: member?.profile?.tshirtReceivingStatus || undefined,
+      acceptInternationalBusiness: member?.profile?.acceptInternationalBusiness || undefined,
       paymentDate: safeParseDate(member?.profile?.paymentDate, 'DD-MMM-YYYY'),
       endorsementDate: safeParseDate(member?.profile?.endorsementDate, 'DD-MMM-YYYY'),
       paymentVerifiedDate: safeParseDate(member?.profile?.paymentVerifiedDate, 'DD-MMM-YYYY'),
       profilePhotoUrl: member?.profile?.profilePhotoUrl || '',
       paymentSlipUrl: member?.profile?.paymentSlipUrl || '',
       joinedDate: safeParseDate(member?.joinDate),
-      // JCI职位相关
-      jciPosition: member?.profile?.jciPosition,
-      positionStartDate: safeParseDate(member?.profile?.positionStartDate),
-      positionEndDate: safeParseDate(member?.profile?.positionEndDate),
-      isActingPosition: member?.profile?.isActingPosition || false,
-      actingForPosition: member?.profile?.actingForPosition,
+      // JCI职位相关字段已移除
       // 入会信息（仅开发者可编辑）
-      status: member?.status,
-      level: member?.level,
+      status: member?.status || undefined,
+      level: member?.level || undefined,
       accountType: member?.accountType || 'member',
-      // 任期管理
-      termStartDate: safeParseDate(member?.profile?.termStartDate),
-      termEndDate: safeParseDate(member?.profile?.termEndDate),
-      isCurrentTerm: member?.profile?.isCurrentTerm || false,
-      // 特殊权限
-      hasSpecialPermissions: member?.profile?.hasSpecialPermissions || false,
-      specialPermissions: member?.profile?.specialPermissions || [],
-      permissionNotes: member?.profile?.permissionNotes || '',
+      // 任期管理字段已移除
+      // 特殊权限字段已移除
     }), [member]),
   });
 
@@ -620,7 +615,8 @@ const ProfileEditForm: React.FC<ProfileEditFormProps> = ({ member, onSubmit, onC
                 field={field} 
                 userRole={userRole} 
                 memberData={member}
-                showLockMessage={true}
+                showLockMessage={false}
+                showPermissionIndicator={false}
               >
                 <Form.Item label="参议员编号">
                   <Controller 
@@ -630,11 +626,20 @@ const ProfileEditForm: React.FC<ProfileEditFormProps> = ({ member, onSubmit, onC
                       <Input 
                         {...field} 
                         placeholder="请输入参议员编号"
+                        disabled={member?.profile?.senatorVerified === true}
                         onChange={(e) => {
                           // 只保留英文字母和数字，并转换为大写
                           const value = e.target.value.replace(/[^A-Za-z0-9]/g, '').toUpperCase();
                           field.onChange(value);
                         }}
+                        suffix={
+                          member?.profile?.senatorVerified ? (
+                            <CheckCircleOutlined 
+                              style={{ color: '#52c41a' }} 
+                              title="参议员身份已验证"
+                            />
+                          ) : null
+                        }
                       />
                     )} 
                   />
@@ -647,7 +652,21 @@ const ProfileEditForm: React.FC<ProfileEditFormProps> = ({ member, onSubmit, onC
             <Col span={12}>
               <Form.Item label="会员编号">
                 <FieldPermissionController field={field} userRole={userRole} memberData={member}>
-                  <Controller name="memberId" control={control} render={({ field }) => <Input {...field} disabled />} />
+                  <Controller 
+                    name="memberId" 
+                    control={control} 
+                    render={({ field }) => (
+                      <Input 
+                        {...field} 
+                        placeholder="请输入会员编号"
+                        onChange={(e) => {
+                          // 只保留英文字母和数字，并转换为大写
+                          const value = e.target.value.replace(/[^A-Za-z0-9]/g, '').toUpperCase();
+                          field.onChange(value);
+                        }}
+                      />
+                    )} 
+                  />
                 </FieldPermissionController>
               </Form.Item>
             </Col>
@@ -804,38 +823,156 @@ const ProfileEditForm: React.FC<ProfileEditFormProps> = ({ member, onSubmit, onC
           );
         
         // ========== JCI职位标签页 ==========
+        // 职位信息字段已移除
         
-        // 职位信息
-        case 'jciPosition':
+        // ========== 新增字段处理 ==========
+        
+        // 付款信息字段
+        case 'paymentDate':
           return (
             <Col span={12}>
-              <Form.Item label="JCI职位">
+              <Form.Item label="付款日期">
                 <FieldPermissionController field={field} userRole={userRole} memberData={member}>
-                  <Controller name="jciPosition" control={control} render={({ field }) => <Input {...field} disabled />} />
+                  <Controller
+                    name="paymentDate"
+                    control={control}
+                    render={({ field }) => (
+                      <DatePicker 
+                        {...field} 
+                        format="DD-MMM-YYYY"
+                        style={{ width: '100%' }}
+                        disabled
+                      />
+                    )}
+                  />
                 </FieldPermissionController>
               </Form.Item>
             </Col>
           );
-        case 'positionStartDate':
+        case 'endorsementDate':
           return (
             <Col span={12}>
-              <Form.Item label="职位开始日期">
+              <Form.Item label="背书日期">
                 <FieldPermissionController field={field} userRole={userRole} memberData={member}>
-                  <Controller name="positionStartDate" control={control} render={({ field }) => <Input {...field} disabled />} />
+                  <Controller
+                    name="endorsementDate"
+                    control={control}
+                    render={({ field }) => (
+                      <DatePicker 
+                        {...field} 
+                        format="DD-MMM-YYYY"
+                        style={{ width: '100%' }}
+                        disabled
+                      />
+                    )}
+                  />
                 </FieldPermissionController>
               </Form.Item>
             </Col>
           );
-        case 'positionEndDate':
+        case 'paymentVerifiedDate':
           return (
             <Col span={12}>
-              <Form.Item label="职位结束日期">
+              <Form.Item label="付款验证日期">
                 <FieldPermissionController field={field} userRole={userRole} memberData={member}>
-                  <Controller name="positionEndDate" control={control} render={({ field }) => <Input {...field} disabled />} />
+                  <Controller
+                    name="paymentVerifiedDate"
+                    control={control}
+                    render={({ field }) => (
+                      <DatePicker 
+                        {...field} 
+                        format="DD-MMM-YYYY"
+                        style={{ width: '100%' }}
+                        disabled
+                      />
+                    )}
+                  />
                 </FieldPermissionController>
               </Form.Item>
             </Col>
           );
+        case 'paymentSlipUrl':
+          return (
+            <Col span={24}>
+              <Form.Item label="付款凭证">
+                <FieldPermissionController field={field} userRole={userRole} memberData={member}>
+                  <Controller
+                    name="paymentSlipUrl"
+                    control={control}
+                    render={({ field }) => (
+                      <Input {...field} disabled placeholder="付款凭证URL" />
+                    )}
+                  />
+                </FieldPermissionController>
+              </Form.Item>
+            </Col>
+          );
+        
+        
+        
+        // 任务完成情况字段
+        case 'requiredTasksCompleted':
+          return (
+            <Col span={12}>
+              <Form.Item label="必需任务完成">
+                <FieldPermissionController field={field} userRole={userRole} memberData={member}>
+                  <Controller
+                    name="requiredTasksCompleted"
+                    control={control}
+                    render={({ field }) => (
+                      <Switch {...field} disabled />
+                    )}
+                  />
+                </FieldPermissionController>
+              </Form.Item>
+            </Col>
+          );
+        case 'taskCompletions':
+          return (
+            <Col span={24}>
+              <Form.Item label="任务完成情况">
+                <FieldPermissionController field={field} userRole={userRole} memberData={member}>
+                  <Controller
+                    name="taskCompletions"
+                    control={control}
+                    render={({ field }) => (
+                      <Input.TextArea 
+                        {...field} 
+                        disabled 
+                        rows={4}
+                        placeholder="任务完成情况详情"
+                      />
+                    )}
+                  />
+                </FieldPermissionController>
+              </Form.Item>
+            </Col>
+          );
+        
+        
+        // 其他新增字段
+        case 'joinDate':
+          return (
+            <Col span={12}>
+              <Form.Item label="入会日期">
+                <FieldPermissionController field={field} userRole={userRole} memberData={member}>
+                  <Controller
+                    name="joinDate"
+                    control={control}
+                    render={({ field }) => (
+                      <DatePicker 
+                        {...field} 
+                        format="YYYY-MM-DD"
+                        style={{ width: '100%' }}
+                        disabled
+                      />
+                    )}
+                  />
+                </FieldPermissionController>
+              </Form.Item>
+            </Col>
+          );
+        
         default:
           return null;
       }
@@ -859,6 +996,7 @@ const ProfileEditForm: React.FC<ProfileEditFormProps> = ({ member, onSubmit, onC
       const updated: Partial<Member> = {
         name: values.name,
         phone: values.phone,
+        memberId: cleanValue(values.memberId),
         joinDate: values.joinedDate ? values.joinedDate.toISOString() : member.joinDate,
         status: cleanValue(values.status),
         level: cleanValue(values.level),
@@ -867,7 +1005,7 @@ const ProfileEditForm: React.FC<ProfileEditFormProps> = ({ member, onSubmit, onC
           ...member.profile,
           fullNameNric: cleanValue(values.fullNameNric),
           senatorId: cleanValue(values.senatorId),
-          gender: (values.gender === 'Male' ? 'Male' : values.gender === 'Female' ? 'Female' : null) as 'Male' | 'Female' | null,
+          gender: cleanValue(values.gender === 'Male' ? 'Male' : values.gender === 'Female' ? 'Female' : undefined),
           race: cleanValue(values.race),
           nationality: cleanValue(values.nationality),
           address: cleanValue(values.address),
@@ -900,23 +1038,11 @@ const ProfileEditForm: React.FC<ProfileEditFormProps> = ({ member, onSubmit, onC
           paymentDate: cleanValue(values.paymentDate ? values.paymentDate.format('DD-MMM-YYYY') : undefined),
           endorsementDate: cleanValue(values.endorsementDate ? values.endorsementDate.format('DD-MMM-YYYY') : undefined),
           paymentVerifiedDate: cleanValue(values.paymentVerifiedDate ? values.paymentVerifiedDate.format('DD-MMM-YYYY') : undefined),
-          // JCI职位相关
-          jciPosition: cleanValue(values.jciPosition),
-          vpDivision: cleanValue(values.vpDivision),
-          positionStartDate: cleanValue(values.positionStartDate ? values.positionStartDate.format('YYYY-MM-DD') : undefined),
-          positionEndDate: cleanValue(values.positionEndDate ? values.positionEndDate.format('YYYY-MM-DD') : undefined),
-          isActingPosition: cleanValue(values.isActingPosition),
-          actingForPosition: cleanValue(values.actingForPosition),
+          // JCI职位相关字段已移除
           // 会员分类相关（已迁移到分类管理系统）
           // 注意：不再通过此表单修改分类信息
-          // 任期管理
-          termStartDate: cleanValue(values.termStartDate ? values.termStartDate.format('YYYY-MM-DD') : undefined),
-          termEndDate: cleanValue(values.termEndDate ? values.termEndDate.format('YYYY-MM-DD') : undefined),
-          isCurrentTerm: cleanValue(values.isCurrentTerm),
-          // 特殊权限
-          hasSpecialPermissions: cleanValue(values.hasSpecialPermissions),
-          specialPermissions: cleanValue(values.specialPermissions),
-          permissionNotes: cleanValue(values.permissionNotes),
+          // 任期管理字段已移除
+          // 特殊权限字段已移除
         },
       };
 
@@ -960,6 +1086,7 @@ const ProfileEditForm: React.FC<ProfileEditFormProps> = ({ member, onSubmit, onC
             children: (
               <div style={{ maxHeight: '60vh', overflowY: 'auto', padding: '0 8px' }}>
                 {renderFieldGroup('jci_membership')}
+                {renderFieldGroup('payment_info')}
                 {renderFieldGroup('clothing_info')}
               </div>
             ),
@@ -969,7 +1096,6 @@ const ProfileEditForm: React.FC<ProfileEditFormProps> = ({ member, onSubmit, onC
             label: 'JCI职位',
             children: (
               <div style={{ maxHeight: '60vh', overflowY: 'auto', padding: '0 8px' }}>
-                {renderFieldGroup('jci_position')}
                 <FieldGroupSection 
                   group={{
                     key: 'position_history',
@@ -1019,6 +1145,60 @@ const ProfileEditForm: React.FC<ProfileEditFormProps> = ({ member, onSubmit, onC
                       )}
                     </div>
                 </FieldGroupSection>
+              </div>
+            ),
+          },
+          {
+            key: 'task_completion',
+            label: '任务完成',
+            children: (
+              <div style={{ maxHeight: '60vh', overflowY: 'auto', padding: '0 8px' }}>
+                {renderFieldGroup('task_completion')}
+              </div>
+            ),
+          },
+          {
+            key: 'membership_fee',
+            label: '会费记录',
+            children: (
+              <div style={{ maxHeight: '60vh', overflowY: 'auto', padding: '0 8px' }}>
+                <MembershipFeeViewer 
+                  member={member}
+                  transactions={transactions}
+                  purposes={purposes}
+                />
+              </div>
+            ),
+          },
+          {
+            key: 'senator_score',
+            label: '参议员分数',
+            children: (
+              <div style={{ maxHeight: '60vh', overflowY: 'auto', padding: '0 8px' }}>
+                <SenatorScoreManager 
+                  member={member}
+                  onUpdate={(updatedMember) => {
+                    // 更新本地状态，触发重新渲染
+                    Object.assign(member, updatedMember);
+                  }}
+                  isAdmin={isAdmin}
+                />
+              </div>
+            ),
+          },
+          {
+            key: 'activity_participation',
+            label: '活动参与',
+            children: (
+              <div style={{ maxHeight: '60vh', overflowY: 'auto', padding: '0 8px' }}>
+                <ActivityParticipationManager 
+                  member={member}
+                  onUpdate={(updatedMember) => {
+                    // 更新本地状态，触发重新渲染
+                    Object.assign(member, updatedMember);
+                  }}
+                  isAdmin={isAdmin}
+                />
               </div>
             ),
           },

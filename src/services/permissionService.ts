@@ -461,9 +461,25 @@ const ACCOUNT_TYPE_PERMISSION_MAP: Record<AccountType, string[]> = {
 };
 
 export const permissionService = {
+  // 检查是否为超级管理员邮箱
+  isSuperAdmin: async (memberId: string): Promise<boolean> => {
+    try {
+      const member = await import('./memberService').then(module => module.getMemberById(memberId));
+      return member?.email === 'admin@jcikl.com';
+    } catch (error) {
+      console.error('检查超级管理员失败:', error);
+      return false;
+    }
+  },
+
   // 检查职位权限
   checkPositionPermission: async (memberId: string, permission: string): Promise<boolean> => {
     try {
+      // 超级管理员绕过所有权限检查
+      if (await permissionService.isSuperAdmin(memberId)) {
+        return true;
+      }
+
       const position = await positionService.getCurrentPosition(memberId);
       if (!position) return false;
       
@@ -478,6 +494,11 @@ export const permissionService = {
   // 检查分类权限
   checkCategoryPermission: async (memberId: string, permission: string): Promise<boolean> => {
     try {
+      // 超级管理员绕过所有权限检查
+      if (await permissionService.isSuperAdmin(memberId)) {
+        return true;
+      }
+
       const category = await categoryService.getMemberCategory(memberId);
       if (!category) return false;
       
@@ -492,6 +513,11 @@ export const permissionService = {
   // 检查账户类型权限
   checkAccountTypePermission: async (memberId: string, permission: string): Promise<boolean> => {
     try {
+      // 超级管理员绕过所有权限检查
+      if (await permissionService.isSuperAdmin(memberId)) {
+        return true;
+      }
+
       const category = await categoryService.getMemberCategory(memberId);
       if (!category) return false;
       
@@ -506,6 +532,18 @@ export const permissionService = {
   // 获取有效权限列表
   getEffectivePermissions: async (memberId: string): Promise<string[]> => {
     try {
+      // 超级管理员获得所有权限
+      if (await permissionService.isSuperAdmin(memberId)) {
+        return [
+          'member.create', 'member.read', 'member.update', 'member.delete',
+          'activity.create', 'activity.read', 'activity.update', 'activity.delete',
+          'finance.create', 'finance.read', 'finance.update', 'finance.delete',
+          'message.create', 'message.read', 'message.update', 'message.delete',
+          'profile.create', 'profile.read', 'profile.update', 'profile.delete',
+          'system.admin', 'system.config', 'system.audit'
+        ];
+      }
+
       const position = await positionService.getCurrentPosition(memberId);
       const category = await categoryService.getMemberCategory(memberId);
       
@@ -535,6 +573,11 @@ export const permissionService = {
   // 检查权限（综合检查）
   checkPermission: async (memberId: string, permission: string): Promise<boolean> => {
     try {
+      // 超级管理员绕过所有权限检查
+      if (await permissionService.isSuperAdmin(memberId)) {
+        return true;
+      }
+
       const effectivePermissions = await permissionService.getEffectivePermissions(memberId);
       return effectivePermissions.includes(permission);
     } catch (error) {
@@ -561,6 +604,11 @@ export const permissionService = {
   // 检查是否有管理权限
   hasAdminPermission: async (memberId: string): Promise<boolean> => {
     try {
+      // 超级管理员总是有管理权限
+      if (await permissionService.isSuperAdmin(memberId)) {
+        return true;
+      }
+
       const category = await categoryService.getMemberCategory(memberId);
       if (!category) return false;
       
@@ -574,6 +622,11 @@ export const permissionService = {
   // 检查是否可以管理其他用户
   canManageUsers: async (memberId: string): Promise<boolean> => {
     try {
+      // 超级管理员总是可以管理用户
+      if (await permissionService.isSuperAdmin(memberId)) {
+        return true;
+      }
+
       const effectivePermissions = await permissionService.getEffectivePermissions(memberId);
       return effectivePermissions.includes('member.create') || 
              effectivePermissions.includes('member.update') || 
@@ -587,6 +640,11 @@ export const permissionService = {
   // 检查是否可以管理活动
   canManageActivities: async (memberId: string): Promise<boolean> => {
     try {
+      // 超级管理员总是可以管理活动
+      if (await permissionService.isSuperAdmin(memberId)) {
+        return true;
+      }
+
       const effectivePermissions = await permissionService.getEffectivePermissions(memberId);
       return effectivePermissions.includes('activity.create') || 
              effectivePermissions.includes('activity.update') || 
@@ -600,6 +658,11 @@ export const permissionService = {
   // 检查是否可以管理财务
   canManageFinance: async (memberId: string): Promise<boolean> => {
     try {
+      // 超级管理员总是可以管理财务
+      if (await permissionService.isSuperAdmin(memberId)) {
+        return true;
+      }
+
       const effectivePermissions = await permissionService.getEffectivePermissions(memberId);
       return effectivePermissions.includes('finance.create') || 
              effectivePermissions.includes('finance.update') || 

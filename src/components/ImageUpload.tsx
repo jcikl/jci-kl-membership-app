@@ -52,15 +52,6 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
   // 上传图片到 Firebase Storage
   const uploadToCloud = async (file: File): Promise<string> => {
     try {
-      console.log('开始上传图片:', {
-        fileName: file.name,
-        fileSize: file.size,
-        fileType: file.type,
-        maxSize,
-        enableCompression,
-        targetSize,
-        storagePath
-      });
 
       // 验证文件
       const validationError = await validateImageFile(file, maxSize);
@@ -72,14 +63,8 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
       // 智能缩放图片（如果启用）
       let fileToUpload = file;
       if (enableCompression) {
-        console.log('开始智能缩放图片...');
         try {
           fileToUpload = await smartResizeImage(file, targetSize, 0.9);
-          console.log('图片缩放完成:', {
-            originalSize: file.size,
-            resizedSize: fileToUpload.size,
-            compression: ((file.size - fileToUpload.size) / file.size * 100).toFixed(2) + '%'
-          });
         } catch (resizeError) {
           console.warn('图片缩放失败，使用原文件:', resizeError);
           fileToUpload = file;
@@ -87,9 +72,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
       }
 
       // 上传到 Firebase Storage
-      console.log('开始上传到Firebase Storage...');
       const url = await uploadImageToStorage(fileToUpload, storagePath);
-      console.log('上传成功，URL:', url);
       return url;
     } catch (error) {
       console.error('上传失败，详细错误:', error);

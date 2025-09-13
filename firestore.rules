@@ -45,6 +45,36 @@ service cloud.firestore {
         request.auth.token.role == 'admin';
     }
     
+    // 交易记录集合规则
+    match /transactions/{transactionId} {
+      // 所有认证用户都可以读取交易记录
+      allow read: if request.auth != null;
+      
+      // 只有管理员、财务长和开发员可以创建、更新、删除交易记录
+      allow write: if request.auth != null && 
+        request.auth.token.role in ['admin', 'treasurer', 'developer'];
+    }
+    
+    // 银行户口集合规则
+    match /bank_accounts/{accountId} {
+      // 所有认证用户都可以读取银行户口
+      allow read: if request.auth != null;
+      
+      // 只有管理员、财务长和开发员可以创建、更新、删除银行户口
+      allow write: if request.auth != null && 
+        request.auth.token.role in ['admin', 'treasurer', 'developer'];
+    }
+    
+    // 交易用途集合规则
+    match /transaction_purposes/{purposeId} {
+      // 所有认证用户都可以读取交易用途
+      allow read: if request.auth != null;
+      
+      // 只有管理员、财务长和开发员可以创建、更新、删除交易用途
+      allow write: if request.auth != null && 
+        request.auth.token.role in ['admin', 'treasurer', 'developer'];
+    }
+    
     // 消息通知集合规则
     match /notifications/{notificationId} {
       // 用户可以读取发送给自己的通知
@@ -54,6 +84,32 @@ service cloud.firestore {
       // 管理员可以创建和读取所有通知
       allow write: if request.auth != null && 
         request.auth.token.role in ['admin', 'moderator'];
+    }
+    
+    // 账单付款申请集合规则
+    match /bill_payment_requests/{requestId} {
+      // 所有认证用户都可以读取账单付款申请
+      allow read: if request.auth != null;
+      
+      // 用户可以创建自己的账单付款申请
+      allow create: if request.auth != null && 
+        request.auth.uid == request.resource.data.submitterId;
+      
+      // 用户可以更新自己的待审批申请
+      allow update: if request.auth != null && 
+        request.auth.uid == resource.data.submitterId &&
+        resource.data.status == 'pending';
+      
+      // 开发员、管理员和财务长可以审批、拒绝、支付申请
+      // 注意：这里仍然使用 Firebase 令牌验证作为最后防线
+      // 实际的权限验证在服务层通过户口资料进行
+      allow update: if request.auth != null && 
+        request.auth.token.role in ['developer', 'admin', 'treasurer'] &&
+        request.resource.data.status in ['approved', 'rejected', 'paid'];
+      
+      // 开发员和管理员可以删除申请
+      allow delete: if request.auth != null && 
+        request.auth.token.role in ['developer', 'admin'];
     }
   }
 }

@@ -19,6 +19,7 @@ import {
 import { Switch } from 'antd';
 import ImageUpload from './ImageUpload';
 import { getChapterSettings, saveChapterSettings, getDefaultChapterSettings } from '@/services/chapterSettingsService';
+import { useFiscalYear } from '@/contexts/FiscalYearContext';
 import type { ChapterSettings } from '@/types';
 
 const { Title, Text } = Typography;
@@ -30,6 +31,7 @@ const ChapterSettings: React.FC = () => {
   const [saving, setSaving] = useState(false);
   const [settings, setSettings] = useState<ChapterSettings | null>(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const { refreshFiscalYear } = useFiscalYear();
 
   // 加载分会设置
   const loadSettings = async () => {
@@ -62,7 +64,15 @@ const ChapterSettings: React.FC = () => {
     setSaving(true);
     try {
       await saveChapterSettings(values);
-      message.success('分会设置保存成功');
+      
+      // 如果财政年度发生变化，刷新财政年度上下文
+      if (settings && settings.fiscalYear !== values.fiscalYear) {
+        await refreshFiscalYear();
+        message.success('分会设置保存成功，财政年度已更新');
+      } else {
+        message.success('分会设置保存成功');
+      }
+      
       setHasUnsavedChanges(false); // 重置修改状态
       await loadSettings(); // 重新加载设置
     } catch (error) {
@@ -144,6 +154,27 @@ const ChapterSettings: React.FC = () => {
                   placeholder="请输入成立年份"
                   min={1900}
                   max={new Date().getFullYear()}
+                />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Row gutter={24}>
+            <Col span={12}>
+              <Form.Item
+                name="fiscalYear"
+                label="财政年度"
+                rules={[
+                  { required: true, message: '请输入财政年度' },
+                  { type: 'number', min: 2020, max: 2030, message: '请输入有效的财政年度' }
+                ]}
+                extra="用于财务管理的财政年度，影响所有财务数据的分类和报告"
+              >
+                <InputNumber
+                  style={{ width: '100%' }}
+                  placeholder="请输入财政年度"
+                  min={2020}
+                  max={2030}
                 />
               </Form.Item>
             </Col>

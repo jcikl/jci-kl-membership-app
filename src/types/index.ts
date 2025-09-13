@@ -27,6 +27,28 @@ export interface MemberProfile {
   // Senator ID
   senatorId?: string; // 参议员编号
   senatorVerified?: boolean; // 参议员验证状态
+  
+  // 参议员分数管理
+  senatorScore?: number; // 参议员分数
+  senatorScoreHistory?: Array<{
+    id: string;
+    score: number;
+    reason: string;
+    awardedBy: string;
+    awardedDate: string;
+    notes?: string;
+  }>; // 分数历史记录
+  
+  // 活动参与管理
+  activityParticipation?: Array<{
+    id: string;
+    activityName: string;
+    activityType: 'meeting' | 'event' | 'training' | 'volunteer' | 'other';
+    participationDate: string;
+    status: 'attended' | 'absent' | 'excused';
+    points?: number;
+    notes?: string;
+  }>; // 活动参与记录
 
   // Social & contact
   linkedin?: string;
@@ -286,6 +308,8 @@ export interface ChapterSettings {
   id: string;
   chapterName: string;
   establishmentYear: number;
+  fiscalYear: number; // 财政年度
+  fiscalYearStartMonth: number; // 财政年度起始月份 (1-12)
   description?: string;
   address?: string;
   contactEmail?: string;

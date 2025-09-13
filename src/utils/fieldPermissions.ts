@@ -17,6 +17,15 @@ export interface FieldPermissionResult {
 }
 
 /**
+ * 检查是否为超级管理员（同步版本）
+ * @param memberData 会员数据
+ * @returns 是否为超级管理员
+ */
+function isSuperAdminSync(memberData: any): boolean {
+  return memberData?.email === 'admin@jcikl.com';
+}
+
+/**
  * 检查字段权限
  * @param field 字段名
  * @param userRole 用户角色
@@ -41,6 +50,14 @@ export function checkFieldPermission(
 
   // 检查管理员专用字段
   if (rule.permission === FieldPermission.ADMIN_ONLY) {
+    // 超级管理员绕过所有限制
+    if (isSuperAdminSync(memberData)) {
+      return {
+        permission: FieldPermission.READ_WRITE,
+        editable: true
+      };
+    }
+    
     if (userRole === 'admin' || userRole === 'developer') {
       return {
         permission: FieldPermission.READ_WRITE,
@@ -57,6 +74,14 @@ export function checkFieldPermission(
 
   // 检查条件锁定
   if (rule.condition && rule.condition(memberData)) {
+    // 超级管理员绕过条件锁定
+    if (isSuperAdminSync(memberData)) {
+      return {
+        permission: FieldPermission.READ_WRITE,
+        editable: true
+      };
+    }
+    
     return {
       permission: FieldPermission.LOCKED,
       editable: false,
@@ -67,6 +92,14 @@ export function checkFieldPermission(
 
   // 检查只读权限
   if (rule.permission === FieldPermission.READ_ONLY) {
+    // 超级管理员绕过只读限制
+    if (isSuperAdminSync(memberData)) {
+      return {
+        permission: FieldPermission.READ_WRITE,
+        editable: true
+      };
+    }
+    
     return {
       permission: FieldPermission.READ_ONLY,
       editable: false,

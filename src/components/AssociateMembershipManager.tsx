@@ -23,7 +23,6 @@ const AssociateMembershipManager: React.FC = () => {
     setLoading(true);
     try {
       const res = await getMembers({ page: 1, limit: 500 });
-      console.log('总会员数:', res.data.length);
       
       // 调试：查看所有会员的 proposedMembershipCategory
       const allCategories = res.data.map(m => ({
@@ -32,7 +31,6 @@ const AssociateMembershipManager: React.FC = () => {
         birthDate: m.profile?.birthDate,
         categoryReviewStatus: m.profile?.categoryReviewStatus
       }));
-      console.log('所有会员的类别信息:', allCategories);
       
       // 过滤出准会员且超过40岁的用户
       // 由于所有会员的 proposedMembershipCategory 都是 undefined，
@@ -41,7 +39,6 @@ const AssociateMembershipManager: React.FC = () => {
         // 计算年龄
         const birthDate = m.profile?.birthDate;
         if (!birthDate) {
-          console.log(`会员 ${m.name} 没有出生日期`);
           return false;
         }
         
@@ -61,14 +58,12 @@ const AssociateMembershipManager: React.FC = () => {
             age = dayjs().diff(dayjs(birthDate), 'year');
           }
         } catch (e) {
-          console.log(`会员 ${m.name} 出生日期格式无法解析: ${birthDate}`);
           return false;
         }
         
         const isOver40 = age > 40;
         
         if (!isOver40) {
-          console.log(`会员 ${m.name} 年龄不足40岁，当前年龄: ${age}，出生日期: ${birthDate}`);
           return false;
         }
         
@@ -78,17 +73,13 @@ const AssociateMembershipManager: React.FC = () => {
                                    (m.profile?.categoryReviewStatus === 'approved' && (proposedCategory as any) === 'associate');
         
         if (hasAssociateCategory) {
-          console.log(`会员 ${m.name} 有明确的准会员类别标记，年龄: ${age}`);
           return true;
         }
         
         // 如果没有明确的类别标记，但年龄超过40岁，也显示（供手动分类）
-        console.log(`会员 ${m.name} 年龄超过40岁但无类别标记，年龄: ${age}，出生日期: ${birthDate}`);
         return true;
       });
       
-      console.log('过滤后的准会员数量:', associateMembers.length);
-      console.log('准会员列表:', associateMembers.map(m => ({ name: m.name, age: dayjs().diff(dayjs(m.profile?.birthDate, 'DD-MMM-YYYY'), 'year') })));
       
       setMembers(associateMembers);
     } catch (e) {

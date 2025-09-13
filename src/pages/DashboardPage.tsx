@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Row, Col, Card, Statistic, Table, Button, Space, Typography, List, Tag, Spin, Image, Progress, Badge } from 'antd';
+import { Row, Col, Card, Statistic, Table, Button, Space, Typography, List, Tag, Spin, Image, Progress, Badge, Avatar } from 'antd';
 import { 
   UserOutlined, 
   TeamOutlined, 
@@ -16,7 +16,8 @@ import {
   GlobalOutlined,
   DashboardOutlined,
   FilterOutlined,
-  ClearOutlined
+  ClearOutlined,
+  SmileOutlined
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { useMemberStore } from '@/store/memberStore';
@@ -38,6 +39,9 @@ const DashboardPage: React.FC = () => {
   // 分会设置状态
   const [chapterSettings, setChapterSettings] = useState<ChapterSettings | null>(null);
   const [chapterLoading, setChapterLoading] = useState(true);
+  
+  // 生日宝宝状态
+  const [selectedBirthdayMonth, setSelectedBirthdayMonth] = useState<number>(new Date().getMonth() + 1);
 
   useEffect(() => {
     fetchMembers({ page: 1, limit: 100 }); // 获取更多数据用于兴趣分析
@@ -173,6 +177,73 @@ const DashboardPage: React.FC = () => {
       .filter(item => item.count > 0)
       .sort((a, b) => b.count - a.count);
   }, [filteredMembers]);
+
+  // 生日宝宝数据（按月份筛选）
+  const birthdayBabies = useMemo(() => {
+    return filteredMembers.filter(member => {
+      if (!member.profile?.birthDate) return false;
+      
+      try {
+        // 解析生日日期 (dd-mmm-yyyy 格式)
+        const birthDateStr = member.profile.birthDate;
+        let birthDate: Date;
+        
+        // 尝试不同的日期格式解析
+        if (birthDateStr.includes('-')) {
+          // DD-MMM-YYYY 格式
+          birthDate = new Date(birthDateStr);
+        } else if (birthDateStr.includes('/')) {
+          // DD/MM/YYYY 或其他格式
+          birthDate = new Date(birthDateStr);
+        } else {
+          // 尝试直接解析
+          birthDate = new Date(birthDateStr);
+        }
+        
+        // 检查日期是否有效
+        if (isNaN(birthDate.getTime())) {
+          return false;
+        }
+        
+        const birthMonth = birthDate.getMonth() + 1; // getMonth() 返回 0-11，需要 +1
+        return birthMonth === selectedBirthdayMonth;
+      } catch (error) {
+        console.warn('解析生日日期失败:', member.profile.birthDate, error);
+        return false;
+      }
+    }).sort((a, b) => {
+      // 按生日日期排序
+      try {
+        const dateA = new Date(a.profile?.birthDate || '');
+        const dateB = new Date(b.profile?.birthDate || '');
+        
+        // 检查日期是否有效
+        if (isNaN(dateA.getTime()) || isNaN(dateB.getTime())) {
+          return 0;
+        }
+        
+        return dateA.getDate() - dateB.getDate();
+      } catch {
+        return 0;
+      }
+    });
+  }, [filteredMembers, selectedBirthdayMonth]);
+
+  // 月份选项
+  const monthOptions = [
+    { value: 1, label: '一月' },
+    { value: 2, label: '二月' },
+    { value: 3, label: '三月' },
+    { value: 4, label: '四月' },
+    { value: 5, label: '五月' },
+    { value: 6, label: '六月' },
+    { value: 7, label: '七月' },
+    { value: 8, label: '八月' },
+    { value: 9, label: '九月' },
+    { value: 10, label: '十月' },
+    { value: 11, label: '十一月' },
+    { value: 12, label: '十二月' },
+  ];
 
   // 筛选处理函数
   const handleHobbyFilter = (hobby: string) => {
@@ -431,6 +502,241 @@ const DashboardPage: React.FC = () => {
             <div style={{ marginTop: '8px', color: 'white', opacity: 0.8, fontSize: '14px' }}>
               本月新加入会员
             </div>
+          </Card>
+        </Col>
+      </Row>
+
+      {/* 生日宝宝卡片 */}
+      <Row gutter={[24, 24]} style={{ marginBottom: '24px' }}>
+        <Col xs={24}>
+          <Card 
+            title={
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: '8px',
+                  padding: '8px 16px',
+                  background: 'rgba(255, 255, 255, 0.2)',
+                  borderRadius: '20px',
+                  border: '1px solid rgba(255, 255, 255, 0.3)'
+                }}>
+                  <SmileOutlined style={{ color: '#fff', fontSize: '18px' }} />
+                  <span style={{ color: '#fff', fontWeight: '600', fontSize: '16px' }}>生日宝宝</span>
+                </div>
+                <div style={{
+                  background: 'rgba(255, 255, 255, 0.9)',
+                  padding: '6px 12px',
+                  borderRadius: '16px',
+                  border: '1px solid rgba(255, 255, 255, 0.5)'
+                }}>
+                  <span style={{ color: '#ff4d4f', fontWeight: '600', fontSize: '14px' }}>
+                    {monthOptions.find(m => m.value === selectedBirthdayMonth)?.label} 
+                    <span style={{ color: '#666', marginLeft: '4px' }}>
+                      ({birthdayBabies.length} 位)
+                    </span>
+                  </span>
+                </div>
+              </div>
+            }
+            extra={
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                <span style={{ 
+                  color: 'rgba(255, 255, 255, 0.9)', 
+                  fontSize: '14px', 
+                  fontWeight: '500' 
+                }}>
+                  选择月份：
+                </span>
+                <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                  {monthOptions.map((month) => (
+                    <Tag
+                      key={month.value}
+                      style={{
+                        cursor: 'pointer',
+                        borderRadius: '20px',
+                        padding: '6px 16px',
+                        fontSize: '13px',
+                        fontWeight: selectedBirthdayMonth === month.value ? '600' : '400',
+                        border: 'none',
+                        background: selectedBirthdayMonth === month.value 
+                          ? 'rgba(255, 255, 255, 0.95)' 
+                          : 'rgba(255, 255, 255, 0.2)',
+                        color: selectedBirthdayMonth === month.value ? '#ff4d4f' : 'rgba(255, 255, 255, 0.9)',
+                        transition: 'all 0.3s ease',
+                        boxShadow: selectedBirthdayMonth === month.value 
+                          ? '0 2px 8px rgba(255, 77, 79, 0.3)' 
+                          : 'none'
+                      }}
+                      onClick={() => setSelectedBirthdayMonth(month.value)}
+                    >
+                      {month.label}
+                    </Tag>
+                  ))}
+                </div>
+              </div>
+            }
+            style={{ 
+              background: 'linear-gradient(135deg, #ff6b6b 0%, #ff8e8e 50%, #ffa8a8 100%)',
+              border: 'none',
+              borderRadius: '16px',
+              boxShadow: '0 8px 32px rgba(255, 107, 107, 0.2)'
+            }}
+            styles={{ 
+              body: { 
+                padding: '32px',
+                minHeight: '240px',
+                background: 'rgba(255, 255, 255, 0.05)',
+                borderRadius: '0 0 16px 16px'
+              } 
+            }}
+          >
+            {birthdayBabies.length === 0 ? (
+              <div style={{ 
+                textAlign: 'center', 
+                padding: '60px 20px',
+                background: 'rgba(255, 255, 255, 0.1)',
+                borderRadius: '16px',
+                border: '2px dashed rgba(255, 255, 255, 0.3)'
+              }}>
+                <div style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: '80px',
+                  height: '80px',
+                  background: 'rgba(255, 255, 255, 0.2)',
+                  borderRadius: '50%',
+                  marginBottom: '24px'
+                }}>
+                  <SmileOutlined style={{ fontSize: '40px', color: 'rgba(255, 255, 255, 0.8)' }} />
+                </div>
+                <div style={{ 
+                  fontSize: '18px', 
+                  marginBottom: '8px',
+                  color: 'rgba(255, 255, 255, 0.9)',
+                  fontWeight: '600'
+                }}>
+                  本月暂无生日宝宝
+                </div>
+                <div style={{ 
+                  fontSize: '14px', 
+                  color: 'rgba(255, 255, 255, 0.7)',
+                  lineHeight: '1.5'
+                }}>
+                  请选择其他月份查看生日会员
+                </div>
+              </div>
+            ) : (
+              <div style={{ 
+                display: 'grid', 
+                gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', 
+                gap: '20px',
+                padding: '8px'
+              }}>
+                {birthdayBabies.map((member) => {
+                  let day = 0;
+                  let month = 0;
+                  
+                  try {
+                    const birthDate = new Date(member.profile?.birthDate || '');
+                    if (!isNaN(birthDate.getTime())) {
+                      day = birthDate.getDate();
+                      month = birthDate.getMonth() + 1;
+                    }
+                  } catch (error) {
+                    console.warn('解析生日日期失败:', member.profile?.birthDate, error);
+                  }
+                  
+                  return (
+                    <div
+                      key={member.id}
+                      style={{
+                        background: 'rgba(255, 255, 255, 0.95)',
+                        borderRadius: '16px',
+                        padding: '24px',
+                        textAlign: 'center',
+                        transition: 'all 0.3s ease',
+                        cursor: 'pointer',
+                        border: '1px solid rgba(255, 255, 255, 0.5)',
+                        boxShadow: '0 4px 16px rgba(0, 0, 0, 0.1)',
+                        position: 'relative',
+                        overflow: 'hidden'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.transform = 'translateY(-4px)';
+                        e.currentTarget.style.boxShadow = '0 8px 24px rgba(0, 0, 0, 0.15)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.transform = 'translateY(0)';
+                        e.currentTarget.style.boxShadow = '0 4px 16px rgba(0, 0, 0, 0.1)';
+                      }}
+                      onClick={() => navigate(`/members/${member.id}`)}
+                    >
+                      {/* 装饰性背景 */}
+                      <div style={{
+                        position: 'absolute',
+                        top: '-20px',
+                        right: '-20px',
+                        width: '60px',
+                        height: '60px',
+                        background: 'linear-gradient(135deg, rgba(255, 107, 107, 0.1), rgba(255, 142, 142, 0.1))',
+                        borderRadius: '50%',
+                        zIndex: 0
+                      }} />
+                      
+                      <div style={{ position: 'relative', zIndex: 1 }}>
+                        <Avatar
+                          size={72}
+                          src={member.profile?.profilePhotoUrl}
+                          icon={<UserOutlined />}
+                          style={{
+                            marginBottom: '16px',
+                            border: '4px solid #fff',
+                            boxShadow: '0 4px 16px rgba(255, 107, 107, 0.3)'
+                          }}
+                        />
+                        
+                        <div style={{ 
+                          fontWeight: '600', 
+                          fontSize: '18px', 
+                          marginBottom: '6px',
+                          color: '#333',
+                          lineHeight: '1.3'
+                        }}>
+                          {member.name}
+                        </div>
+                        
+                        <div style={{ 
+                          fontSize: '13px', 
+                          color: '#666',
+                          marginBottom: '12px',
+                          background: 'rgba(0, 0, 0, 0.05)',
+                          padding: '4px 8px',
+                          borderRadius: '8px',
+                          display: 'inline-block'
+                        }}>
+                          {member.memberId}
+                        </div>
+                        
+                        <div style={{
+                          background: 'linear-gradient(135deg, #ff6b6b, #ff8e8e)',
+                          color: 'white',
+                          padding: '8px 16px',
+                          borderRadius: '20px',
+                          fontSize: '14px',
+                          fontWeight: '600',
+                          display: 'inline-block',
+                          boxShadow: '0 2px 8px rgba(255, 107, 107, 0.3)'
+                        }}>
+                          {month}月{day}日
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </Card>
         </Col>
       </Row>

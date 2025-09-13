@@ -55,16 +55,19 @@ export const FIELD_GROUPS: FieldGroup[] = [
   },
   {
     key: 'personal_interests',
-    label: '个人兴趣',
+    label: '个人兴趣与目标',
     fields: [
-      'hobbies'
+      'hobbies',
+      'fiveYearsVision',
+      'activeMemberHow'
     ]
   },
   {
     key: 'files',
     label: '文件资料',
     fields: [
-      'profilePhotoUrl'
+      'profilePhotoUrl',
+      'paymentSlipUrl'
     ]
   },
   // 职业信息标签页
@@ -103,8 +106,16 @@ export const FIELD_GROUPS: FieldGroup[] = [
       'introducerName',
       'jciEventInterests',
       'jciBenefitsExpectation',
-      'activeMemberHow',
-      'fiveYearsVision'
+      'joinDate'
+    ]
+  },
+  {
+    key: 'payment_info',
+    label: '付款信息',
+    fields: [
+      'paymentDate',
+      'endorsementDate',
+      'paymentVerifiedDate'
     ]
   },
   {
@@ -122,12 +133,17 @@ export const FIELD_GROUPS: FieldGroup[] = [
   {
     key: 'jci_position',
     label: '职位信息',
+    fields: []
+  },
+  // 任务完成情况标签页
+  {
+    key: 'task_completion',
+    label: '任务完成情况',
     fields: [
-      'jciPosition',
-      'positionStartDate',
-      'positionEndDate'
+      'requiredTasksCompleted',
+      'taskCompletions'
     ]
-  }
+  },
 ];
 
 // 字段权限规则定义
@@ -162,6 +178,10 @@ export const FIELD_PERMISSION_RULES: FieldPermissionRule[] = [
     permission: FieldPermission.ADMIN_ONLY
   },
   {
+    field: 'vpDivision',
+    permission: FieldPermission.ADMIN_ONLY
+  },
+  {
     field: 'positionStartDate',
     permission: FieldPermission.ADMIN_ONLY
   },
@@ -169,12 +189,88 @@ export const FIELD_PERMISSION_RULES: FieldPermissionRule[] = [
     field: 'positionEndDate',
     permission: FieldPermission.ADMIN_ONLY
   },
+  {
+    field: 'isActingPosition',
+    permission: FieldPermission.ADMIN_ONLY
+  },
+  {
+    field: 'actingForPosition',
+    permission: FieldPermission.ADMIN_ONLY
+  },
+  {
+    field: 'senatorVerified',
+    permission: FieldPermission.ADMIN_ONLY
+  },
+  {
+    field: 'paymentVerifiedDate',
+    permission: FieldPermission.ADMIN_ONLY
+  },
+  {
+    field: 'joinDate',
+    permission: FieldPermission.ADMIN_ONLY
+  },
+  {
+    field: 'termStartDate',
+    permission: FieldPermission.ADMIN_ONLY
+  },
+  {
+    field: 'termEndDate',
+    permission: FieldPermission.ADMIN_ONLY
+  },
+  {
+    field: 'isCurrentTerm',
+    permission: FieldPermission.ADMIN_ONLY
+  },
+  {
+    field: 'hasSpecialPermissions',
+    permission: FieldPermission.ADMIN_ONLY
+  },
+  {
+    field: 'specialPermissions',
+    permission: FieldPermission.ADMIN_ONLY
+  },
+  {
+    field: 'permissionNotes',
+    permission: FieldPermission.ADMIN_ONLY
+  },
+  {
+    field: 'effectivePermissions',
+    permission: FieldPermission.ADMIN_ONLY
+  },
+  {
+    field: 'requiredTasksCompleted',
+    permission: FieldPermission.ADMIN_ONLY
+  },
+  {
+    field: 'taskCompletions',
+    permission: FieldPermission.ADMIN_ONLY
+  },
+  {
+    field: 'proposedMembershipCategory',
+    permission: FieldPermission.ADMIN_ONLY
+  },
+  {
+    field: 'categoryReviewStatus',
+    permission: FieldPermission.ADMIN_ONLY
+  },
+  {
+    field: 'categoryReviewNotes',
+    permission: FieldPermission.ADMIN_ONLY
+  },
+  {
+    field: 'categoryReviewerId',
+    permission: FieldPermission.ADMIN_ONLY
+  },
+  {
+    field: 'categoryReviewedAt',
+    permission: FieldPermission.ADMIN_ONLY
+  },
   
   // 条件锁定字段
   {
     field: 'senatorId',
     permission: FieldPermission.READ_WRITE,
-    condition: (memberData) => !memberData.profile?.senatorVerified,
+    condition: (memberData) => memberData.profile?.senatorVerified === true,
     lockReason: LockReason.SENATOR_VERIFIED
   },
   {
@@ -206,6 +302,20 @@ export const FIELD_PERMISSION_RULES: FieldPermissionRule[] = [
     permission: FieldPermission.READ_WRITE,
     condition: (memberData) => memberData.profile?.tshirtReceivingStatus !== 'Requested',
     lockReason: LockReason.TSHIRT_REQUESTED
+  },
+  
+  // 只读字段（会员可查看但不可编辑）
+  {
+    field: 'paymentDate',
+    permission: FieldPermission.READ_ONLY
+  },
+  {
+    field: 'endorsementDate',
+    permission: FieldPermission.READ_ONLY
+  },
+  {
+    field: 'paymentSlipUrl',
+    permission: FieldPermission.READ_ONLY
   }
 ];
 

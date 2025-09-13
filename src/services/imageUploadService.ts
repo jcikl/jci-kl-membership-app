@@ -7,12 +7,6 @@ export const uploadImageToStorage = async (
   path: string = 'chapter-logos'
 ): Promise<string> => {
   try {
-    console.log('Firebase Storage 上传开始:', {
-      fileName: file.name,
-      fileSize: file.size,
-      fileType: file.type,
-      path
-    });
 
     // 检查 storage 是否可用
     if (!storage) {
@@ -23,20 +17,14 @@ export const uploadImageToStorage = async (
     const timestamp = Date.now();
     const fileName = `${timestamp}_${file.name}`;
     const fullPath = `${path}/${fileName}`;
-    console.log('文件路径:', fullPath);
     
     const imageRef = ref(storage, fullPath);
-    console.log('Storage ref 创建成功');
     
     // 上传文件
-    console.log('开始上传字节...');
     const snapshot = await uploadBytes(imageRef, file);
-    console.log('上传字节完成:', snapshot);
     
     // 获取下载URL
-    console.log('获取下载URL...');
     const downloadURL = await getDownloadURL(snapshot.ref);
-    console.log('下载URL获取成功:', downloadURL);
     
     return downloadURL;
   } catch (error) {

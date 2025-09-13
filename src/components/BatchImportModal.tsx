@@ -25,13 +25,39 @@ import {
 } from '@ant-design/icons';
 import { Member, MemberStatus, MemberLevel } from '@/types';
 import ExcelUpload from './ExcelUpload';
+import { parseDateToDDMMMYYYY } from '@/utils/dateParser';
 
 const { Text } = Typography;
+
+// 通用日期输入组件
+const DateInput: React.FC<{
+  value: string;
+  onChange: (value: string) => void;
+  placeholder?: string;
+}> = ({ value, onChange, placeholder = "支持多种格式: 2024-01-15, 01/15/2024, 15/01/2024, 2024年1月15日" }) => (
+  <Input
+    value={value}
+    onChange={(e) => {
+      const inputValue = e.target.value;
+      // 实时转换日期格式
+      const parsedDate = parseDateToDDMMMYYYY(inputValue);
+      onChange(parsedDate || inputValue);
+    }}
+    placeholder={placeholder}
+    size="small"
+  />
+);
 
 interface BatchImportModalProps {
   visible: boolean;
   onCancel: () => void;
-  onImport: (members: Omit<Member, 'id' | 'createdAt' | 'updatedAt'>[], developerMode: boolean) => Promise<{ success: number; failed: number; errors: string[] }>;
+  onImport: (members: Omit<Member, 'id' | 'createdAt' | 'updatedAt'>[], developerMode: boolean) => Promise<{ 
+    success: number; 
+    failed: number; 
+    created: number; 
+    updated: number; 
+    errors: string[] 
+  }>;
 }
 
 interface ParsedMember {
@@ -45,6 +71,7 @@ interface ParsedMember {
   fullNameNric?: string;
   gender?: 'Male' | 'Female' | null;
   race?: 'Chinese' | 'Malay' | 'Indian' | 'Other' | null;
+  nationality?: string;
   birthDate?: string;
   nricOrPassport?: string;
   address?: string;
@@ -126,7 +153,13 @@ const BatchImportModal: React.FC<BatchImportModalProps> = ({
 }) => {
   const [members, setMembers] = useState<ParsedMember[]>([]);
   const [isImporting, setIsImporting] = useState(false);
-  const [importResult, setImportResult] = useState<{ success: number; failed: number; errors: string[] } | null>(null);
+  const [importResult, setImportResult] = useState<{ 
+    success: number; 
+    failed: number; 
+    created: number; 
+    updated: number; 
+    errors: string[] 
+  } | null>(null);
   const [activeTab, setActiveTab] = useState('manual');
   const [developerMode, setDeveloperMode] = useState(false);
 
@@ -142,6 +175,7 @@ const BatchImportModal: React.FC<BatchImportModalProps> = ({
     fullNameNric: '',
     gender: null,
     race: null,
+    nationality: '',
     birthDate: '',
     nricOrPassport: '',
     address: '',
@@ -329,43 +363,44 @@ const BatchImportModal: React.FC<BatchImportModalProps> = ({
         fullNameNric: values[1] ? String(values[1]).trim() : '',
         gender: values[2] ? (String(values[2]).trim() as 'Male' | 'Female') : null,
         race: values[3] ? (String(values[3]).trim() as 'Chinese' | 'Malay' | 'Indian' | 'Other') : null,
-        birthDate: values[4] ? String(values[4]).trim() : '',
-        nricOrPassport: values[5] ? String(values[5]).trim() : '',
-        address: values[6] ? String(values[6]).trim() : '',
+        nationality: values[4] ? String(values[4]).trim() : '',
+        birthDate: values[5] ? parseDateToDDMMMYYYY(String(values[5]).trim()) : '',
+        nricOrPassport: values[6] ? String(values[6]).trim() : '',
+        address: values[7] ? String(values[7]).trim() : '',
         
         // 联系方式
-        email: values[7] ? String(values[7]).trim() : '',
-        phone: values[8] ? String(values[8]).trim() : '',
-        whatsappGroup: values[9] ? (String(values[9]).trim() === 'true' || String(values[9]).trim() === '是') : false,
+        email: values[8] ? String(values[8]).trim() : '',
+        phone: values[9] ? String(values[9]).trim() : '',
+        whatsappGroup: values[10] ? (String(values[10]).trim() === 'true' || String(values[10]).trim() === '是') : false,
         
         // 个人兴趣
-        hobbies: values[10] ? (String(values[10]).trim() ? String(values[10]).split(',').map(s => s.trim()).filter(s => s) : []) : [],
+        hobbies: values[11] ? (String(values[11]).trim() ? String(values[11]).split(',').map(s => s.trim()).filter(s => s) : []) : [],
         
         // 文件资料
-        profilePhotoUrl: values[11] ? String(values[11]).trim() : '',
+        profilePhotoUrl: values[12] ? String(values[12]).trim() : '',
         
         // ========== 职业信息标签页 ==========
         
         // 公司信息
-        company: values[12] ? String(values[12]).trim() : '',
-        departmentAndPosition: values[13] ? String(values[13]).trim() : '',
-        industryDetail: values[14] ? String(values[14]).trim() : '',
-        categories: values[15] ? (String(values[15]).trim() ? String(values[15]).split(',').map(s => s.trim()).filter(s => s) : []) : [],
-        ownIndustry: values[16] ? (String(values[16]).trim() ? String(values[16]).split(',').map(s => s.trim()).filter(s => s) : []) : [],
-        companyIntro: values[17] ? String(values[17]).trim() : '',
-        acceptInternationalBusiness: values[18] ? (String(values[18]).trim() as 'Yes' | 'No' | 'Willing to explore') : null,
-        interestedIndustries: values[19] ? (String(values[19]).trim() ? String(values[19]).split(',').map(s => s.trim()).filter(s => s) : []) : [],
+        company: values[13] ? String(values[13]).trim() : '',
+        departmentAndPosition: values[14] ? String(values[14]).trim() : '',
+        industryDetail: values[15] ? String(values[15]).trim() : '',
+        categories: values[16] ? (String(values[16]).trim() ? String(values[16]).split(',').map(s => s.trim()).filter(s => s) : []) : [],
+        ownIndustry: values[17] ? (String(values[17]).trim() ? String(values[17]).split(',').map(s => s.trim()).filter(s => s) : []) : [],
+        companyIntro: values[18] ? String(values[18]).trim() : '',
+        acceptInternationalBusiness: values[19] ? (String(values[19]).trim() as 'Yes' | 'No' | 'Willing to explore') : null,
+        interestedIndustries: values[20] ? (String(values[20]).trim() ? String(values[20]).split(',').map(s => s.trim()).filter(s => s) : []) : [],
         
         // 社交网络
-        linkedin: values[20] ? String(values[20]).trim() : '',
-        companyWebsite: values[21] ? String(values[21]).trim() : '',
+        linkedin: values[21] ? String(values[21]).trim() : '',
+        companyWebsite: values[22] ? String(values[22]).trim() : '',
         
         // ========== JCI 相关标签页 ==========
         
         // 入会信息
-        accountType: values[22] ? String(values[22]).trim() : '',
-        status: values[23] ? (() => {
-          const statusValue = String(values[23]).trim();
+        accountType: values[23] ? String(values[23]).trim() : '',
+        status: values[24] ? (() => {
+          const statusValue = String(values[24]).trim();
           const statusMapping: Record<string, MemberStatus> = {
             '活跃': 'active',
             '不活跃': 'inactive', 
@@ -378,8 +413,8 @@ const BatchImportModal: React.FC<BatchImportModalProps> = ({
           };
           return statusMapping[statusValue] || statusValue as MemberStatus;
         })() : 'pending',
-        level: values[24] ? (() => {
-          const levelValue = String(values[24]).trim();
+        level: values[25] ? (() => {
+          const levelValue = String(values[25]).trim();
           const levelMapping: Record<string, MemberLevel> = {
             '铜牌': 'bronze',
             '银牌': 'silver',
@@ -413,17 +448,17 @@ const BatchImportModal: React.FC<BatchImportModalProps> = ({
         
         // 职位信息
         jciPosition: values[37] ? String(values[37]).trim() : '',
-        positionStartDate: values[38] ? String(values[38]).trim() : '',
-        positionEndDate: values[39] ? String(values[39]).trim() : '',
+        positionStartDate: values[38] ? parseDateToDDMMMYYYY(String(values[38]).trim()) : '',
+        positionEndDate: values[39] ? parseDateToDDMMMYYYY(String(values[39]).trim()) : '',
         
         // 其他字段
-        joinedDate: values[40] ? String(values[40]).trim() : '',
-        paymentDate: values[41] ? String(values[41]).trim() : '',
-        endorsementDate: values[42] ? String(values[42]).trim() : '',
-        paymentVerifiedDate: values[43] ? String(values[43]).trim() : '',
+        joinedDate: values[40] ? parseDateToDDMMMYYYY(String(values[40]).trim()) : '',
+        paymentDate: values[41] ? parseDateToDDMMMYYYY(String(values[41]).trim()) : '',
+        endorsementDate: values[42] ? parseDateToDDMMMYYYY(String(values[42]).trim()) : '',
+        paymentVerifiedDate: values[43] ? parseDateToDDMMMYYYY(String(values[43]).trim()) : '',
         paymentSlipUrl: values[44] ? String(values[44]).trim() : '',
-        termStartDate: values[45] ? String(values[45]).trim() : '',
-        termEndDate: values[46] ? String(values[46]).trim() : '',
+        termStartDate: values[45] ? parseDateToDDMMMYYYY(String(values[45]).trim()) : '',
+        termEndDate: values[46] ? parseDateToDDMMMYYYY(String(values[46]).trim()) : '',
       };
 
       const validation = validateMember(memberData);
@@ -523,6 +558,7 @@ const BatchImportModal: React.FC<BatchImportModalProps> = ({
           fullNameNric: m.fullNameNric || '',
           gender: m.gender === 'Male' ? 'Male' : m.gender === 'Female' ? 'Female' : null,
           race: m.race,
+          nationality: m.nationality || '',
           birthDate: m.birthDate || '',
           nricOrPassport: m.nricOrPassport || '',
           address: m.address || '',
@@ -594,7 +630,21 @@ const BatchImportModal: React.FC<BatchImportModalProps> = ({
       })), developerMode);
       
       setImportResult(result);
-      message.success(`导入完成！成功: ${result.success} 条，失败: ${result.failed} 条`);
+      
+      // 显示详细的导入结果
+      let messageText = `导入完成！成功: ${result.success} 条`;
+      if (result.created > 0) {
+        messageText += `（新建 ${result.created} 条`;
+      }
+      if (result.updated > 0) {
+        messageText += result.created > 0 ? `，更新 ${result.updated} 条` : `（更新 ${result.updated} 条`;
+      }
+      messageText += '）';
+      if (result.failed > 0) {
+        messageText += `，失败: ${result.failed} 条`;
+      }
+      
+      message.success(messageText);
     } catch (error) {
       message.error('导入失败');
     } finally {
@@ -608,16 +658,16 @@ const BatchImportModal: React.FC<BatchImportModalProps> = ({
   };
 
   const handleLoadExample = () => {
-    const exampleData = `姓名\t完整姓名(NRIC)\t性别\t种族\t出生日期\tNRIC/护照号\t地址\t邮箱\t手机号\tWhatsApp群组\t兴趣爱好\t头像链接\t公司\t职位\t行业详情\t类别\t自身行业\t公司简介\t接受国际商务\t关注行业\tLinkedIn\t公司网站\t户口类别\t状态\t等级\t参议员编号\t会员编号\t介绍人\tJCI活动兴趣\tJCI期望收益\t如何成为活跃会员\t五年愿景\t刺绣姓名\tT恤尺码\t外套尺码\tT恤版型\tT恤领取状态\tJCI职位\t职位开始日期\t职位结束日期\t入会日期\t付款日期\t背书日期\t核验日期\t付款凭证链接\t任期开始日期\t任期结束日期
-张三\tZHANG SAN\tMale\tChinese\t15-JAN-1990\t1234567890123456\t北京市朝阳区\tzhangsan@example.com\t13800138001\ttrue\t编程,阅读\thttps://example.com/avatar1.jpg\tABC公司\t软件工程师\tIT\t技术,创新\t软件开发,人工智能\t专注于AI技术开发\tYes\t人工智能,区块链\thttps://linkedin.com/in/zhangsan\thttps://abc.com\t正式会员\tactive\tbronze\tSN001\tM001\t李四\t技术交流\t技术提升\t参与技术分享\t成为技术专家\t张三\tM\tL\tUnisex\tDelivered\t技术总监\t01-JAN-2024\t31-DEC-2024\t15-JAN-2024\t15-JAN-2024\t20-JAN-2024\t25-JAN-2024\thttps://example.com/payment1.jpg\t01-JAN-2024\t31-DEC-2024
-李四\tLI SI\tFemale\tChinese\t20-MAR-1988\t1234567890123457\t上海市浦东区\tlisi@example.com\t13800138002\tfalse\t设计,音乐\thttps://example.com/avatar2.jpg\tXYZ公司\t产品经理\t互联网\t产品,管理\t产品设计,用户体验\t专注于用户体验优化\tWilling to explore\t产品设计,用户体验\thttps://linkedin.com/in/lisi\thttps://xyz.com\t正式会员\tactive\tsilver\tSN002\tM002\t王五\t产品创新\t产品管理\t参与产品设计\t成为产品总监\t李四\tL\tXL\tLady\tProcessing\t产品总监\t01-MAR-2024\t28-FEB-2025\t20-MAR-2024\t20-MAR-2024\t25-MAR-2024\t30-MAR-2024\thttps://example.com/payment2.jpg\t01-MAR-2024\t28-FEB-2025
-王五\tWANG WU\tMale\tMalay\t10-DEC-1992\t1234567890123458\t广州市天河区\twangwu@example.com\t13800138003\ttrue\t销售,运动\thttps://example.com/avatar3.jpg\tDEF公司\t销售经理\t金融\t销售,金融\t金融销售,客户关系\t专注于金融产品销售\tNo\t金融,销售\thttps://linkedin.com/in/wangwu\thttps://def.com\t准会员\tpending\tgold\tSN003\tM003\t赵六\t销售技巧\t销售业绩\t参与销售培训\t成为销售总监\t王五\tXL\t2XL\tUnisex\tRequested\t销售总监\t01-DEC-2024\t30-NOV-2025\t10-DEC-2024\t10-DEC-2024\t15-DEC-2024\t20-DEC-2024\thttps://example.com/payment3.jpg\t01-DEC-2024\t30-NOV-2025`;
+    const exampleData = `姓名\t完整姓名(NRIC)\t性别\t种族\t国籍\t出生日期\tNRIC/护照号\t地址\t邮箱\t手机号\tWhatsApp群组\t兴趣爱好\t头像链接\t公司\t职位\t行业详情\t类别\t自身行业\t公司简介\t接受国际商务\t关注行业\tLinkedIn\t公司网站\t户口类别\t状态\t等级\t参议员编号\t会员编号\t介绍人\tJCI活动兴趣\tJCI期望收益\t如何成为活跃会员\t五年愿景\t刺绣姓名\tT恤尺码\t外套尺码\tT恤版型\tT恤领取状态\tJCI职位\t职位开始日期\t职位结束日期\t入会日期\t付款日期\t背书日期\t核验日期\t付款凭证链接\t任期开始日期\t任期结束日期
+张三\tZHANG SAN\tMale\tChinese\t中国\t15-JAN-1990\t1234567890123456\t北京市朝阳区\tzhangsan@example.com\t13800138001\ttrue\t编程,阅读\thttps://example.com/avatar1.jpg\tABC公司\t软件工程师\tIT\t技术,创新\t软件开发,人工智能\t专注于AI技术开发\tYes\t人工智能,区块链\thttps://linkedin.com/in/zhangsan\thttps://abc.com\t正式会员\tactive\tbronze\tSN001\tM001\t李四\t技术交流\t技术提升\t参与技术分享\t成为技术专家\t张三\tM\tL\tUnisex\tDelivered\t技术总监\t01-JAN-2024\t31-DEC-2024\t15-JAN-2024\t15-JAN-2024\t20-JAN-2024\t25-JAN-2024\thttps://example.com/payment1.jpg\t01-JAN-2024\t31-DEC-2024
+李四\tLI SI\tFemale\tChinese\t中国\t20-MAR-1988\t1234567890123457\t上海市浦东区\tlisi@example.com\t13800138002\tfalse\t设计,音乐\thttps://example.com/avatar2.jpg\tXYZ公司\t产品经理\t互联网\t产品,管理\t产品设计,用户体验\t专注于用户体验优化\tWilling to explore\t产品设计,用户体验\thttps://linkedin.com/in/lisi\thttps://xyz.com\t正式会员\tactive\tsilver\tSN002\tM002\t王五\t产品创新\t产品管理\t参与产品设计\t成为产品总监\t李四\tL\tXL\tLady\tProcessing\t产品总监\t01-MAR-2024\t28-FEB-2025\t20-MAR-2024\t20-MAR-2024\t25-MAR-2024\t30-MAR-2024\thttps://example.com/payment2.jpg\t01-MAR-2024\t28-FEB-2025
+王五\tWANG WU\tMale\tMalay\t马来西亚\t10-DEC-1992\t1234567890123458\t广州市天河区\twangwu@example.com\t13800138003\ttrue\t销售,运动\thttps://example.com/avatar3.jpg\tDEF公司\t销售经理\t金融\t销售,金融\t金融销售,客户关系\t专注于金融产品销售\tNo\t金融,销售\thttps://linkedin.com/in/wangwu\thttps://def.com\t准会员\tpending\tgold\tSN003\tM003\t赵六\t销售技巧\t销售业绩\t参与销售培训\t成为销售总监\t王五\tXL\t2XL\tUnisex\tRequested\t销售总监\t01-DEC-2024\t30-NOV-2025\t10-DEC-2024\t10-DEC-2024\t15-DEC-2024\t20-DEC-2024\thttps://example.com/payment3.jpg\t01-DEC-2024\t30-NOV-2025`;
     const parsedMembers = parsePastedData(exampleData);
     setMembers(parsedMembers);
   };
 
   const handleCopyTemplate = () => {
-    const template = `姓名\t完整姓名(NRIC)\t性别\t种族\t出生日期\tNRIC/护照号\t地址\t邮箱\t手机号\tWhatsApp群组\t兴趣爱好\t头像链接\t公司\t职位\t行业详情\t类别\t自身行业\t公司简介\t接受国际商务\t关注行业\tLinkedIn\t公司网站\t户口类别\t状态\t等级\t参议员编号\t会员编号\t介绍人\tJCI活动兴趣\tJCI期望收益\t如何成为活跃会员\t五年愿景\t刺绣姓名\tT恤尺码\t外套尺码\tT恤版型\tT恤领取状态\tJCI职位\t职位开始日期\t职位结束日期\t入会日期\t付款日期\t背书日期\t核验日期\t付款凭证链接\t任期开始日期\t任期结束日期`;
+    const template = `姓名\t完整姓名(NRIC)\t性别\t种族\t国籍\t出生日期\tNRIC/护照号\t地址\t邮箱\t手机号\tWhatsApp群组\t兴趣爱好\t头像链接\t公司\t职位\t行业详情\t类别\t自身行业\t公司简介\t接受国际商务\t关注行业\tLinkedIn\t公司网站\t户口类别\t状态\t等级\t参议员编号\t会员编号\t介绍人\tJCI活动兴趣\tJCI期望收益\t如何成为活跃会员\t五年愿景\t刺绣姓名\tT恤尺码\t外套尺码\tT恤版型\tT恤领取状态\tJCI职位\t职位开始日期\t职位结束日期\t入会日期\t付款日期\t背书日期\t核验日期\t付款凭证链接\t任期开始日期\t任期结束日期`;
     navigator.clipboard.writeText(template).then(() => {
       message.success('模板已复制到剪贴板');
     }).catch(() => {
@@ -723,16 +773,29 @@ const BatchImportModal: React.FC<BatchImportModalProps> = ({
       ),
     },
     {
+      title: '国籍',
+      dataIndex: 'nationality',
+      key: 'nationality',
+      width: 80,
+      render: (text: string, _: ParsedMember, index: number) => (
+        <Input
+          value={text}
+          onChange={(e) => updateMember(index, 'nationality', e.target.value)}
+          placeholder="国籍"
+          size="small"
+        />
+      ),
+    },
+    {
       title: '出生日期',
       dataIndex: 'birthDate',
       key: 'birthDate',
       width: 100,
       render: (text: string, _: ParsedMember, index: number) => (
-        <Input
+        <DateInput
           value={text}
-          onChange={(e) => updateMember(index, 'birthDate', e.target.value)}
-          placeholder="出生日期"
-          size="small"
+          onChange={(value) => updateMember(index, 'birthDate', value)}
+          placeholder="支持多种格式: 1990-01-15, 01/15/1990, 15/01/1990, 1990年1月15日"
         />
       ),
     },
@@ -1263,11 +1326,10 @@ const BatchImportModal: React.FC<BatchImportModalProps> = ({
       key: 'positionStartDate',
       width: 100,
       render: (text: string, _: ParsedMember, index: number) => (
-        <Input
+        <DateInput
           value={text}
-          onChange={(e) => updateMember(index, 'positionStartDate', e.target.value)}
+          onChange={(value) => updateMember(index, 'positionStartDate', value)}
           placeholder="职位开始日期"
-          size="small"
         />
       ),
     },
@@ -1277,11 +1339,10 @@ const BatchImportModal: React.FC<BatchImportModalProps> = ({
       key: 'positionEndDate',
       width: 100,
       render: (text: string, _: ParsedMember, index: number) => (
-        <Input
+        <DateInput
           value={text}
-          onChange={(e) => updateMember(index, 'positionEndDate', e.target.value)}
+          onChange={(value) => updateMember(index, 'positionEndDate', value)}
           placeholder="职位结束日期"
-          size="small"
         />
       ),
     },
@@ -1292,11 +1353,10 @@ const BatchImportModal: React.FC<BatchImportModalProps> = ({
       key: 'joinedDate',
       width: 100,
       render: (text: string, _: ParsedMember, index: number) => (
-        <Input
+        <DateInput
           value={text}
-          onChange={(e) => updateMember(index, 'joinedDate', e.target.value)}
+          onChange={(value) => updateMember(index, 'joinedDate', value)}
           placeholder="入会日期"
-          size="small"
         />
       ),
     },
@@ -1306,11 +1366,10 @@ const BatchImportModal: React.FC<BatchImportModalProps> = ({
       key: 'paymentDate',
       width: 100,
       render: (text: string, _: ParsedMember, index: number) => (
-        <Input
+        <DateInput
           value={text}
-          onChange={(e) => updateMember(index, 'paymentDate', e.target.value)}
+          onChange={(value) => updateMember(index, 'paymentDate', value)}
           placeholder="付款日期"
-          size="small"
         />
       ),
     },
@@ -1320,11 +1379,10 @@ const BatchImportModal: React.FC<BatchImportModalProps> = ({
       key: 'endorsementDate',
       width: 100,
       render: (text: string, _: ParsedMember, index: number) => (
-        <Input
+        <DateInput
           value={text}
-          onChange={(e) => updateMember(index, 'endorsementDate', e.target.value)}
+          onChange={(value) => updateMember(index, 'endorsementDate', value)}
           placeholder="背书日期"
-          size="small"
         />
       ),
     },
@@ -1334,11 +1392,10 @@ const BatchImportModal: React.FC<BatchImportModalProps> = ({
       key: 'paymentVerifiedDate',
       width: 100,
       render: (text: string, _: ParsedMember, index: number) => (
-        <Input
+        <DateInput
           value={text}
-          onChange={(e) => updateMember(index, 'paymentVerifiedDate', e.target.value)}
+          onChange={(value) => updateMember(index, 'paymentVerifiedDate', value)}
           placeholder="核验日期"
-          size="small"
         />
       ),
     },
@@ -1362,11 +1419,10 @@ const BatchImportModal: React.FC<BatchImportModalProps> = ({
       key: 'termStartDate',
       width: 100,
       render: (text: string, _: ParsedMember, index: number) => (
-        <Input
+        <DateInput
           value={text}
-          onChange={(e) => updateMember(index, 'termStartDate', e.target.value)}
+          onChange={(value) => updateMember(index, 'termStartDate', value)}
           placeholder="任期开始日期"
-          size="small"
         />
       ),
     },
@@ -1376,11 +1432,10 @@ const BatchImportModal: React.FC<BatchImportModalProps> = ({
       key: 'termEndDate',
       width: 100,
       render: (text: string, _: ParsedMember, index: number) => (
-        <Input
+        <DateInput
           value={text}
-          onChange={(e) => updateMember(index, 'termEndDate', e.target.value)}
+          onChange={(value) => updateMember(index, 'termEndDate', value)}
           placeholder="任期结束日期"
-          size="small"
         />
       ),
     },
@@ -1498,42 +1553,6 @@ const BatchImportModal: React.FC<BatchImportModalProps> = ({
             </Space>
           </Card>
 
-          <Alert
-            message="使用说明"
-            description={
-              <div>
-                <p>1. 您可以直接在表格中编辑数据</p>
-                <p>2. 也可以从Excel复制数据粘贴到此处</p>
-                <p>3. 点击"加载示例数据"查看数据格式示例</p>
-                <p>4. 点击"复制模板"获取Excel模板</p>
-                <p>5. 支持添加新行和删除行操作，删除所有行后会自动添加一行空数据</p>
-                <p><strong>注意：</strong>粘贴数据时请确保使用制表符分隔，不是空格。如果只有14个字段，请检查数据格式。</p>
-                <p><strong>状态值：</strong>支持中文(待审核/活跃/不活跃/暂停)或英文(pending/active/inactive/suspended)</p>
-                <p><strong>等级值：</strong>支持中文(铜牌/银牌/金牌/白金/钻石)或英文(bronze/silver/gold/platinum/diamond)</p>
-                {developerMode && (
-                  <p style={{ color: '#fa8c16', fontWeight: 'bold' }}>
-                    ⚠️ 开发者模式已启用：必填字段验证已绕过，所有字段变为选填
-                  </p>
-                )}
-                <details style={{ marginTop: 8 }}>
-                  <summary><strong>字段列表（按ProfileEditForm顺序）：</strong></summary>
-                  <div style={{ marginTop: 8, fontSize: '12px', lineHeight: '1.4' }}>
-                    <strong>基本信息标签页：</strong><br/>
-                    1.姓名 2.完整姓名(NRIC) 3.性别 4.种族 5.出生日期 6.NRIC/护照号 7.地址 8.邮箱 9.手机号 10.WhatsApp群组 11.兴趣爱好 12.头像链接<br/>
-                    <strong>职业信息标签页：</strong><br/>
-                    13.公司 14.职位 15.行业详情 16.类别 17.自身行业 18.公司简介 19.接受国际商务 20.关注行业 21.LinkedIn 22.公司网站<br/>
-                    <strong>JCI 相关标签页：</strong><br/>
-                    23.户口类别 24.状态 25.等级 26.参议员编号 27.会员编号 28.介绍人 29.JCI活动兴趣 30.JCI期望收益 31.如何成为活跃会员 32.五年愿景 33.刺绣姓名 34.T恤尺码 35.外套尺码 36.T恤版型 37.T恤领取状态<br/>
-                    <strong>JCI职位标签页：</strong><br/>
-                    38.JCI职位 39.职位开始日期 40.职位结束日期 41.入会日期 42.付款日期 43.背书日期 44.核验日期 45.付款凭证链接 46.任期开始日期 47.任期结束日期
-                  </div>
-                </details>
-              </div>
-            }
-            type="info"
-            showIcon
-            style={{ marginBottom: 16 }}
-          />
 
           <div style={{ marginBottom: 16 }}>
             <Space>
@@ -1567,7 +1586,57 @@ const BatchImportModal: React.FC<BatchImportModalProps> = ({
       onCancel={onCancel}
       width={1600}
       style={{ top: 20 }}
-      footer={null}
+      footer={
+        <div style={{ padding: '16px 0', textAlign: 'left' }}>
+          <Alert
+            message="使用说明"
+            description={
+              <div style={{ textAlign: 'left' }}>
+                <p style={{ textAlign: 'left', margin: '4px 0' }}><strong>智能导入功能：</strong>系统将根据NRIC/护照号自动判断操作类型</p>
+                <ul style={{ textAlign: 'left', margin: '4px 0', paddingLeft: '20px' }}>
+                  <li><strong>新建记录</strong>：如果NRIC/护照号不存在，将创建新的会员记录</li>
+                  <li><strong>更新记录</strong>：如果NRIC/护照号已存在，将更新现有会员的信息</li>
+                  <li><strong>无NRIC/护照号</strong>：将直接创建新记录</li>
+                </ul>
+                <p style={{ textAlign: 'left', margin: '4px 0' }}><strong>操作步骤：</strong></p>
+                <p style={{ textAlign: 'left', margin: '4px 0' }}>1. 您可以直接在表格中编辑数据</p>
+                <p style={{ textAlign: 'left', margin: '4px 0' }}>2. 也可以从Excel复制数据粘贴到此处</p>
+                <p style={{ textAlign: 'left', margin: '4px 0' }}>3. 点击"加载示例数据"查看数据格式示例</p>
+                <p style={{ textAlign: 'left', margin: '4px 0' }}>4. 点击"复制模板"获取Excel模板</p>
+                <p style={{ textAlign: 'left', margin: '4px 0' }}>5. 支持添加新行和删除行操作，删除所有行后会自动添加一行空数据</p>
+                <p style={{ textAlign: 'left', margin: '4px 0' }}><strong>注意事项：</strong></p>
+                <p style={{ textAlign: 'left', margin: '4px 0' }}>• 粘贴数据时请确保使用制表符分隔，不是空格。如果只有14个字段，请检查数据格式。</p>
+                <p style={{ textAlign: 'left', margin: '4px 0' }}>• <strong>状态值：</strong>支持中文(待审核/活跃/不活跃/暂停)或英文(pending/active/inactive/suspended)</p>
+                <p style={{ textAlign: 'left', margin: '4px 0' }}>• <strong>等级值：</strong>支持中文(铜牌/银牌/金牌/白金/钻石)或英文(bronze/silver/gold/platinum/diamond)</p>
+                {developerMode && (
+                  <p style={{ color: '#fa8c16', fontWeight: 'bold', textAlign: 'left', margin: '4px 0' }}>
+                    ⚠️ 开发者模式已启用：必填字段验证已绕过，所有字段变为选填
+                  </p>
+                )}
+                <details style={{ marginTop: 8, textAlign: 'left' }}>
+                  <summary style={{ textAlign: 'left' }}><strong>字段列表（按ProfileEditForm顺序）：</strong></summary>
+                  <div style={{ marginTop: 8, fontSize: '12px', lineHeight: '1.4', textAlign: 'left' }}>
+                    <strong>基本信息标签页：</strong><br/>
+                    1.姓名 2.完整姓名(NRIC) 3.性别 4.种族 5.国籍 6.出生日期 7.NRIC/护照号 8.地址 9.邮箱 10.手机号 11.WhatsApp群组 12.兴趣爱好 13.头像链接<br/>
+                    <strong>职业信息标签页：</strong><br/>
+                    14.公司 15.职位 16.行业详情 17.类别 18.自身行业 19.公司简介 20.接受国际商务 21.关注行业 22.LinkedIn 23.公司网站<br/>
+                    <strong>JCI 相关标签页：</strong><br/>
+                    24.户口类别 25.状态 26.等级 27.参议员编号 28.会员编号 29.介绍人 30.JCI活动兴趣 31.JCI期望收益 32.如何成为活跃会员 33.五年愿景<br/>
+                    <strong>服装信息标签页：</strong><br/>
+                    34.刺绣姓名 35.T恤尺码 36.外套尺码 37.T恤版型 38.T恤领取状态<br/>
+                    <strong>JCI职位标签页：</strong><br/>
+                    39.JCI职位 40.职位开始日期 41.职位结束日期<br/>
+                    <strong>其他字段：</strong><br/>
+                    42.入会日期 43.付款日期 44.背书日期 45.核验日期 46.付款凭证链接 47.任期开始日期 48.任期结束日期
+                  </div>
+                </details>
+              </div>
+            }
+            type="info"
+            showIcon
+          />
+        </div>
+      }
       destroyOnHidden
     >
       <div style={{ maxHeight: '80vh', overflowY: 'auto' }}>
@@ -1580,7 +1649,26 @@ const BatchImportModal: React.FC<BatchImportModalProps> = ({
         {importResult && (
           <Card style={{ marginTop: 16 }}>
             <Alert
-              message={`导入完成：成功 ${importResult.success} 条，失败 ${importResult.failed} 条`}
+              message={
+                <div>
+                  <div>导入完成：成功 {importResult.success} 条</div>
+                  {importResult.created > 0 && (
+                    <div style={{ fontSize: '12px', color: '#52c41a', marginTop: 4 }}>
+                      ✓ 新建 {importResult.created} 条记录
+                    </div>
+                  )}
+                  {importResult.updated > 0 && (
+                    <div style={{ fontSize: '12px', color: '#1890ff', marginTop: 4 }}>
+                      ↻ 更新 {importResult.updated} 条记录
+                    </div>
+                  )}
+                  {importResult.failed > 0 && (
+                    <div style={{ fontSize: '12px', color: '#ff4d4f', marginTop: 4 }}>
+                      ✗ 失败 {importResult.failed} 条记录
+                    </div>
+                  )}
+                </div>
+              }
               type={importResult.failed > 0 ? 'warning' : 'success'}
               showIcon
             />

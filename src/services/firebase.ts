@@ -29,7 +29,6 @@ if (useEmulators) {
     connectFirestoreEmulator(db, 'localhost', 8080);
     connectStorageEmulator(storage, 'localhost', 9199);
   } catch (error) {
-    console.log('Firebase emulators already connected');
   }
 }
 

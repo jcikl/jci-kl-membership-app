@@ -183,13 +183,18 @@ export const useMemberStore = create<MemberState>((set, get) => ({
   clearFilters: () => set({ filters: {} }),
   
   applySearchAndFilters: async () => {
-    const { searchQuery, filters } = get();
-    const params = {
-      page: 1, // Reset to first page when searching/filtering
-      limit: get().pagination.limit,
-      search: searchQuery,
-      filters
-    };
-    await get().fetchMembers(params);
+    try {
+      const { searchQuery, filters } = get();
+      const params = {
+        page: 1, // Reset to first page when searching/filtering
+        limit: get().pagination.limit,
+        search: searchQuery,
+        filters
+      };
+      await get().fetchMembers(params);
+    } catch (error) {
+      console.error('应用搜索和筛选失败:', error);
+      set({ error: error instanceof Error ? error.message : '搜索和筛选失败' });
+    }
   },
 }));

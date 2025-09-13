@@ -23,7 +23,7 @@ import { Member } from '@/types';
 import { getAccountTypeFormOptions } from '@/utils/accountType';
 
 const { Title, Text } = Typography;
-const { Option } = Select;
+const { Option, OptGroup } = Select;
 const { TextArea } = Input;
 
 export interface BatchSettingsModalProps {
@@ -116,7 +116,18 @@ const BatchSettingsModal: React.FC<BatchSettingsModalProps> = ({
     {
       key: 'profile.nationality',
       label: '国籍',
-      type: 'input',
+      type: 'select',
+      options: [
+        { value: 'Malaysia', label: '马来西亚' },
+        { value: 'Singapore', label: '新加坡' },
+        { value: 'China', label: '中国' },
+        { value: 'India', label: '印度' },
+        { value: 'Indonesia', label: '印度尼西亚' },
+        { value: 'Thailand', label: '泰国' },
+        { value: 'Philippines', label: '菲律宾' },
+        { value: 'Vietnam', label: '越南' },
+        { value: 'Other', label: '其他' }
+      ],
       description: '设置会员国籍'
     },
     {
@@ -249,6 +260,37 @@ const BatchSettingsModal: React.FC<BatchSettingsModalProps> = ({
           <Select
             placeholder={`请选择${fieldConfig.label}`}
             style={{ width: '100%' }}
+            showSearch
+            filterOption={(input, option) => {
+              const text = String(option?.children || '');
+              return text.toLowerCase().includes(input.toLowerCase());
+            }}
+            optionFilterProp="children"
+            allowClear
+            size="large"
+          >
+            {fieldConfig.options?.map(option => (
+              <Option key={String(option.value)} value={option.value}>
+                {option.label}
+              </Option>
+            ))}
+          </Select>
+        );
+      case 'multiSelect':
+        return (
+          <Select
+            mode="multiple"
+            placeholder={`请选择${fieldConfig.label}（可多选）`}
+            style={{ width: '100%' }}
+            showSearch
+            filterOption={(input, option) => {
+              const text = String(option?.children || '');
+              return text.toLowerCase().includes(input.toLowerCase());
+            }}
+            optionFilterProp="children"
+            allowClear
+            size="large"
+            maxTagCount="responsive"
           >
             {fieldConfig.options?.map(option => (
               <Option key={String(option.value)} value={option.value}>
@@ -263,18 +305,33 @@ const BatchSettingsModal: React.FC<BatchSettingsModalProps> = ({
             placeholder={`请选择${fieldConfig.label}`}
             style={{ width: '100%' }}
             format="YYYY-MM-DD"
+            size="large"
+            allowClear
           />
         );
       case 'input':
         return (
           <Input
             placeholder={`请输入${fieldConfig.label}`}
+            size="large"
+            allowClear
+          />
+        );
+      case 'textarea':
+        return (
+          <TextArea
+            placeholder={`请输入${fieldConfig.label}`}
+            rows={3}
+            size="large"
+            allowClear
           />
         );
       default:
         return (
           <Input
             placeholder={`请输入${fieldConfig.label}`}
+            size="large"
+            allowClear
           />
         );
     }
@@ -315,6 +372,69 @@ const BatchSettingsModal: React.FC<BatchSettingsModalProps> = ({
         style={{ marginBottom: 24 }}
       />
 
+      {/* 快速字段预设 */}
+      <div style={{ marginBottom: 24 }}>
+        <Text strong style={{ marginBottom: 12, display: 'block' }}>快速选择常用字段：</Text>
+        <Space wrap>
+          <Button 
+            size="small" 
+            onClick={() => {
+              setSelectedField('status');
+              form.setFieldsValue({ field: 'status' });
+            }}
+          >
+            状态
+          </Button>
+          <Button 
+            size="small" 
+            onClick={() => {
+              setSelectedField('level');
+              form.setFieldsValue({ field: 'level' });
+            }}
+          >
+            等级
+          </Button>
+          <Button 
+            size="small" 
+            onClick={() => {
+              setSelectedField('accountType');
+              form.setFieldsValue({ field: 'accountType' });
+            }}
+          >
+            用户户口类别
+          </Button>
+          <Button 
+            size="small" 
+            onClick={() => {
+              setSelectedField('profile.gender');
+              form.setFieldsValue({ field: 'profile.gender' });
+            }}
+          >
+            性别
+          </Button>
+          <Button 
+            size="small" 
+            onClick={() => {
+              setSelectedField('profile.race');
+              form.setFieldsValue({ field: 'profile.race' });
+            }}
+          >
+            种族
+          </Button>
+          <Button 
+            size="small" 
+            onClick={() => {
+              setSelectedField('profile.nationality');
+              form.setFieldsValue({ field: 'profile.nationality' });
+            }}
+          >
+            国籍
+          </Button>
+        </Space>
+      </div>
+
+      <Divider />
+
       <Form
         form={form}
         layout="vertical"
@@ -329,22 +449,99 @@ const BatchSettingsModal: React.FC<BatchSettingsModalProps> = ({
             placeholder="请选择要批量设置的字段"
             onChange={handleFieldChange}
             style={{ width: '100%' }}
+            showSearch
+            filterOption={(input, option) => {
+              const field = batchFields.find(f => f.key === option?.value);
+              return field ? 
+                field.label.toLowerCase().includes(input.toLowerCase()) ||
+                field.description.toLowerCase().includes(input.toLowerCase())
+                : false;
+            }}
+            optionFilterProp="children"
+            size="large"
           >
-            {batchFields.map(field => (
-              <Option key={field.key} value={field.key}>
-                <div>
-                  <div>{field.label}</div>
-                  <Text type="secondary" style={{ fontSize: '12px' }}>
-                    {field.description}
-                  </Text>
-                </div>
-              </Option>
-            ))}
+            <OptGroup label="基本信息">
+              {batchFields.filter(field => 
+                ['status', 'level', 'accountType', 'joinDate'].includes(field.key)
+              ).map(field => (
+                <Option key={field.key} value={field.key}>
+                  <div>
+                    <div>{field.label}</div>
+                    <Text type="secondary" style={{ fontSize: '12px' }}>
+                      {field.description}
+                    </Text>
+                  </div>
+                </Option>
+              ))}
+            </OptGroup>
+            
+            <OptGroup label="个人资料">
+              {batchFields.filter(field => 
+                ['profile.gender', 'profile.race', 'profile.nationality', 'profile.introducerName'].includes(field.key)
+              ).map(field => (
+                <Option key={field.key} value={field.key}>
+                  <div>
+                    <div>{field.label}</div>
+                    <Text type="secondary" style={{ fontSize: '12px' }}>
+                      {field.description}
+                    </Text>
+                  </div>
+                </Option>
+              ))}
+            </OptGroup>
+            
+            <OptGroup label="JCI信息">
+              {batchFields.filter(field => 
+                ['profile.jciPosition', 'profile.vpDivision', 'profile.isActingPosition'].includes(field.key)
+              ).map(field => (
+                <Option key={field.key} value={field.key}>
+                  <div>
+                    <div>{field.label}</div>
+                    <Text type="secondary" style={{ fontSize: '12px' }}>
+                      {field.description}
+                    </Text>
+                  </div>
+                </Option>
+              ))}
+            </OptGroup>
+            
+            <OptGroup label="其他设置">
+              {batchFields.filter(field => 
+                ['profile.whatsappGroup', 'profile.tshirtReceivingStatus', 'profile.acceptInternationalBusiness'].includes(field.key)
+              ).map(field => (
+                <Option key={field.key} value={field.key}>
+                  <div>
+                    <div>{field.label}</div>
+                    <Text type="secondary" style={{ fontSize: '12px' }}>
+                      {field.description}
+                    </Text>
+                  </div>
+                </Option>
+              ))}
+            </OptGroup>
           </Select>
         </Form.Item>
 
         {selectedField && (
           <>
+            {/* 字段信息预览 */}
+            <div style={{ 
+              marginBottom: 16, 
+              padding: 12, 
+              background: '#f0f9ff', 
+              borderRadius: 6,
+              border: '1px solid #e6f7ff'
+            }}>
+              <Text strong style={{ color: '#1890ff' }}>
+                {getCurrentFieldConfig()?.label}
+              </Text>
+              <div style={{ marginTop: 4 }}>
+                <Text type="secondary" style={{ fontSize: '12px' }}>
+                  {getCurrentFieldConfig()?.description}
+                </Text>
+              </div>
+            </div>
+
             <Form.Item
               name="value"
               label={`设置${getCurrentFieldConfig()?.label}`}
