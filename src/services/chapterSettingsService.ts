@@ -40,7 +40,7 @@ export const saveChapterSettings = async (settings: Omit<ChapterSettings, 'id' |
     const now = new Date().toISOString();
     
     // 过滤掉 undefined 值，避免 Firebase 错误
-    const cleanSettings = JSON.parse(JSON.stringify(settings, (key, value) => {
+    const cleanSettings = JSON.parse(JSON.stringify(settings, (_, value) => {
       return value === undefined ? null : value;
     }));
     

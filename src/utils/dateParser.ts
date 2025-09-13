@@ -54,6 +54,7 @@ export class SmartDateParser {
   };
 
   // 中文月份映射
+  /*
   private static readonly CHINESE_MONTHS = {
     '一月': '01', '二月': '02', '三月': '03', '四月': '04',
     '五月': '05', '六月': '06', '七月': '07', '八月': '08',
@@ -62,6 +63,7 @@ export class SmartDateParser {
     '5月': '05', '6月': '06', '7月': '07', '8月': '08',
     '9月': '09', '10月': '10', '11月': '11', '12月': '12'
   };
+  */
 
   /**
    * 解析日期字符串并转换为 dd-mmm-yyyy 格式
@@ -143,19 +145,22 @@ export class SmartDateParser {
     }
 
     // 3. 处理中文日期
-    parsed = this.parseChineseDate(dateStr);
+    const chineseParsed = this.parseChineseDate(dateStr);
+    if (chineseParsed) parsed = chineseParsed;
     if (parsed && parsed.isValid()) {
       return parsed;
     }
 
     // 4. 处理相对日期
-    parsed = this.parseRelativeDate(dateStr);
+    const relativeParsed = this.parseRelativeDate(dateStr);
+    if (relativeParsed) parsed = relativeParsed;
     if (parsed && parsed.isValid()) {
       return parsed;
     }
 
     // 5. 尝试智能解析
-    parsed = this.parseSmartDate(dateStr);
+    const smartParsed = this.parseSmartDate(dateStr);
+    if (smartParsed) parsed = smartParsed;
     if (parsed && parsed.isValid()) {
       return parsed;
     }

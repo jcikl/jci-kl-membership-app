@@ -4,7 +4,7 @@ import {
   Button,
   Space,
   Select,
-  DatePicker,
+  // DatePicker, // Unused for now
   Table,
   Typography,
   Row,
@@ -188,7 +188,7 @@ const FinancialReportGenerator: React.FC<FinancialReportGeneratorProps> = ({
             <Card size="small">
               <Statistic
                 title={item.label}
-                value={item.value}
+                value={item.value as any}
                 valueStyle={{ fontSize: '16px' }}
               />
             </Card>
@@ -486,7 +486,7 @@ const FinancialReportGenerator: React.FC<FinancialReportGeneratorProps> = ({
                           <Button
                             size="small"
                             icon={<DownloadOutlined />}
-                            onClick={() => handleExportReport(record, 'csv')}
+                            onClick={() => handleExportReport(record)}
                           />
                         </Tooltip>
                       </Space>
@@ -508,7 +508,7 @@ const FinancialReportGenerator: React.FC<FinancialReportGeneratorProps> = ({
                       {reportTypeOptions.find(opt => opt.value === reportData.reportType)?.label}
                     </Title>
                     <Text type="secondary">
-                      {getFiscalYearPeriod(reportData.period.fiscalYear)}
+                      {reportData.period ? getFiscalYearPeriod((reportData.period as any).fiscalYear) : '未知期间'}
                     </Text>
                   </div>
 

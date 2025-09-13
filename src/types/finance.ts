@@ -206,15 +206,15 @@ export type ReportStatus = 'generating' | 'completed' | 'failed';
 
 // 财务报告数据类型
 export interface FinancialReportData {
-  totalIncome: number; // 总收入
-  totalExpense: number; // 总支出
-  netIncome: number; // 净收入
-  bankBalances: BankBalance[]; // 银行余额
-  transactions: Transaction[]; // 交易记录
-  budgetComparison: BudgetComparison[]; // 预算对比
+  totalIncome?: number; // 总收入
+  totalExpense?: number; // 总支出
+  netIncome?: number; // 净收入
+  bankBalances?: BankBalance[]; // 银行余额
+  transactions?: Transaction[]; // 交易记录
+  budgetComparison?: BudgetComparison[]; // 预算对比
   projectSummary?: ProjectSummary[]; // 项目汇总
   reportType?: FinancialReportType; // 报告类型
-  period?: string; // 报告期间
+  period?: string | { startDate: string; endDate: string; fiscalYear: number }; // 报告期间
   summary?: any; // 摘要信息
   details?: any; // 详细信息
 }

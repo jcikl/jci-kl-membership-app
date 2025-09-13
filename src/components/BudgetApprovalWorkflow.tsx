@@ -36,17 +36,17 @@ interface BudgetApprovalWorkflowProps {
   loading?: boolean;
 }
 
-interface ApprovalRecord {
-  id: string;
-  budgetId: string;
-  approverId: string;
-  approverName: string;
-  approverRole: string;
-  status: 'pending' | 'approved' | 'rejected';
-  comments?: string;
-  approvedAt?: string;
-  createdAt: string;
-}
+// interface ApprovalRecord {
+//   id: string;
+//   budgetId: string;
+//   approverId: string;
+//   approverName: string;
+//   approverRole: string;
+//   status: 'pending' | 'approved' | 'rejected';
+//   comments?: string;
+//   approvedAt?: string;
+//   createdAt: string;
+// }
 
 interface ApprovalWorkflow {
   id: string;
@@ -81,8 +81,8 @@ const BudgetApprovalWorkflow: React.FC<BudgetApprovalWorkflowProps> = ({
   const [isApprovalModalVisible, setIsApprovalModalVisible] = useState(false);
   const [isWorkflowModalVisible, setIsWorkflowModalVisible] = useState(false);
   const [selectedBudget, setSelectedBudget] = useState<Budget | null>(null);
-  const [approvalWorkflows, setApprovalWorkflows] = useState<ApprovalWorkflow[]>([]);
-  const [approvalRecords] = useState<ApprovalRecord[]>([]);
+  // const [approvalWorkflows, setApprovalWorkflows] = useState<ApprovalWorkflow[]>([]);
+  // const [approvalRecords] = useState<ApprovalRecord[]>([]);
   const [selectedYear, setSelectedYear] = useState<number>(fiscalYear);
 
   // 表单实例
@@ -130,7 +130,7 @@ const BudgetApprovalWorkflow: React.FC<BudgetApprovalWorkflowProps> = ({
   ];
 
   useEffect(() => {
-    setApprovalWorkflows(mockApprovalWorkflows);
+    // setApprovalWorkflows(mockApprovalWorkflows); // Commented out since setApprovalWorkflows is not used
   }, []);
 
   // 获取所有可用年份
@@ -160,7 +160,7 @@ const BudgetApprovalWorkflow: React.FC<BudgetApprovalWorkflowProps> = ({
       rejected: 'error',
       cancelled: 'default',
     };
-    return colors[status] as any;
+    return colors[status as keyof typeof colors] || 'default';
   };
 
   // 审批状态文本映射
@@ -183,7 +183,7 @@ const BudgetApprovalWorkflow: React.FC<BudgetApprovalWorkflowProps> = ({
       completed: 'success',
       cancelled: 'error',
     };
-    return colors[status] as any;
+    return colors[status as keyof typeof colors] || 'default';
   };
 
   // 预算状态文本映射

@@ -19,7 +19,7 @@ const FinanceDateFilter: React.FC<FinanceDateFilterProps> = ({
   onYearChange,
   onMonthChange,
   onReset,
-  fiscalYear,
+  // fiscalYear, // Unused for now
 }) => {
   // 生成年份选项（当前年份前后5年）
   const currentYear = new Date().getFullYear();

@@ -90,13 +90,13 @@ export const useBillPaymentPermissions = (): BillPaymentPermissions => {
 export const useBillPaymentPermission = (permission: string): boolean => {
   const { user } = useAuthStore();
   const [hasPermission, setHasPermission] = useState<boolean>(false);
-  const [loading, setLoading] = useState<boolean>(true);
+  // const [loading, setLoading] = useState<boolean>(true); // Unused variable
 
   useEffect(() => {
     const checkPermission = async () => {
       if (!user?.uid) {
         setHasPermission(false);
-        setLoading(false);
+        // setLoading(false); // Commented out since loading is unused
         return;
       }
 
@@ -107,7 +107,7 @@ export const useBillPaymentPermission = (permission: string): boolean => {
         console.error(`检查权限 ${permission} 失败:`, error);
         setHasPermission(false);
       } finally {
-        setLoading(false);
+        // setLoading(false); // Commented out since loading is unused
       }
     };
 

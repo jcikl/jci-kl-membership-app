@@ -17,8 +17,8 @@ import {
   Col,
   Statistic,
   Progress,
-  Tabs,
   Alert,
+  Badge,
 } from 'antd';
 import {
   PlusOutlined,
@@ -27,6 +27,7 @@ import {
   CopyOutlined,
   EyeOutlined,
   FileTextOutlined,
+  CalendarOutlined,
 } from '@ant-design/icons';
 import { Budget, BudgetStatus, BudgetAllocation, TransactionPurpose } from '@/types/finance';
 import { useFiscalYear } from '@/contexts/FiscalYearContext';
@@ -84,7 +85,7 @@ const AnnualBudgetManagement: React.FC<AnnualBudgetManagementProps> = ({
   const [editingAllocation, setEditingAllocation] = useState<BudgetAllocation | null>(null);
   const [selectedBudget, setSelectedBudget] = useState<Budget | null>(null);
   const [budgetTemplates, setBudgetTemplates] = useState<BudgetTemplate[]>([]);
-  const [activeTab] = useState('current');
+  // const [activeTab] = useState('current'); // Unused for now
   const [selectedYear, setSelectedYear] = useState<number>(fiscalYear);
 
   // 表单实例
@@ -602,7 +603,7 @@ const AnnualBudgetManagement: React.FC<AnnualBudgetManagementProps> = ({
               style={{ width: '100%' }}
               placeholder="请输入总预算金额"
               formatter={(value) => value ? `RM ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',') : ''}
-              parser={(value) => (value || '').replace(/RM\s?|(,*)/g, '')}
+              parser={(value) => (parseFloat((value || '').replace(/RM\s?|(,*)/g, '')) || 0) as any}
             />
           </Form.Item>
           
@@ -882,7 +883,7 @@ const AnnualBudgetManagement: React.FC<AnnualBudgetManagementProps> = ({
               style={{ width: '100%' }}
               placeholder="请输入分配金额"
               formatter={(value) => value ? `RM ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',') : ''}
-              parser={(value) => (value || '').replace(/RM\s?|(,*)/g, '')}
+              parser={(value) => (parseFloat((value || '').replace(/RM\s?|(,*)/g, '')) || 0) as any}
             />
           </Form.Item>
         </Form>

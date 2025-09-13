@@ -25,12 +25,14 @@ const AssociateMembershipManager: React.FC = () => {
       const res = await getMembers({ page: 1, limit: 500 });
       
       // 调试：查看所有会员的 proposedMembershipCategory
+      /*
       const allCategories = res.data.map(m => ({
         name: m.name,
         proposedCategory: m.profile?.proposedMembershipCategory,
         birthDate: m.profile?.birthDate,
         categoryReviewStatus: m.profile?.categoryReviewStatus
       }));
+      */
       
       // 过滤出准会员且超过40岁的用户
       // 由于所有会员的 proposedMembershipCategory 都是 undefined，

@@ -648,7 +648,8 @@ export const financialReportService = {
       case 'monthly_summary':
         rows.push(['月份', '收入', '支出', '净收入']);
         Object.entries(reportData.details.monthlyData).forEach(([month, data]) => {
-          rows.push([month, data.income.toString(), data.expense.toString(), data.netIncome.toString()]);
+          const monthData = data as any;
+          rows.push([month, monthData.income?.toString() || '0', monthData.expense?.toString() || '0', monthData.netIncome?.toString() || '0']);
         });
         break;
 

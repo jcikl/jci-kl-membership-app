@@ -174,7 +174,7 @@ const BudgetMonitoringDashboard: React.FC<BudgetMonitoringDashboardProps> = ({
       'under-budget': 'warning',
       'completed': 'success',
     };
-    return colors[status] as any;
+    return colors[status as keyof typeof colors] || 'default';
   };
 
   // 获取状态文本
@@ -415,9 +415,8 @@ const BudgetMonitoringDashboard: React.FC<BudgetMonitoringDashboardProps> = ({
               <Statistic
                 title="总预算"
                 value={overallStats.totalBudgetAmount}
-                prefix="RM"
-                formatter={(value) => value?.toLocaleString()}
                 prefix={<DollarOutlined />}
+                formatter={(value) => value?.toLocaleString()}
               />
             </Card>
           </Col>

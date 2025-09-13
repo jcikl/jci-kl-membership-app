@@ -78,7 +78,7 @@ export function useFinanceDateFilter<T extends Record<string, any>>(
 
   // 获取筛选后的统计信息
   const getFilteredStats = (data: any[], amountField: string) => {
-    return filteredData.reduce((sum, item) => sum + (item[amountField] || 0), 0);
+    return data.reduce((sum, item) => sum + (item[amountField] || 0), 0);
   };
 
   return {

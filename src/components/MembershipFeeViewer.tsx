@@ -4,7 +4,7 @@ import { DollarOutlined, CalendarOutlined, CheckCircleOutlined, ExclamationCircl
 import { Transaction, TransactionSplit } from '@/types/finance';
 import { Member } from '@/types';
 import { transactionSplitService } from '@/services/financeService';
-import { useFiscalYear } from '@/contexts/FiscalYearContext';
+// import { useFiscalYear } from '@/contexts/FiscalYearContext'; // Unused for now
 
 const { Text } = Typography;
 
@@ -19,7 +19,7 @@ const MembershipFeeViewer: React.FC<MembershipFeeViewerProps> = ({
   transactions,
   purposes
 }) => {
-  const { fiscalYear } = useFiscalYear();
+  // const { fiscalYear } = useFiscalYear(); // Unused for now
   const [transactionSplits, setTransactionSplits] = useState<TransactionSplit[]>([]);
   const [loading, setLoading] = useState(false);
 

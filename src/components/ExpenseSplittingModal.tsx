@@ -18,7 +18,6 @@ import {
 import {
   PlusOutlined,
   DeleteOutlined,
-  CalculatorOutlined,
 } from '@ant-design/icons';
 import { Transaction, TransactionPurpose, ExpenseSplit } from '@/types/finance';
 
@@ -169,7 +168,7 @@ const ExpenseSplittingModal: React.FC<ExpenseSplittingModalProps> = ({
           min={0}
           precision={2}
           formatter={(value) => value ? `RM ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',') : ''}
-          parser={(value) => (value || '').replace(/RM\s?|(,*)/g, '')}
+          parser={(value) => parseFloat((value || '').replace(/RM\s?|(,*)/g, '')) || 0}
         />
       ),
     },

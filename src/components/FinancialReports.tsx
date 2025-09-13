@@ -13,7 +13,6 @@ import {
   Col,
   Statistic,
   Tabs,
-  Progress,
   Tooltip,
   Modal,
   Descriptions,
@@ -22,21 +21,15 @@ import {
 import {
   FileTextOutlined,
   BarChartOutlined,
-  PieChartOutlined,
   DownloadOutlined,
-  PrinterOutlined,
   CalendarOutlined,
   DollarOutlined,
-  BankOutlined,
-  TrendingUpOutlined,
-  TrendingDownOutlined,
   EyeOutlined,
 } from '@ant-design/icons';
 import { useFiscalYear } from '@/contexts/FiscalYearContext';
 import { 
   FinancialReport, 
   FinancialReportType, 
-  FinancialReportData,
   BankAccount,
   Transaction,
   Budget,
@@ -67,13 +60,13 @@ const FinancialReports: React.FC<FinancialReportsProps> = ({
   onGenerateReport,
   onExportReport,
   reports,
-  bankAccounts,
+  // bankAccounts, // Unused for now
   transactions,
   budgets,
-  allocations,
-  purposes,
+  // allocations, // Unused for now
+  // purposes, // Unused for now
   loading = false,
-  dateFilter,
+  // dateFilter, // Unused for now
 }) => {
   const { fiscalYear } = useFiscalYear();
   const [selectedReportType, setSelectedReportType] = useState<FinancialReportType>('income_statement');
@@ -165,7 +158,7 @@ const FinancialReports: React.FC<FinancialReportsProps> = ({
       dataIndex: 'reportName',
       key: 'reportName',
       width: 200,
-      render: (text: string, record: FinancialReport) => (
+      render: (text: string) => (
         <Space>
           <FileTextOutlined />
           <Text strong>{text}</Text>
@@ -516,7 +509,7 @@ const FinancialReports: React.FC<FinancialReportsProps> = ({
                         value={viewingReport.data.netIncome}
                         prefix={<DollarOutlined />}
                         precision={2}
-                        valueStyle={{ color: viewingReport.data.netIncome >= 0 ? '#52c41a' : '#ff4d4f' }}
+                        valueStyle={{ color: (viewingReport.data.netIncome || 0) >= 0 ? '#52c41a' : '#ff4d4f' }}
                       />
                     </Card>
                   </Col>

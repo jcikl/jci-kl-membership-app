@@ -7,7 +7,7 @@ import {
   Form,
   Input,
   InputNumber,
-  Select,
+  // Select, // Unused for now
   Space,
   Tag,
   Typography,
@@ -29,8 +29,8 @@ import {
 import { Member } from '@/types';
 import { updateMember } from '@/services/memberService';
 
-const { Title, Text } = Typography;
-const { Option } = Select;
+const { Text } = Typography;
+// const { Option } = Select; // Unused for now
 const { TextArea } = Input;
 
 interface SenatorScoreManagerProps {
@@ -281,7 +281,7 @@ const SenatorScoreManager: React.FC<SenatorScoreManagerProps> = ({
         <div>
           <Text strong style={{ fontSize: '14px' }}>最近记录：</Text>
           <div style={{ marginTop: 8 }}>
-            {scoreHistory.slice(0, 3).map((record, index) => (
+            {scoreHistory.slice(0, 3).map((record) => (
               <div key={record.id} style={{ 
                 padding: '8px', 
                 backgroundColor: '#fafafa', 
