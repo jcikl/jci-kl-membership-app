@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Card,
   Table,
@@ -16,11 +16,34 @@ import {
   Timeline,
   Alert,
   Statistic,
+  Tabs,
+  Badge,
+  Progress,
+  Steps,
+  Tooltip,
+  Drawer,
+  Descriptions,
+  List,
+  Avatar,
+  Empty,
+  Divider,
 } from 'antd';
 import {
   CheckCircleOutlined,
   ClockCircleOutlined,
   ExclamationCircleOutlined,
+  UserOutlined,
+  AuditOutlined,
+  SendOutlined,
+  StopOutlined,
+  PlayCircleOutlined,
+  FileTextOutlined,
+  CalendarOutlined,
+  DashboardOutlined,
+  FilterOutlined,
+  SyncOutlined,
+  EyeOutlined,
+  EditOutlined,
 } from '@ant-design/icons';
 import { Budget, BudgetStatus } from '@/types/finance';
 import { useFiscalYear } from '@/contexts/FiscalYearContext';
@@ -80,10 +103,12 @@ const BudgetApprovalWorkflow: React.FC<BudgetApprovalWorkflowProps> = ({
   // 状态管理
   const [isApprovalModalVisible, setIsApprovalModalVisible] = useState(false);
   const [isWorkflowModalVisible, setIsWorkflowModalVisible] = useState(false);
+  const [isBudgetDetailDrawerVisible, setIsBudgetDetailDrawerVisible] = useState(false);
   const [selectedBudget, setSelectedBudget] = useState<Budget | null>(null);
-  // const [approvalWorkflows, setApprovalWorkflows] = useState<ApprovalWorkflow[]>([]);
-  // const [approvalRecords] = useState<ApprovalRecord[]>([]);
   const [selectedYear, setSelectedYear] = useState<number>(fiscalYear);
+  const [activeTab, setActiveTab] = useState('pending');
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<BudgetStatus | 'all'>('all');
 
   // 表单实例
   const [approvalForm] = Form.useForm();
@@ -134,23 +159,65 @@ const BudgetApprovalWorkflow: React.FC<BudgetApprovalWorkflowProps> = ({
   }, []);
 
   // 获取所有可用年份
-  const availableYears = Array.from(new Set(budgets.map(budget => budget.budgetYear)))
-    .sort((a, b) => b - a); // 按年份降序排列
-
-  // 获取选中年度待审批预算
-  const pendingBudgets = budgets.filter(budget => 
-    budget.budgetYear === selectedYear && budget.status === 'draft'
+  const availableYears = useMemo(() => 
+    Array.from(new Set(budgets.map(budget => budget.budgetYear)))
+      .sort((a, b) => b - a), // 按年份降序排列
+    [budgets]
   );
 
-  // 获取选中年度已审批预算
-  const approvedBudgets = budgets.filter(budget => 
-    budget.budgetYear === selectedYear && budget.status === 'approved'
+  // 获取选中年度预算
+  const selectedYearBudgets = useMemo(() => 
+    budgets.filter(budget => budget.budgetYear === selectedYear),
+    [budgets, selectedYear]
   );
 
-  // 获取选中年度执行中预算
-  const activeBudgets = budgets.filter(budget => 
-    budget.budgetYear === selectedYear && budget.status === 'active'
-  );
+  // 按状态分组预算
+  const budgetsByStatus = useMemo(() => {
+    const filtered = statusFilter === 'all' ? selectedYearBudgets : 
+                     selectedYearBudgets.filter(b => b.status === statusFilter);
+    
+    return {
+      all: filtered,
+      draft: selectedYearBudgets.filter(budget => budget.status === 'draft'),
+      approved: selectedYearBudgets.filter(budget => budget.status === 'approved'),
+      active: selectedYearBudgets.filter(budget => budget.status === 'active'),
+      completed: selectedYearBudgets.filter(budget => budget.status === 'completed'),
+      cancelled: selectedYearBudgets.filter(budget => budget.status === 'cancelled'),
+    };
+  }, [selectedYearBudgets, statusFilter]);
+
+  // 审批统计
+  const approvalStats = useMemo(() => {
+    const total = selectedYearBudgets.length;
+    const pending = budgetsByStatus.draft.length;
+    const approved = budgetsByStatus.approved.length;
+    const active = budgetsByStatus.active.length;
+    const totalAmount = selectedYearBudgets.reduce((sum, b) => sum + b.totalBudget, 0);
+    const approvedAmount = budgetsByStatus.approved.reduce((sum, b) => sum + b.totalBudget, 0) +
+                          budgetsByStatus.active.reduce((sum, b) => sum + b.totalBudget, 0);
+    
+    return {
+      total,
+      pending,
+      approved,
+      active,
+      totalAmount,
+      approvedAmount,
+      approvalRate: total > 0 ? Math.round(((approved + active) / total) * 100) : 0,
+    };
+  }, [selectedYearBudgets, budgetsByStatus]);
+
+  // 刷新数据
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      // 模拟刷新
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      message.success('数据刷新成功');
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
 
   // 审批状态颜色映射
   const getApprovalStatusColor = (status: string) => {
@@ -293,156 +360,331 @@ const BudgetApprovalWorkflow: React.FC<BudgetApprovalWorkflowProps> = ({
       title: '操作',
       key: 'actions',
       render: (_: any, record: Budget) => (
-        <Space>
+        <Space size="small">
+          <Tooltip title="查看详情">
+            <Button
+              type="text"
+              size="small"
+              icon={<EyeOutlined />}
+              onClick={() => {
+                setSelectedBudget(record);
+                setIsBudgetDetailDrawerVisible(true);
+              }}
+            />
+          </Tooltip>
           {record.status === 'draft' && (
             <>
-              <Button
-                type="primary"
-                size="small"
-                onClick={() => handleStartApproval(record)}
-              >
-                提交审批
-              </Button>
-              <Button
-                size="small"
-                onClick={() => handleViewWorkflow(record)}
-              >
-                查看流程
-              </Button>
+              <Tooltip title="提交审批">
+                <Button
+                  type="text"
+                  size="small"
+                  icon={<SendOutlined />}
+                  onClick={() => handleStartApproval(record)}
+                />
+              </Tooltip>
+              <Tooltip title="拒绝">
+                <Button
+                  type="text"
+                  size="small"
+                  danger
+                  icon={<StopOutlined />}
+                  onClick={() => handleRejectBudget(record)}
+                />
+              </Tooltip>
             </>
           )}
           {record.status === 'approved' && (
-            <Button
-              type="primary"
-              size="small"
-              onClick={() => handleActivateBudget(record)}
-            >
-              激活预算
-            </Button>
+            <Tooltip title="激活预算">
+              <Button
+                type="text"
+                size="small"
+                icon={<PlayCircleOutlined />}
+                onClick={() => handleActivateBudget(record)}
+              />
+            </Tooltip>
           )}
-          {record.status === 'draft' && (
+          <Tooltip title="查看流程">
             <Button
+              type="text"
               size="small"
-              danger
-              onClick={() => handleRejectBudget(record)}
-            >
-              拒绝
-            </Button>
-          )}
+              icon={<AuditOutlined />}
+              onClick={() => handleViewWorkflow(record)}
+            />
+          </Tooltip>
         </Space>
       ),
     },
   ];
 
   return (
-    <div>
+    <div style={{ background: '#f5f5f5', minHeight: '100vh', padding: '16px' }}>
+      {/* 页面头部 */}
+      <Card style={{ marginBottom: 16 }}>
+        <Row justify="space-between" align="middle">
+          <Col>
+            <Space size="large">
+              <div>
+                <Title level={3} style={{ margin: 0 }}>
+                  <AuditOutlined style={{ marginRight: 8, color: '#1890ff' }} />
+                  {selectedYear}年预算审批工作流
+                </Title>
+                <Text type="secondary">
+                  管理新理事团预算的审批流程，确保预算合规性和透明度
+                </Text>
+              </div>
+            </Space>
+          </Col>
+          <Col>
+            <Space>
+              <Select
+                value={selectedYear}
+                onChange={setSelectedYear}
+                style={{ width: 120 }}
+                placeholder="选择年份"
+                suffixIcon={<CalendarOutlined />}
+              >
+                {availableYears.map(year => (
+                  <Option key={year} value={year}>
+                    {year}年
+                  </Option>
+                ))}
+              </Select>
+              <Select
+                value={statusFilter}
+                onChange={setStatusFilter}
+                style={{ width: 120 }}
+                placeholder="状态筛选"
+                suffixIcon={<FilterOutlined />}
+              >
+                <Option value="all">全部状态</Option>
+                <Option value="draft">草稿</Option>
+                <Option value="approved">已审批</Option>
+                <Option value="active">执行中</Option>
+                <Option value="completed">已完成</Option>
+                <Option value="cancelled">已取消</Option>
+              </Select>
+              <Tooltip title="刷新数据">
+                <Button
+                  icon={<SyncOutlined spin={isRefreshing} />}
+                  onClick={handleRefresh}
+                  loading={isRefreshing}
+                />
+              </Tooltip>
+            </Space>
+          </Col>
+        </Row>
+      </Card>
+
+      {/* 审批统计概览 */}
+      <Row gutter={16} style={{ marginBottom: 24 }}>
+        <Col xs={24} sm={12} md={6}>
+          <Card>
+            <Statistic
+              title="待审批"
+              value={approvalStats.pending}
+              prefix={<ClockCircleOutlined style={{ color: '#1890ff' }} />}
+              valueStyle={{ color: '#1890ff' }}
+            />
+            <div style={{ marginTop: 8 }}>
+              <Text type="secondary">需要处理</Text>
+            </div>
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} md={6}>
+          <Card>
+            <Statistic
+              title="已审批"
+              value={approvalStats.approved + approvalStats.active}
+              prefix={<CheckCircleOutlined style={{ color: '#52c41a' }} />}
+              valueStyle={{ color: '#52c41a' }}
+            />
+            <div style={{ marginTop: 8 }}>
+              <Progress
+                percent={approvalStats.approvalRate}
+                size="small"
+                showInfo={false}
+                strokeColor="#52c41a"
+              />
+              <Text type="secondary">{approvalStats.approvalRate}% 通过率</Text>
+            </div>
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} md={6}>
+          <Card>
+            <Statistic
+              title="执行中"
+              value={approvalStats.active}
+              prefix={<PlayCircleOutlined style={{ color: '#faad14' }} />}
+              valueStyle={{ color: '#faad14' }}
+            />
+            <div style={{ marginTop: 8 }}>
+              <Text type="secondary">正在执行</Text>
+            </div>
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} md={6}>
+          <Card>
+            <Statistic
+              title="总预算"
+              value={approvalStats.totalAmount}
+              prefix="RM"
+              formatter={(value) => value?.toLocaleString()}
+              valueStyle={{ color: '#722ed1' }}
+            />
+            <div style={{ marginTop: 8 }}>
+              <Text type="secondary">
+                已批准 RM {approvalStats.approvedAmount.toLocaleString()}
+              </Text>
+            </div>
+          </Card>
+        </Col>
+      </Row>
+
+      {/* 审批进度流程 */}
+      <Card style={{ marginBottom: 16 }}>
+        <Title level={5}>
+          <SendOutlined style={{ marginRight: 8 }} />
+          审批流程概览
+        </Title>
+        <Steps
+          current={1}
+          items={[
+            {
+              title: '预算提交',
+              description: `${budgetsByStatus.draft.length} 个待审批`,
+              icon: <FileTextOutlined />,
+            },
+            {
+              title: '财务审核',
+              description: '财务总监审核',
+              icon: <UserOutlined />,
+            },
+            {
+              title: '会长审批',
+              description: '分会会长审批',
+              icon: <AuditOutlined />,
+            },
+            {
+              title: '主席确认',
+              description: '理事会主席确认',
+              icon: <CheckCircleOutlined />,
+            },
+            {
+              title: '预算激活',
+              description: `${approvalStats.active} 个执行中`,
+              icon: <PlayCircleOutlined />,
+            },
+          ]}
+        />
+      </Card>
+
+      {/* 主要内容区域 */}
       <Card>
-        <Row justify="space-between" align="middle" style={{ marginBottom: 16 }}>
-          <Col>
-            <Title level={4} style={{ margin: 0 }}>
-              <CheckCircleOutlined style={{ marginRight: 8 }} />
-              {selectedYear}年预算审批工作流
-            </Title>
-            <Text type="secondary">
-              管理新理事团预算的审批流程
-            </Text>
-          </Col>
-          <Col>
-            <Select
-              value={selectedYear}
-              onChange={setSelectedYear}
-              style={{ width: 120 }}
-              placeholder="选择年份"
-            >
-              {availableYears.map(year => (
-                <Option key={year} value={year}>
-                  {year}年
-                </Option>
-              ))}
-            </Select>
-          </Col>
-        </Row>
-
-        {/* 审批统计 */}
-        <Row gutter={16} style={{ marginBottom: 24 }}>
-          <Col span={6}>
-            <Card size="small">
-              <Statistic
-                title="待审批"
-                value={pendingBudgets.length}
-                prefix={<ClockCircleOutlined />}
-                valueStyle={{ color: '#1890ff' }}
+        <Tabs
+          activeKey={activeTab}
+          onChange={setActiveTab}
+          size="large"
+          tabBarStyle={{ marginBottom: 24 }}
+        >
+          <Tabs.TabPane
+            tab={
+              <Space>
+                <ClockCircleOutlined />
+                待审批
+                <Badge count={budgetsByStatus.draft.length} showZero />
+              </Space>
+            }
+            key="pending"
+          >
+            {budgetsByStatus.draft.length === 0 ? (
+              <Empty
+                image={Empty.PRESENTED_IMAGE_SIMPLE}
+                description="暂无待审批预算"
+              >
+                <Text type="secondary">所有预算都已处理</Text>
+              </Empty>
+            ) : (
+              <Table
+                columns={budgetColumns}
+                dataSource={budgetsByStatus.draft}
+                rowKey="id"
+                loading={loading}
+                scroll={{ x: 1200 }}
+                pagination={{
+                  pageSize: 10,
+                  showTotal: (total, range) => `第 ${range[0]}-${range[1]} 条，共 ${total} 条`,
+                }}
               />
-            </Card>
-          </Col>
-          <Col span={6}>
-            <Card size="small">
-              <Statistic
-                title="已审批"
-                value={approvedBudgets.length}
-                prefix={<CheckCircleOutlined />}
-                valueStyle={{ color: '#52c41a' }}
-              />
-            </Card>
-          </Col>
-          <Col span={6}>
-            <Card size="small">
-              <Statistic
-                title="执行中"
-                value={activeBudgets.length}
-                prefix={<ExclamationCircleOutlined />}
-                valueStyle={{ color: '#faad14' }}
-              />
-            </Card>
-          </Col>
-          <Col span={6}>
-            <Card size="small">
-              <Statistic
-                title="总预算"
-                value={budgets.filter(b => b.budgetYear === selectedYear).reduce((sum, b) => sum + b.totalBudget, 0)}
-                prefix="RM"
-                formatter={(value) => value?.toLocaleString()}
-                valueStyle={{ color: '#722ed1' }}
-              />
-            </Card>
-          </Col>
-        </Row>
+            )}
+          </Tabs.TabPane>
 
-        {/* 待审批预算 */}
-        <Card title="待审批预算" style={{ marginBottom: 16 }}>
-          <Table
-            columns={budgetColumns}
-            dataSource={pendingBudgets}
-            rowKey="id"
-            loading={loading}
-            pagination={false}
-            size="small"
-          />
-        </Card>
+          <Tabs.TabPane
+            tab={
+              <Space>
+                <CheckCircleOutlined />
+                已审批
+                <Badge count={budgetsByStatus.approved.length} showZero />
+              </Space>
+            }
+            key="approved"
+          >
+            <Table
+              columns={budgetColumns}
+              dataSource={budgetsByStatus.approved}
+              rowKey="id"
+              loading={loading}
+              scroll={{ x: 1200 }}
+              pagination={false}
+              size="small"
+            />
+          </Tabs.TabPane>
 
-        {/* 已审批预算 */}
-        <Card title="已审批预算" style={{ marginBottom: 16 }}>
-          <Table
-            columns={budgetColumns}
-            dataSource={approvedBudgets}
-            rowKey="id"
-            loading={loading}
-            pagination={false}
-            size="small"
-          />
-        </Card>
+          <Tabs.TabPane
+            tab={
+              <Space>
+                <PlayCircleOutlined />
+                执行中
+                <Badge count={budgetsByStatus.active.length} showZero />
+              </Space>
+            }
+            key="active"
+          >
+            <Table
+              columns={budgetColumns}
+              dataSource={budgetsByStatus.active}
+              rowKey="id"
+              loading={loading}
+              scroll={{ x: 1200 }}
+              pagination={false}
+              size="small"
+            />
+          </Tabs.TabPane>
 
-        {/* 执行中预算 */}
-        <Card title="执行中预算">
-          <Table
-            columns={budgetColumns}
-            dataSource={activeBudgets}
-            rowKey="id"
-            loading={loading}
-            pagination={false}
-            size="small"
-          />
-        </Card>
+          <Tabs.TabPane
+            tab={
+              <Space>
+                <FileTextOutlined />
+                全部预算
+                <Badge count={budgetsByStatus.all.length} showZero />
+              </Space>
+            }
+            key="all"
+          >
+            <Table
+              columns={budgetColumns}
+              dataSource={budgetsByStatus.all}
+              rowKey="id"
+              loading={loading}
+              scroll={{ x: 1200 }}
+              pagination={{
+                pageSize: 10,
+                showSizeChanger: true,
+                showQuickJumper: true,
+                showTotal: (total, range) => `第 ${range[0]}-${range[1]} 条，共 ${total} 条`,
+              }}
+            />
+          </Tabs.TabPane>
+        </Tabs>
       </Card>
 
       {/* 审批模态框 */}
@@ -539,6 +781,183 @@ const BudgetApprovalWorkflow: React.FC<BudgetApprovalWorkflowProps> = ({
           </div>
         )}
       </Modal>
+
+      {/* 预算详情抽屉 */}
+      <Drawer
+        title={
+          <Space>
+            <FileTextOutlined />
+            {selectedBudget?.projectName} - 审批详情
+          </Space>
+        }
+        placement="right"
+        size="large"
+        open={isBudgetDetailDrawerVisible}
+        onClose={() => {
+          setIsBudgetDetailDrawerVisible(false);
+          setSelectedBudget(null);
+        }}
+        extra={
+          <Space>
+            {selectedBudget?.status === 'draft' && (
+              <Button
+                type="primary"
+                icon={<SendOutlined />}
+                onClick={() => {
+                  handleStartApproval(selectedBudget);
+                  setIsBudgetDetailDrawerVisible(false);
+                }}
+              >
+                提交审批
+              </Button>
+            )}
+            {selectedBudget?.status === 'approved' && (
+              <Button
+                type="primary"
+                icon={<PlayCircleOutlined />}
+                onClick={() => {
+                  handleActivateBudget(selectedBudget);
+                  setIsBudgetDetailDrawerVisible(false);
+                }}
+              >
+                激活预算
+              </Button>
+            )}
+          </Space>
+        }
+      >
+        {selectedBudget && (
+          <div>
+            {/* 预算基本信息 */}
+            <Card title="预算信息" style={{ marginBottom: 16 }}>
+              <Descriptions column={2} bordered size="small">
+                <Descriptions.Item label="项目名称" span={2}>
+                  <Text strong>{selectedBudget.projectName}</Text>
+                </Descriptions.Item>
+                <Descriptions.Item label="预算年份">
+                  {selectedBudget.budgetYear}年
+                </Descriptions.Item>
+                <Descriptions.Item label="当前状态">
+                  <Tag color={getBudgetStatusColor(selectedBudget.status)}>
+                    {getBudgetStatusText(selectedBudget.status)}
+                  </Tag>
+                </Descriptions.Item>
+                <Descriptions.Item label="总预算" span={2}>
+                  <Text strong style={{ color: '#1890ff', fontSize: '16px' }}>
+                    RM {selectedBudget.totalBudget.toLocaleString()}
+                  </Text>
+                </Descriptions.Item>
+                <Descriptions.Item label="创建者">
+                  {selectedBudget.createdBy}
+                </Descriptions.Item>
+                <Descriptions.Item label="创建时间">
+                  {dayjs(selectedBudget.createdAt).format('YYYY-MM-DD HH:mm')}
+                </Descriptions.Item>
+                {selectedBudget.description && (
+                  <Descriptions.Item label="描述" span={2}>
+                    {selectedBudget.description}
+                  </Descriptions.Item>
+                )}
+              </Descriptions>
+            </Card>
+
+            {/* 审批流程状态 */}
+            <Card title="审批流程" style={{ marginBottom: 16 }}>
+              <Timeline>
+                {mockApprovalWorkflows[0]?.steps.map((step) => (
+                  <Timeline.Item
+                    key={step.stepNumber}
+                    color={
+                      step.status === 'approved' ? 'green' :
+                      step.status === 'rejected' ? 'red' :
+                      step.status === 'pending' ? 'blue' : 'gray'
+                    }
+                    dot={
+                      step.status === 'approved' ? <CheckCircleOutlined /> :
+                      step.status === 'rejected' ? <ExclamationCircleOutlined /> :
+                      <ClockCircleOutlined />
+                    }
+                  >
+                    <div>
+                      <Space>
+                        <Text strong>{step.approverName}</Text>
+                        <Tag color={getApprovalStatusColor(step.status)}>
+                          {getApprovalStatusText(step.status)}
+                        </Tag>
+                      </Space>
+                      <br />
+                      <Text type="secondary">{step.approverRole}</Text>
+                      {step.comments && (
+                        <div style={{ marginTop: 8 }}>
+                          <Text>审批意见: {step.comments}</Text>
+                        </div>
+                      )}
+                      {step.approvedAt && (
+                        <div style={{ marginTop: 4 }}>
+                          <Text type="secondary">
+                            审批时间: {dayjs(step.approvedAt).format('YYYY-MM-DD HH:mm')}
+                          </Text>
+                        </div>
+                      )}
+                    </div>
+                  </Timeline.Item>
+                ))}
+              </Timeline>
+            </Card>
+
+            {/* 预算使用情况 */}
+            <Card title="预算使用情况">
+              <Row gutter={16}>
+                <Col span={8}>
+                  <div style={{ textAlign: 'center' }}>
+                    <Text type="secondary">已分配</Text>
+                    <div style={{ fontSize: '20px', fontWeight: 'bold', color: '#faad14' }}>
+                      RM {selectedBudget.allocatedAmount.toLocaleString()}
+                    </div>
+                    <Progress
+                      percent={Math.round((selectedBudget.allocatedAmount / selectedBudget.totalBudget) * 100)}
+                      size="small"
+                      strokeColor="#faad14"
+                    />
+                  </div>
+                </Col>
+                <Col span={8}>
+                  <div style={{ textAlign: 'center' }}>
+                    <Text type="secondary">已支出</Text>
+                    <div style={{ fontSize: '20px', fontWeight: 'bold', color: '#ff4d4f' }}>
+                      RM {selectedBudget.spentAmount.toLocaleString()}
+                    </div>
+                    <Progress
+                      percent={Math.round((selectedBudget.spentAmount / selectedBudget.totalBudget) * 100)}
+                      size="small"
+                      strokeColor="#ff4d4f"
+                    />
+                  </div>
+                </Col>
+                <Col span={8}>
+                  <div style={{ textAlign: 'center' }}>
+                    <Text type="secondary">剩余</Text>
+                    <div 
+                      style={{ 
+                        fontSize: '20px', 
+                        fontWeight: 'bold', 
+                        color: selectedBudget.remainingAmount < 0 ? '#ff4d4f' : '#52c41a' 
+                      }}
+                    >
+                      RM {selectedBudget.remainingAmount.toLocaleString()}
+                    </div>
+                    <Progress
+                      percent={Math.round((selectedBudget.remainingAmount / selectedBudget.totalBudget) * 100)}
+                      size="small"
+                      strokeColor={selectedBudget.remainingAmount < 0 ? '#ff4d4f' : '#52c41a'}
+                    />
+                  </div>
+                </Col>
+              </Row>
+            </Card>
+          </div>
+        )}
+      </Drawer>
     </div>
   );
 };
