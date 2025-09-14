@@ -94,6 +94,11 @@ const AppSider: React.FC = () => {
           label: '指标管理',
         },
         {
+          key: '/awards/award-indicators',
+          icon: <TrophyOutlined />,
+          label: '奖励指标',
+        },
+        {
           key: '/awards/tracker',
           icon: <UserOutlined />,
           label: '活动追踪',

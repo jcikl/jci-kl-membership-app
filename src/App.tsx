@@ -115,6 +115,7 @@ const App: React.FC = () => {
         <Route path="/awards/e-awards" element={<AwardsManagementPage />} />
         <Route path="/awards/historical" element={<AwardsManagementPage />} />
         <Route path="/awards/indicators" element={<AwardsManagementPage />} />
+        <Route path="/awards/award-indicators" element={<AwardsManagementPage />} />
         <Route path="/awards/tracker" element={<AwardsManagementPage />} />
         <Route path="/awards/competitors" element={<AwardsManagementPage />} />
               <Route path="/rbac-management" element={<RBACManagement />} />
