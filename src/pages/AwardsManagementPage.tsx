@@ -21,6 +21,7 @@ import NationalAreaIncentiveAwardComponent from '@/components/NationalAreaIncent
 import AwardsDashboard from '@/components/AwardsDashboard';
 import HistoricalIndicatorsView from '@/components/HistoricalIndicatorsView';
 import IndicatorManagement from '@/components/IndicatorManagement';
+import AwardIndicatorManagement from '@/components/AwardIndicatorManagement';
 import ActivityParticipationTracker from '@/components/ActivityParticipationTracker';
 import CompetitorScoreTracker from '@/components/CompetitorScoreTracker';
 import EAwardsComponent from '@/components/EAwardsComponent';
@@ -59,6 +60,8 @@ const AwardsManagementPage: React.FC<AwardsManagementPageProps> = ({
       setActiveTab('historical');
     } else if (path === '/awards/indicators') {
       setActiveTab('indicators');
+    } else if (path === '/awards/award-indicators') {
+      setActiveTab('award_indicators');
     } else if (path === '/awards/tracker') {
       setActiveTab('tracker');
     } else if (path === '/awards/competitors') {
@@ -77,6 +80,7 @@ const AwardsManagementPage: React.FC<AwardsManagementPageProps> = ({
       e_awards: '/awards/e-awards',
       historical: '/awards/historical',
       indicators: '/awards/indicators',
+      award_indicators: '/awards/award-indicators',
       tracker: '/awards/tracker',
       competitors: '/awards/competitors'
     };
@@ -185,6 +189,18 @@ const AwardsManagementPage: React.FC<AwardsManagementPageProps> = ({
        ),
        children: (
          <IndicatorManagement />
+       ),
+     },
+     {
+       key: 'award_indicators',
+       label: (
+         <span>
+           <TrophyOutlined />
+           Award Indicators
+         </span>
+       ),
+       children: (
+         <AwardIndicatorManagement />
        ),
      },
     ...(isDeveloper ? [{
