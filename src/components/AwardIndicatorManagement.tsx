@@ -21,6 +21,7 @@ import {
   Row,
   Col,
   Divider,
+  Switch,
 } from 'antd';
 import dayjs from 'dayjs';
 import {
@@ -38,6 +39,7 @@ import {
   ClockCircleOutlined,
   ExclamationCircleOutlined,
   DownloadOutlined,
+  UserOutlined,
 } from '@ant-design/icons';
 import { 
   EfficientStarAward,
@@ -48,7 +50,9 @@ import {
   StarActivity,
   IncentiveAward,
   StarCategoryType,
-  AwardCategory
+  AwardCategory,
+  AwardTeam,
+  TeamRole
 } from '@/types/awards';
 import { awardService } from '@/services/awardService';
 import { indicatorService } from '@/services/indicatorService';
@@ -91,6 +95,12 @@ const AwardIndicatorManagement: React.FC<AwardIndicatorManagementProps> = ({
   const [nationalIncentiveModalVisible, setNationalIncentiveModalVisible] = useState(false);
   const [editingIncentiveAward, setEditingIncentiveAward] = useState<IncentiveAward | null>(null);
   const [nationalIncentiveForm] = Form.useForm();
+  
+  // Team management states
+  const [teamModalVisible, setTeamModalVisible] = useState(false);
+  const [editingTeam, setEditingTeam] = useState<AwardTeam | null>(null);
+  const [teamForm] = Form.useForm();
+  const [currentAwardCategory, setCurrentAwardCategory] = useState<AwardCategory | null>(null);
 
   useEffect(() => {
     loadAvailableYears();
@@ -161,6 +171,145 @@ const AwardIndicatorManagement: React.FC<AwardIndicatorManagementProps> = ({
 
   const exportData = () => {
     message.info('导出功能开发中...');
+  };
+
+  // ========== Team Management ==========
+  
+  const handleTeamCreate = (awardCategory: AwardCategory) => {
+    setCurrentAwardCategory(awardCategory);
+    setEditingTeam(null);
+    teamForm.resetFields();
+    setTeamModalVisible(true);
+  };
+
+  const handleTeamEdit = (team: AwardTeam) => {
+    setCurrentAwardCategory(team.awardCategory);
+    setEditingTeam(team);
+    teamForm.setFieldsValue({
+      teamName: team.teamName,
+      description: team.description,
+      members: team.members.map(member => ({
+        name: member.name,
+        position: member.position,
+        email: member.email,
+        phone: member.phone,
+        role: member.role,
+        isActive: member.isActive
+      }))
+    });
+    setTeamModalVisible(true);
+  };
+
+  const handleTeamSave = async () => {
+    try {
+      const values = await teamForm.validateFields();
+      
+      if (!currentAwardCategory) {
+        message.error('未选择奖励类别');
+        return;
+      }
+
+      const newTeam: AwardTeam = {
+        id: editingTeam?.id || `team_${Date.now()}`,
+        awardId: getCurrentAwardId(currentAwardCategory),
+        awardCategory: currentAwardCategory,
+        year: year,
+        teamName: values.teamName,
+        description: values.description,
+        members: values.members.map((member: any, index: number) => ({
+          id: `member_${Date.now()}_${index}`,
+          memberId: `member_${Date.now()}_${index}`,
+          name: member.name,
+          position: member.position,
+          email: member.email,
+          phone: member.phone,
+          role: member.role,
+          isActive: member.isActive !== false,
+          joinedAt: new Date().toISOString()
+        })),
+        leader: values.members.find((m: any) => m.role === 'leader') || values.members[0],
+        createdAt: editingTeam?.createdAt || new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+
+      // 更新对应的奖励数据
+      await updateAwardTeam(currentAwardCategory, newTeam);
+      
+      setTeamModalVisible(false);
+      message.success(editingTeam ? '团队更新成功' : '团队创建成功');
+    } catch (error) {
+      message.error('保存失败');
+      console.error(error);
+    }
+  };
+
+  const getCurrentAwardId = (category: AwardCategory): string => {
+    switch (category) {
+      case 'efficient_star':
+        return efficientStarAward?.id || 'efficient_star_default';
+      case 'star_point':
+        return starPointAward?.id || 'star_point_default';
+      case 'national_area_incentive':
+        return nationalIncentiveAward?.id || 'national_incentive_default';
+      default:
+        return 'default';
+    }
+  };
+
+  const updateAwardTeam = async (category: AwardCategory, team: AwardTeam) => {
+    switch (category) {
+      case 'efficient_star':
+        if (efficientStarAward) {
+          const updatedAward = { ...efficientStarAward, team };
+          await awardService.saveEfficientStarAward(updatedAward);
+          setEfficientStarAward(updatedAward);
+        }
+        break;
+      case 'star_point':
+        if (starPointAward) {
+          const updatedAward = { ...starPointAward, team };
+          await awardService.saveStarPointAward(updatedAward);
+          setStarPointAward(updatedAward);
+        }
+        break;
+      case 'national_area_incentive':
+        if (nationalIncentiveAward) {
+          const updatedAward = { ...nationalIncentiveAward, team };
+          await awardService.saveNationalAreaIncentiveAward(updatedAward);
+          setNationalIncentiveAward(updatedAward);
+        }
+        break;
+    }
+  };
+
+  const getTeamRoleName = (role: TeamRole): string => {
+    switch (role) {
+      case 'leader':
+        return '负责人';
+      case 'coordinator':
+        return '协调员';
+      case 'member':
+        return '成员';
+      case 'advisor':
+        return '顾问';
+      default:
+        return '成员';
+    }
+  };
+
+  const getTeamRoleColor = (role: TeamRole): string => {
+    switch (role) {
+      case 'leader':
+        return 'red';
+      case 'coordinator':
+        return 'blue';
+      case 'member':
+        return 'green';
+      case 'advisor':
+        return 'purple';
+      default:
+        return 'default';
+    }
   };
 
   // ========== Efficient Star Management ==========
@@ -487,28 +636,34 @@ const AwardIndicatorManagement: React.FC<AwardIndicatorManagementProps> = ({
     <div>
       {efficientStarAward ? (
         <>
-          {/* Header Card - 完全符合原始UI */}
-          <Card style={{ marginBottom: 24 }}>
-            <Row gutter={24}>
-              <Col span={16}>
-                <div style={{ marginBottom: 16 }}>
-                  <Title level={3} style={{ color: '#1890ff', marginBottom: 8 }}>
-                    {efficientStarAward.title}
-                  </Title>
-                  <Text strong style={{ color: '#1890ff' }}>
-                    {efficientStarAward.description}
-                  </Text>
-                </div>
-                <Divider />
-                <Space direction="vertical" size="small">
-                  <Button type="primary" icon={<FileTextOutlined />}>
-                    Submit Score
-                  </Button>
-                  <Button icon={<EyeOutlined />}>
-                    View History
-                  </Button>
-                </Space>
-              </Col>
+           {/* Header Card - 完全符合原始UI */}
+           <Card style={{ marginBottom: 24 }}>
+             <Row gutter={24}>
+               <Col span={16}>
+                 <div style={{ marginBottom: 16 }}>
+                   <Title level={3} style={{ color: '#1890ff', marginBottom: 8 }}>
+                     {efficientStarAward.title}
+                   </Title>
+                   <Text strong style={{ color: '#1890ff' }}>
+                     {efficientStarAward.description}
+                   </Text>
+                 </div>
+                 <Divider />
+                 <Space direction="vertical" size="small">
+                   <Button type="primary" icon={<FileTextOutlined />}>
+                     Submit Score
+                   </Button>
+                   <Button icon={<EyeOutlined />}>
+                     View History
+                   </Button>
+                   <Button 
+                     icon={<UserOutlined />}
+                     onClick={() => handleTeamCreate('efficient_star')}
+                   >
+                     Manage Team
+                   </Button>
+                 </Space>
+               </Col>
               <Col span={8}>
                 <Card size="small" style={{ backgroundColor: '#f0f9ff', border: '1px solid #1890ff' }}>
                   <div style={{ textAlign: 'center' }}>
@@ -526,9 +681,63 @@ const AwardIndicatorManagement: React.FC<AwardIndicatorManagementProps> = ({
                 </Card>
               </Col>
             </Row>
-          </Card>
+           </Card>
 
-          {/* Standards Table - 完全符合原始UI */}
+           {/* Team Information Card */}
+           {efficientStarAward.team && (
+             <Card 
+               title="团队信息" 
+               style={{ marginBottom: 24 }}
+               extra={
+                 <Space>
+                   <Button 
+                     type="text" 
+                     icon={<EditOutlined />}
+                     onClick={() => handleTeamEdit(efficientStarAward.team!)}
+                   >
+                     编辑团队
+                   </Button>
+                 </Space>
+               }
+             >
+               <Row gutter={16}>
+                 <Col span={8}>
+                   <Text strong>团队名称: </Text>
+                   <Text>{efficientStarAward.team.teamName}</Text>
+                 </Col>
+                 <Col span={8}>
+                   <Text strong>负责人: </Text>
+                   <Text>{efficientStarAward.team.leader.name}</Text>
+                 </Col>
+                 <Col span={8}>
+                   <Text strong>团队成员: </Text>
+                   <Text>{efficientStarAward.team.members.length} 人</Text>
+                 </Col>
+               </Row>
+               {efficientStarAward.team.description && (
+                 <div style={{ marginTop: 16 }}>
+                   <Text strong>团队描述: </Text>
+                   <Text>{efficientStarAward.team.description}</Text>
+                 </div>
+               )}
+               <div style={{ marginTop: 16 }}>
+                 <Text strong>团队成员: </Text>
+                 <div style={{ marginTop: 8 }}>
+                   {efficientStarAward.team.members.map((member) => (
+                     <Tag 
+                       key={member.id} 
+                       color={getTeamRoleColor(member.role)}
+                       style={{ marginBottom: 4 }}
+                     >
+                       {member.name} ({getTeamRoleName(member.role)})
+                     </Tag>
+                   ))}
+                 </div>
+               </div>
+             </Card>
+           )}
+
+           {/* Standards Table - 完全符合原始UI */}
           <Card 
             title="Standards and Tasks"
             extra={
@@ -695,6 +904,12 @@ const AwardIndicatorManagement: React.FC<AwardIndicatorManagementProps> = ({
                   <Button icon={<EyeOutlined />}>
                     View History
                   </Button>
+                  <Button 
+                    icon={<UserOutlined />}
+                    onClick={() => handleTeamCreate('star_point')}
+                  >
+                    Manage Team
+                  </Button>
                 </Space>
               </Col>
               <Col span={8}>
@@ -712,9 +927,63 @@ const AwardIndicatorManagement: React.FC<AwardIndicatorManagementProps> = ({
                 </Card>
               </Col>
             </Row>
-          </Card>
+           </Card>
 
-          {/* Star Categories - 完全符合原始UI */}
+           {/* Team Information Card */}
+           {starPointAward.team && (
+             <Card 
+               title="团队信息" 
+               style={{ marginBottom: 24 }}
+               extra={
+                 <Space>
+                   <Button 
+                     type="text" 
+                     icon={<EditOutlined />}
+                     onClick={() => handleTeamEdit(starPointAward.team!)}
+                   >
+                     编辑团队
+                   </Button>
+                 </Space>
+               }
+             >
+               <Row gutter={16}>
+                 <Col span={8}>
+                   <Text strong>团队名称: </Text>
+                   <Text>{starPointAward.team.teamName}</Text>
+                 </Col>
+                 <Col span={8}>
+                   <Text strong>负责人: </Text>
+                   <Text>{starPointAward.team.leader.name}</Text>
+                 </Col>
+                 <Col span={8}>
+                   <Text strong>团队成员: </Text>
+                   <Text>{starPointAward.team.members.length} 人</Text>
+                 </Col>
+               </Row>
+               {starPointAward.team.description && (
+                 <div style={{ marginTop: 16 }}>
+                   <Text strong>团队描述: </Text>
+                   <Text>{starPointAward.team.description}</Text>
+                 </div>
+               )}
+               <div style={{ marginTop: 16 }}>
+                 <Text strong>团队成员: </Text>
+                 <div style={{ marginTop: 8 }}>
+                   {starPointAward.team.members.map((member) => (
+                     <Tag 
+                       key={member.id} 
+                       color={getTeamRoleColor(member.role)}
+                       style={{ marginBottom: 4 }}
+                     >
+                       {member.name} ({getTeamRoleName(member.role)})
+                     </Tag>
+                   ))}
+                 </div>
+               </div>
+             </Card>
+           )}
+
+           {/* Star Categories - 完全符合原始UI */}
           <Card 
             title="Star Categories"
             extra={
@@ -904,6 +1173,12 @@ const AwardIndicatorManagement: React.FC<AwardIndicatorManagementProps> = ({
                   <Button icon={<EyeOutlined />}>
                     View History
                   </Button>
+                  <Button 
+                    icon={<UserOutlined />}
+                    onClick={() => handleTeamCreate('national_area_incentive')}
+                  >
+                    Manage Team
+                  </Button>
                 </Space>
               </Col>
               <Col span={8}>
@@ -944,9 +1219,63 @@ const AwardIndicatorManagement: React.FC<AwardIndicatorManagementProps> = ({
                 Submission Guideline
               </Button>
             </div>
-          )}
+           )}
 
-          {/* 奖励列表 - 完全符合原始UI */}
+           {/* Team Information Card */}
+           {nationalIncentiveAward.team && (
+             <Card 
+               title="团队信息" 
+               style={{ marginBottom: 24 }}
+               extra={
+                 <Space>
+                   <Button 
+                     type="text" 
+                     icon={<EditOutlined />}
+                     onClick={() => handleTeamEdit(nationalIncentiveAward.team!)}
+                   >
+                     编辑团队
+                   </Button>
+                 </Space>
+               }
+             >
+               <Row gutter={16}>
+                 <Col span={8}>
+                   <Text strong>团队名称: </Text>
+                   <Text>{nationalIncentiveAward.team.teamName}</Text>
+                 </Col>
+                 <Col span={8}>
+                   <Text strong>负责人: </Text>
+                   <Text>{nationalIncentiveAward.team.leader.name}</Text>
+                 </Col>
+                 <Col span={8}>
+                   <Text strong>团队成员: </Text>
+                   <Text>{nationalIncentiveAward.team.members.length} 人</Text>
+                 </Col>
+               </Row>
+               {nationalIncentiveAward.team.description && (
+                 <div style={{ marginTop: 16 }}>
+                   <Text strong>团队描述: </Text>
+                   <Text>{nationalIncentiveAward.team.description}</Text>
+                 </div>
+               )}
+               <div style={{ marginTop: 16 }}>
+                 <Text strong>团队成员: </Text>
+                 <div style={{ marginTop: 8 }}>
+                   {nationalIncentiveAward.team.members.map((member) => (
+                     <Tag 
+                       key={member.id} 
+                       color={getTeamRoleColor(member.role)}
+                       style={{ marginBottom: 4 }}
+                     >
+                       {member.name} ({getTeamRoleName(member.role)})
+                     </Tag>
+                   ))}
+                 </div>
+               </div>
+             </Card>
+           )}
+
+           {/* 奖励列表 - 完全符合原始UI */}
           {nationalIncentiveAward.awardCategories.map((category) => (
             <Card key={category.id} style={{ marginBottom: 24 }}>
               <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -1366,10 +1695,140 @@ const AwardIndicatorManagement: React.FC<AwardIndicatorManagementProps> = ({
           >
             <TextArea rows={3} />
           </Form.Item>
-        </Form>
-      </Modal>
-    </div>
-  );
-};
+         </Form>
+       </Modal>
 
-export default AwardIndicatorManagement;
+       {/* Team Management Modal */}
+       <Modal
+         title={editingTeam ? '编辑团队' : '创建团队'}
+         open={teamModalVisible}
+         onOk={handleTeamSave}
+         onCancel={() => setTeamModalVisible(false)}
+         width={800}
+         okText="保存"
+         cancelText="取消"
+       >
+         <Form form={teamForm} layout="vertical">
+           <Row gutter={16}>
+             <Col span={12}>
+               <Form.Item
+                 name="teamName"
+                 label="团队名称"
+                 rules={[{ required: true, message: '请输入团队名称' }]}
+               >
+                 <Input placeholder="如: Efficient Star 2024 Team" />
+               </Form.Item>
+             </Col>
+             <Col span={12}>
+               <Form.Item
+                 name="description"
+                 label="团队描述"
+               >
+                 <Input placeholder="团队职责和说明" />
+               </Form.Item>
+             </Col>
+           </Row>
+
+           <Form.List name="members">
+             {(fields, { add, remove }) => (
+               <>
+                 <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                   <Text strong>团队成员</Text>
+                   <Button type="dashed" onClick={() => add()} icon={<PlusOutlined />}>
+                     添加成员
+                   </Button>
+                 </div>
+                 
+                 {fields.map(({ key, name, ...restField }) => (
+                   <Card key={key} size="small" style={{ marginBottom: 16 }}>
+                     <Row gutter={16}>
+                       <Col span={6}>
+                         <Form.Item
+                           {...restField}
+                           name={[name, 'name']}
+                           label="姓名"
+                           rules={[{ required: true, message: '请输入姓名' }]}
+                         >
+                           <Input placeholder="成员姓名" />
+                         </Form.Item>
+                       </Col>
+                       <Col span={6}>
+                         <Form.Item
+                           {...restField}
+                           name={[name, 'position']}
+                           label="职位"
+                           rules={[{ required: true, message: '请输入职位' }]}
+                         >
+                           <Input placeholder="如: President, VP" />
+                         </Form.Item>
+                       </Col>
+                       <Col span={6}>
+                         <Form.Item
+                           {...restField}
+                           name={[name, 'role']}
+                           label="角色"
+                           rules={[{ required: true, message: '请选择角色' }]}
+                         >
+                           <Select placeholder="选择角色">
+                             <Option value="leader">负责人</Option>
+                             <Option value="coordinator">协调员</Option>
+                             <Option value="member">成员</Option>
+                             <Option value="advisor">顾问</Option>
+                           </Select>
+                         </Form.Item>
+                       </Col>
+                       <Col span={6}>
+                         <Form.Item
+                           {...restField}
+                           name={[name, 'email']}
+                           label="邮箱"
+                           rules={[{ required: true, message: '请输入邮箱' }]}
+                         >
+                           <Input placeholder="email@example.com" />
+                         </Form.Item>
+                       </Col>
+                     </Row>
+                     <Row gutter={16}>
+                       <Col span={12}>
+                         <Form.Item
+                           {...restField}
+                           name={[name, 'phone']}
+                           label="电话"
+                         >
+                           <Input placeholder="联系电话" />
+                         </Form.Item>
+                       </Col>
+                       <Col span={12}>
+                         <Form.Item
+                           {...restField}
+                           name={[name, 'isActive']}
+                           label="状态"
+                           valuePropName="checked"
+                           initialValue={true}
+                         >
+                           <Switch checkedChildren="活跃" unCheckedChildren="非活跃" />
+                         </Form.Item>
+                       </Col>
+                     </Row>
+                     <div style={{ textAlign: 'right' }}>
+                       <Button 
+                         type="text" 
+                         danger 
+                         icon={<DeleteOutlined />}
+                         onClick={() => remove(name)}
+                       >
+                         删除
+                       </Button>
+                     </div>
+                   </Card>
+                 ))}
+               </>
+             )}
+           </Form.List>
+         </Form>
+       </Modal>
+     </div>
+   );
+ };
+ 
+ export default AwardIndicatorManagement;

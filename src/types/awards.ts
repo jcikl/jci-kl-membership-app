@@ -11,6 +11,38 @@ export interface Award {
   updatedAt: string;
 }
 
+// 团队管理相关类型
+export interface TeamMember {
+  id: string;
+  memberId: string;
+  name: string;
+  position: string;
+  email: string;
+  phone?: string;
+  role: TeamRole;
+  isActive: boolean;
+  joinedAt: string;
+}
+
+export type TeamRole = 
+  | 'leader'      // 负责人
+  | 'coordinator' // 协调员
+  | 'member'      // 成员
+  | 'advisor';    // 顾问
+
+export interface AwardTeam {
+  id: string;
+  awardId: string;
+  awardCategory: AwardCategory;
+  year: number;
+  teamName: string;
+  description?: string;
+  members: TeamMember[];
+  leader: TeamMember;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export type AwardCategory = 
   | 'efficient_star'
   | 'star_point'
@@ -34,6 +66,7 @@ export interface EfficientStarAward extends Award {
   currentScore: number;
   deadline: string;
   criteria: EfficientStarCriteria;
+  team?: AwardTeam;
 }
 
 export interface EfficientStarStandard {
@@ -76,6 +109,7 @@ export interface StarPointAward extends Award {
   currentScore: number;
   deadline: string;
   terms: string[];
+  team?: AwardTeam;
 }
 
 export type StarCategoryType = 
@@ -113,6 +147,7 @@ export interface NationalAreaIncentiveAward extends Award {
   category: 'national_area_incentive';
   awardCategories: IncentiveAwardCategory[];
   submissionGuideline?: string;
+  team?: AwardTeam;
 }
 
 export interface IncentiveAwardCategory {
