@@ -230,10 +230,6 @@ const AwardIndicatorManagement: React.FC<AwardIndicatorManagementProps> = ({
 
   // ========== Star Point Activity CRUD ==========
   
-  const handleStarActivityEdit = (_activity: StarActivity, _category: StarCategory) => {
-    // TODO: 实现Star Point Activity编辑功能
-    message.info('Star Point Activity编辑功能待实现');
-  };
 
   const handleStarActivityDelete = (_activityId: string, _categoryId: string) => {
     // TODO: 实现Star Point Activity删除功能
@@ -248,7 +244,7 @@ const AwardIndicatorManagement: React.FC<AwardIndicatorManagementProps> = ({
     setUnifiedEditModalVisible(true);
   };
 
-  const handleUnifiedSave = async (values: any) => {
+  const handleUnifiedSave = async (_values: any) => {
     try {
       if (editModalType === 'efficient_star') {
         await handleEfficientStarStandardSave();
@@ -346,11 +342,6 @@ const AwardIndicatorManagement: React.FC<AwardIndicatorManagementProps> = ({
 
   // ========== Star Point Management ==========
   
-  const handleStarCategoryEdit = (category: StarCategory) => {
-    setEditingCategory(category);
-    starPointForm.setFieldsValue(category);
-    setStarPointModalVisible(true);
-  };
 
   const handleStarCategoryCreate = () => {
     setEditingCategory(null);
@@ -429,11 +420,6 @@ const AwardIndicatorManagement: React.FC<AwardIndicatorManagementProps> = ({
 
   // ========== National & Area Incentive Management ==========
   
-  const handleIncentiveAwardEdit = (award: IncentiveAward) => {
-    setEditingIncentiveAward(award);
-    nationalIncentiveForm.setFieldsValue(award);
-    setNationalIncentiveModalVisible(true);
-  };
 
   const handleIncentiveAwardCreate = () => {
     setEditingIncentiveAward(null);
@@ -946,11 +932,11 @@ const AwardIndicatorManagement: React.FC<AwardIndicatorManagementProps> = ({
                         width={160}
                         render={(_, record: StarActivity) => (
                           <Space>
-                            <Tooltip title="编辑活动">
+                            <Tooltip title="编辑标准">
                               <Button 
                                 type="text" 
                                 icon={<EditOutlined />} 
-                                onClick={() => handleStarActivityEdit(record, category)}
+                                onClick={() => handleUnifiedEdit(record, 'star_point')}
                               />
                             </Tooltip>
                             <TeamManagementButton
