@@ -14,7 +14,6 @@ import {
   StarOutlined,
   GiftOutlined,
   SendOutlined,
-  HistoryOutlined,
   BarChartOutlined
 } from '@ant-design/icons';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -82,16 +81,6 @@ const AppSider: React.FC = () => {
           key: '/awards/e-awards',
           icon: <TrophyOutlined />,
           label: 'E-Awards',
-        },
-        {
-          key: '/awards/historical',
-          icon: <HistoryOutlined />,
-          label: '历史指标',
-        },
-        {
-          key: '/awards/indicators',
-          icon: <SettingOutlined />,
-          label: '指标管理',
         },
         {
           key: '/awards/award-indicators',

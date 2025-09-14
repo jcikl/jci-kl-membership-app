@@ -9,8 +9,6 @@ import {
   SendOutlined,
   GiftOutlined,
   DashboardOutlined,
-  HistoryOutlined,
-  SettingOutlined,
   UserOutlined,
   BarChartOutlined
 } from '@ant-design/icons';
@@ -19,8 +17,6 @@ import EfficientStarAwardComponent from '@/components/EfficientStarAward';
 import StarPointAwardComponent from '@/components/StarPointAward';
 import NationalAreaIncentiveAwardComponent from '@/components/NationalAreaIncentiveAward';
 import AwardsDashboard from '@/components/AwardsDashboard';
-import HistoricalIndicatorsView from '@/components/HistoricalIndicatorsView';
-import IndicatorManagement from '@/components/IndicatorManagement';
 import AwardIndicatorManagement from '@/components/AwardIndicatorManagement';
 import ActivityParticipationTracker from '@/components/ActivityParticipationTracker';
 import CompetitorScoreTracker from '@/components/CompetitorScoreTracker';
@@ -56,10 +52,6 @@ const AwardsManagementPage: React.FC<AwardsManagementPageProps> = ({
       setActiveTab('national_area_incentive');
     } else if (path === '/awards/e-awards') {
       setActiveTab('e_awards');
-    } else if (path === '/awards/historical') {
-      setActiveTab('historical');
-    } else if (path === '/awards/indicators') {
-      setActiveTab('indicators');
     } else if (path === '/awards/award-indicators') {
       setActiveTab('award_indicators');
     } else if (path === '/awards/tracker') {
@@ -78,8 +70,6 @@ const AwardsManagementPage: React.FC<AwardsManagementPageProps> = ({
       star_point: '/awards/star-point',
       national_area_incentive: '/awards/national-area-incentive',
       e_awards: '/awards/e-awards',
-      historical: '/awards/historical',
-      indicators: '/awards/indicators',
       award_indicators: '/awards/award-indicators',
       tracker: '/awards/tracker',
       competitors: '/awards/competitors'
@@ -164,33 +154,6 @@ const AwardsManagementPage: React.FC<AwardsManagementPageProps> = ({
         />
       ),
     },
-    {
-      key: 'historical',
-      label: (
-        <span>
-          <HistoryOutlined />
-          Historical Indicators
-        </span>
-      ),
-      children: (
-        <HistoricalIndicatorsView
-          memberId={memberId}
-          isAdmin={isAdmin}
-        />
-      ),
-    },
-     {
-       key: 'indicators',
-       label: (
-         <span>
-           <SettingOutlined />
-           Indicator Management
-         </span>
-       ),
-       children: (
-         <IndicatorManagement />
-       ),
-     },
      {
        key: 'award_indicators',
        label: (

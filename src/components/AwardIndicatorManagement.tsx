@@ -36,7 +36,8 @@ import {
   SendOutlined,
   CheckCircleOutlined,
   ClockCircleOutlined,
-  ExclamationCircleOutlined
+  ExclamationCircleOutlined,
+  DownloadOutlined,
 } from '@ant-design/icons';
 import { 
   EfficientStarAward,
@@ -46,9 +47,11 @@ import {
   StarCategory,
   StarActivity,
   IncentiveAward,
-  StarCategoryType
+  StarCategoryType,
+  AwardCategory
 } from '@/types/awards';
 import { awardService } from '@/services/awardService';
+import { indicatorService } from '@/services/indicatorService';
 
 const { Title, Text, Paragraph } = Typography;
 const { TextArea } = Input;
@@ -65,6 +68,11 @@ const AwardIndicatorManagement: React.FC<AwardIndicatorManagementProps> = ({
   // State management
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<string>('efficient-star');
+  
+  // Filter states (from HistoricalIndicatorsView)
+  const [availableYears, setAvailableYears] = useState<number[]>([]);
+  const [selectedYears, setSelectedYears] = useState<number[]>([]);
+  const [selectedCategory, setSelectedCategory] = useState<AwardCategory | 'all'>('all');
   
   // Efficient Star states
   const [efficientStarAward, setEfficientStarAward] = useState<EfficientStarAward | null>(null);
@@ -85,8 +93,27 @@ const AwardIndicatorManagement: React.FC<AwardIndicatorManagementProps> = ({
   const [nationalIncentiveForm] = Form.useForm();
 
   useEffect(() => {
+    loadAvailableYears();
     loadAllAwards();
   }, [year]);
+
+  useEffect(() => {
+    if (selectedYears.length > 0) {
+      loadAllAwards();
+    }
+  }, [selectedYears, selectedCategory]);
+
+  const loadAvailableYears = async () => {
+    try {
+      const years = await indicatorService.getAvailableYears();
+      setAvailableYears(years);
+      // 默认选择当前年份
+      setSelectedYears([year]);
+    } catch (error) {
+      message.error('加载可用年份失败');
+      console.error(error);
+    }
+  };
 
   const loadAllAwards = async () => {
     try {
@@ -106,6 +133,34 @@ const AwardIndicatorManagement: React.FC<AwardIndicatorManagementProps> = ({
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleYearChange = (years: number[]) => {
+    setSelectedYears(years);
+  };
+
+  const handleCategoryChange = (category: AwardCategory | 'all') => {
+    setSelectedCategory(category);
+  };
+
+
+  const getCategoryName = (category: AwardCategory) => {
+    switch (category) {
+      case 'efficient_star':
+        return 'Efficient Star';
+      case 'star_point':
+        return 'Star Point';
+      case 'national_area_incentive':
+        return 'National & Area Incentive';
+      case 'e_awards':
+        return 'E-Awards';
+      default:
+        return category;
+    }
+  };
+
+  const exportData = () => {
+    message.info('导出功能开发中...');
   };
 
   // ========== Efficient Star Management ==========
@@ -1022,21 +1077,76 @@ const AwardIndicatorManagement: React.FC<AwardIndicatorManagementProps> = ({
 
   return (
     <div>
-      <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div>
-          <Title level={3}>奖励指标管理</Title>
-          <Text type="secondary">管理所有奖励系统的指标和标准</Text>
-        </div>
-        <Space>
-          <Button 
-            icon={<ReloadOutlined />} 
-            onClick={loadAllAwards}
-            loading={loading}
-          >
-            刷新数据
-          </Button>
-        </Space>
-      </div>
+      {/* 页面标题和筛选器 */}
+      <Card style={{ marginBottom: 24 }}>
+        <Row gutter={24} align="middle">
+          <Col span={12}>
+            <Title level={2} style={{ marginBottom: 0 }}>
+              <TrophyOutlined style={{ marginRight: 8 }} />
+              奖励指标管理
+            </Title>
+            <Text type="secondary">管理所有奖励系统的指标和标准</Text>
+          </Col>
+          <Col span={12} style={{ textAlign: 'right' }}>
+            <Space>
+              <Button 
+                icon={<ReloadOutlined />} 
+                onClick={loadAllAwards}
+                loading={loading}
+              >
+                刷新数据
+              </Button>
+              <Button icon={<DownloadOutlined />} onClick={exportData}>
+                导出数据
+              </Button>
+            </Space>
+          </Col>
+        </Row>
+        
+        <Divider />
+        
+        <Row gutter={16}>
+          <Col span={8}>
+            <Text strong>选择年份:</Text>
+            <Select
+              mode="multiple"
+              style={{ width: '100%', marginTop: 8 }}
+              placeholder="选择要查看的年份"
+              value={selectedYears}
+              onChange={handleYearChange}
+              maxTagCount={3}
+            >
+              {availableYears.map(year => (
+                <Option key={year} value={year}>{year}</Option>
+              ))}
+            </Select>
+          </Col>
+          
+          <Col span={8}>
+            <Text strong>奖励类别:</Text>
+            <Select
+              style={{ width: '100%', marginTop: 8 }}
+              value={selectedCategory}
+              onChange={handleCategoryChange}
+            >
+              <Option value="all">All Categories</Option>
+              <Option value="efficient_star">Efficient Star</Option>
+              <Option value="star_point">Star Point</Option>
+              <Option value="national_area_incentive">National & Area Incentive</Option>
+              <Option value="e_awards">E-Awards</Option>
+            </Select>
+          </Col>
+          
+          <Col span={8}>
+            <Text strong>统计概览:</Text>
+            <div style={{ marginTop: 8 }}>
+              <Text type="secondary">
+                共 {selectedYears.length} 年数据，当前选择: {selectedCategory === 'all' ? '所有类别' : getCategoryName(selectedCategory)}
+              </Text>
+            </div>
+          </Col>
+        </Row>
+      </Card>
 
       <Tabs activeKey={activeTab} onChange={setActiveTab}>
         <TabPane 
