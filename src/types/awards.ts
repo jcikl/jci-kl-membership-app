@@ -42,6 +42,7 @@ export interface EfficientStarStandard {
   title: string;
   description: string;
   deadline: string;
+  externalLink?: string; // 外部资料链接
   score: number;
   myScore?: number;
   status: 'pending' | 'completed' | 'overdue';
@@ -50,6 +51,7 @@ export interface EfficientStarStandard {
   responsiblePerson?: string; // 负责人
   team?: string[]; // 团队成员
   teamManagement?: TeamManagement; // 团队管理
+  scoreSettings?: any[]; // 分数设置
 }
 
 export interface EfficientStarSubStandard {
@@ -94,11 +96,15 @@ export interface StarCategory {
   type: StarCategoryType;
   title: string;
   description: string;
+  deadline?: string; // 截至日期
+  externalLink?: string; // 外部资料链接
   objective: string;
   note?: string;
   points: number;
   myPoints: number;
   activities: StarActivity[];
+  scoreSettings?: any[]; // 分数设置
+  teamManagement?: TeamManagement; // 团队管理
 }
 
 export interface StarActivity {
@@ -133,6 +139,9 @@ export interface IncentiveAward {
   id: string;
   no: string; // 如 "A01"
   title: string;
+  description?: string; // 描述
+  deadline?: string; // 截至日期
+  externalLink?: string; // 外部资料链接
   nationalAllocation: string; // 如 "1**", "3"
   areaAllocation: string; // 如 "-", "1*"
   guidelines?: string;
@@ -140,6 +149,7 @@ export interface IncentiveAward {
   responsiblePerson?: string; // 负责人
   team?: string[]; // 团队成员
   teamManagement?: TeamManagement; // 团队管理
+  scoreSettings?: any[]; // 分数设置
 }
 
 // E-Awards 奖励系统

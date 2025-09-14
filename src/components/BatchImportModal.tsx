@@ -658,10 +658,8 @@ const BatchImportModal: React.FC<BatchImportModalProps> = ({
   };
 
   const handleLoadExample = () => {
-    const exampleData = `姓名\t完整姓名(NRIC)\t性别\t种族\t国籍\t出生日期\tNRIC/护照号\t地址\t邮箱\t手机号\tWhatsApp群组\t兴趣爱好\t头像链接\t公司\t职位\t行业详情\t类别\t自身行业\t公司简介\t接受国际商务\t关注行业\tLinkedIn\t公司网站\t户口类别\t状态\t等级\t参议员编号\t会员编号\t介绍人\tJCI活动兴趣\tJCI期望收益\t如何成为活跃会员\t五年愿景\t刺绣姓名\tT恤尺码\t外套尺码\tT恤版型\tT恤领取状态\tJCI职位\t职位开始日期\t职位结束日期\t入会日期\t付款日期\t背书日期\t核验日期\t付款凭证链接\t任期开始日期\t任期结束日期
-张三\tZHANG SAN\tMale\tChinese\t中国\t15-JAN-1990\t1234567890123456\t北京市朝阳区\tzhangsan@example.com\t13800138001\ttrue\t编程,阅读\thttps://example.com/avatar1.jpg\tABC公司\t软件工程师\tIT\t技术,创新\t软件开发,人工智能\t专注于AI技术开发\tYes\t人工智能,区块链\thttps://linkedin.com/in/zhangsan\thttps://abc.com\t正式会员\tactive\tbronze\tSN001\tM001\t李四\t技术交流\t技术提升\t参与技术分享\t成为技术专家\t张三\tM\tL\tUnisex\tDelivered\t技术总监\t01-JAN-2024\t31-DEC-2024\t15-JAN-2024\t15-JAN-2024\t20-JAN-2024\t25-JAN-2024\thttps://example.com/payment1.jpg\t01-JAN-2024\t31-DEC-2024
-李四\tLI SI\tFemale\tChinese\t中国\t20-MAR-1988\t1234567890123457\t上海市浦东区\tlisi@example.com\t13800138002\tfalse\t设计,音乐\thttps://example.com/avatar2.jpg\tXYZ公司\t产品经理\t互联网\t产品,管理\t产品设计,用户体验\t专注于用户体验优化\tWilling to explore\t产品设计,用户体验\thttps://linkedin.com/in/lisi\thttps://xyz.com\t正式会员\tactive\tsilver\tSN002\tM002\t王五\t产品创新\t产品管理\t参与产品设计\t成为产品总监\t李四\tL\tXL\tLady\tProcessing\t产品总监\t01-MAR-2024\t28-FEB-2025\t20-MAR-2024\t20-MAR-2024\t25-MAR-2024\t30-MAR-2024\thttps://example.com/payment2.jpg\t01-MAR-2024\t28-FEB-2025
-王五\tWANG WU\tMale\tMalay\t马来西亚\t10-DEC-1992\t1234567890123458\t广州市天河区\twangwu@example.com\t13800138003\ttrue\t销售,运动\thttps://example.com/avatar3.jpg\tDEF公司\t销售经理\t金融\t销售,金融\t金融销售,客户关系\t专注于金融产品销售\tNo\t金融,销售\thttps://linkedin.com/in/wangwu\thttps://def.com\t准会员\tpending\tgold\tSN003\tM003\t赵六\t销售技巧\t销售业绩\t参与销售培训\t成为销售总监\t王五\tXL\t2XL\tUnisex\tRequested\t销售总监\t01-DEC-2024\t30-NOV-2025\t10-DEC-2024\t10-DEC-2024\t15-DEC-2024\t20-DEC-2024\thttps://example.com/payment3.jpg\t01-DEC-2024\t30-NOV-2025`;
+    // 示例数据已清空
+    const exampleData = `姓名\t完整姓名(NRIC)\t性别\t种族\t国籍\t出生日期\tNRIC/护照号\t地址\t邮箱\t手机号\tWhatsApp群组\t兴趣爱好\t头像链接\t公司\t职位\t行业详情\t类别\t自身行业\t公司简介\t接受国际商务\t关注行业\tLinkedIn\t公司网站\t户口类别\t状态\t等级\t参议员编号\t会员编号\t介绍人\tJCI活动兴趣\tJCI期望收益\t如何成为活跃会员\t五年愿景\t刺绣姓名\tT恤尺码\t外套尺码\tT恤版型\tT恤领取状态\tJCI职位\t职位开始日期\t职位结束日期\t入会日期\t付款日期\t背书日期\t核验日期\t付款凭证链接\t任期开始日期\t任期结束日期`;
     const parsedMembers = parsePastedData(exampleData);
     setMembers(parsedMembers);
   };

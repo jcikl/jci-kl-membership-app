@@ -294,83 +294,14 @@ const EAwardsComponent: React.FC<EAwardsComponentProps> = ({
   const initializeSampleAwards = async () => {
     try {
       setLoading(true);
-      const sampleAwards = [
-        {
-          title: 'Digital Innovation Award',
-          description: 'Recognizes outstanding digital innovation projects',
-          category: 'e_awards' as const,
-          year: year,
-          status: 'open' as const,
-          deadline: '2025-12-31',
-          criteria: 'Projects must demonstrate innovative use of technology',
-          submissionGuidelines: 'Submit detailed project documentation',
-          evaluationCriteria: 'Innovation, impact, technical excellence',
-          eligibility: 'All JCI members',
-          rewards: 'Certificate and recognition',
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-          createdBy: 'system',
-          updatedBy: 'system',
-          requirements: [],
-          submissionPeriod: {
-            start: '2025-01-01',
-            end: '2025-12-31'
-          },
-          maxScore: 100
-        },
-        {
-          title: 'Leadership Excellence Award',
-          description: 'Recognizes exceptional leadership qualities',
-          category: 'e_awards' as const,
-          year: year,
-          status: 'open' as const,
-          deadline: '2025-12-31',
-          criteria: 'Demonstrate outstanding leadership in community projects',
-          submissionGuidelines: 'Submit leadership portfolio and references',
-          evaluationCriteria: 'Leadership impact, team development, results',
-          eligibility: 'JCI members with leadership roles',
-          rewards: 'Certificate and leadership development opportunity',
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-          createdBy: 'system',
-          updatedBy: 'system',
-          requirements: [],
-          submissionPeriod: {
-            start: '2025-01-01',
-            end: '2025-12-31'
-          },
-          maxScore: 100
-        },
-        {
-          title: 'Community Impact Award',
-          description: 'Recognizes projects that create positive community impact',
-          category: 'e_awards' as const,
-          year: year,
-          status: 'open' as const,
-          deadline: '2025-12-31',
-          criteria: 'Projects must demonstrate measurable community impact',
-          submissionGuidelines: 'Submit project documentation and impact metrics',
-          evaluationCriteria: 'Impact, sustainability, innovation',
-          eligibility: 'All JCI members and organizations',
-          rewards: 'Certificate and project funding opportunity',
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-          createdBy: 'system',
-          updatedBy: 'system',
-          requirements: [],
-          submissionPeriod: {
-            start: '2025-01-01',
-            end: '2025-12-31'
-          },
-          maxScore: 100
-        }
-      ];
+      // 示例数据已清空
+      const sampleAwards: any[] = [];
 
       for (const awardData of sampleAwards) {
         await awardService.saveEAward(awardData);
       }
       
-      message.success('示例E-Awards初始化成功');
+      message.success('示例E-Awards初始化已清空');
       loadData();
     } catch (error) {
       message.error('初始化示例E-Awards失败');

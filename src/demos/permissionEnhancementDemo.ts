@@ -2,44 +2,8 @@
 import { permissionService } from '../services/permissionService';
 import { JCIPosition, MembershipCategory } from '../types/rbac';
 
-// 模拟数据
-const mockMembers = [
-  {
-    id: 'member-1',
-    name: '张三',
-    position: 'president' as JCIPosition,
-    category: 'active' as MembershipCategory,
-    accountType: 'member' as const
-  },
-  {
-    id: 'member-2',
-    name: '李四',
-    position: 'secretary' as JCIPosition,
-    category: 'associate' as MembershipCategory,
-    accountType: 'member' as const
-  },
-  {
-    id: 'member-3',
-    name: '王五',
-    position: 'treasurer' as JCIPosition,
-    category: 'active' as MembershipCategory,
-    accountType: 'member' as const
-  },
-  {
-    id: 'member-4',
-    name: '赵六',
-    position: null,
-    category: 'active' as MembershipCategory,
-    accountType: 'member' as const
-  },
-  {
-    id: 'member-5',
-    name: '钱七',
-    position: 'vp_personal_development' as JCIPosition,
-    category: 'associate' as MembershipCategory,
-    accountType: 'member' as const
-  }
-];
+// 模拟数据 - 已清空
+const mockMembers: any[] = [];
 
 // 模拟服务
 const mockPositionService = {

@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Table, Card, Tag, Typography, Row, Col, Statistic, Alert } from 'antd';
 import { DollarOutlined, CalendarOutlined, CheckCircleOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
-import { Transaction, TransactionSplit } from '@/types/finance';
+import { Transaction, TransactionSplit, BankAccount } from '@/types/finance';
 import { Member } from '@/types';
-import { transactionSplitService } from '@/services/financeService';
+import { transactionSplitService, bankAccountService } from '@/services/financeService';
 // import { useFiscalYear } from '@/contexts/FiscalYearContext';
 
 const { Text } = Typography;
@@ -20,22 +20,27 @@ const MembershipFeeViewer: React.FC<MembershipFeeViewerProps> = ({
   purposes
 }) => {
   const [transactionSplits, setTransactionSplits] = useState<TransactionSplit[]>([]);
+  const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([]);
   const [loading, setLoading] = useState(false);
 
-  // 加载拆分记录
+  // 加载拆分记录和银行户口数据
   useEffect(() => {
-    const loadSplits = async () => {
+    const loadData = async () => {
       try {
         setLoading(true);
-        const splits = await transactionSplitService.getAllSplits();
+        const [splits, accounts] = await Promise.all([
+          transactionSplitService.getAllSplits(),
+          bankAccountService.getAccounts()
+        ]);
         setTransactionSplits(splits);
+        setBankAccounts(accounts);
       } catch (error) {
-        console.error('加载拆分记录失败:', error);
+        console.error('加载数据失败:', error);
       } finally {
         setLoading(false);
       }
     };
-    loadSplits();
+    loadData();
   }, []);
 
   // 获取会员费相关的交易用途
@@ -55,22 +60,24 @@ const MembershipFeeViewer: React.FC<MembershipFeeViewerProps> = ({
     
     // 添加主交易记录
     transactions.forEach(transaction => {
-      const purpose = purposes.find(p => p.id === transaction.purposeId);
+      const purpose = purposes.find(p => p.id === transaction.transactionPurpose);
       if (purpose && membershipPurposes.includes(purpose)) {
         // 检查是否与当前会员相关（通过会员费匹配数据）
         const isRelatedToMember = transaction.membershipFeeData?.matchedAccountIds?.includes(member.id);
         
         if (isRelatedToMember) {
+          const bankAccount = bankAccounts.find(account => account.id === transaction.bankAccountId);
           records.push({
             id: transaction.id,
             type: 'main',
-            date: transaction.date,
-            amount: transaction.amount,
+            bankAccountName: bankAccount?.accountName || '未知户口',
+            date: transaction.transactionDate,
+            amount: transaction.income - transaction.expense,
             purpose: purpose.name,
-            description: transaction.description,
-            status: transaction.status,
-            payer: transaction.payer,
-            payee: transaction.payee,
+            description: transaction.mainDescription,
+            status: transaction.status || 'paid',
+            payer: transaction.payerPayee,
+            payee: transaction.payerPayee,
             transactionId: transaction.id,
             splitId: null
           });
@@ -82,22 +89,24 @@ const MembershipFeeViewer: React.FC<MembershipFeeViewerProps> = ({
     transactionSplits.forEach(split => {
       const transaction = transactions.find(t => t.id === split.transactionId);
       if (transaction) {
-        const purpose = purposes.find(p => p.id === transaction.purposeId);
+        const purpose = purposes.find(p => p.id === transaction.transactionPurpose);
         if (purpose && membershipPurposes.includes(purpose)) {
           // 检查是否与当前会员相关（通过会员费匹配数据）
           const isRelatedToMember = transaction.membershipFeeData?.matchedAccountIds?.includes(member.id);
 
           if (isRelatedToMember) {
+            const bankAccount = bankAccounts.find(account => account.id === transaction.bankAccountId);
             records.push({
               id: `${split.transactionId}-${split.id}`,
               type: 'split',
-              date: transaction.date,
+              bankAccountName: bankAccount?.accountName || '未知户口',
+              date: transaction.transactionDate,
               amount: split.amount,
               purpose: purpose.name,
-              description: split.description || transaction.description,
-              status: split.status || transaction.status,
-              payer: split.payerName || transaction.payer,
-              payee: split.payeeName || transaction.payee,
+              description: split.description || transaction.mainDescription,
+              status: split.status || transaction.status || 'paid',
+              payer: split.payerPayee || transaction.payerPayee,
+              payee: split.payerPayee || transaction.payerPayee,
               transactionId: split.transactionId,
               splitId: split.id
             });
@@ -108,7 +117,7 @@ const MembershipFeeViewer: React.FC<MembershipFeeViewerProps> = ({
 
     // 按日期降序排列
     return records.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  }, [transactions, transactionSplits, purposes, membershipPurposes, member]);
+  }, [transactions, transactionSplits, purposes, membershipPurposes, member, bankAccounts]);
 
   // 计算统计信息
   const statistics = useMemo(() => {
@@ -134,7 +143,7 @@ const MembershipFeeViewer: React.FC<MembershipFeeViewerProps> = ({
       title: '日期',
       dataIndex: 'date',
       key: 'date',
-      width: 100,
+      width: 90,
       render: (date: string) => (
         <Text style={{ fontSize: '12px' }}>
           {new Date(date).toLocaleDateString('zh-CN')}
@@ -142,13 +151,13 @@ const MembershipFeeViewer: React.FC<MembershipFeeViewerProps> = ({
       )
     },
     {
-      title: '类型',
-      dataIndex: 'type',
-      key: 'type',
-      width: 60,
-      render: (type: string) => (
-        <Tag color={type === 'main' ? 'blue' : 'green'}>
-          {type === 'main' ? '主记录' : '拆分'}
+      title: '银行户口',
+      dataIndex: 'bankAccountName',
+      key: 'bankAccountName',
+      width: 140,
+      render: (bankAccountName: string, record: any) => (
+        <Tag color={record.type === 'main' ? 'blue' : 'green'}>
+          {bankAccountName}
         </Tag>
       )
     },
@@ -156,7 +165,7 @@ const MembershipFeeViewer: React.FC<MembershipFeeViewerProps> = ({
       title: '金额',
       dataIndex: 'amount',
       key: 'amount',
-      width: 80,
+      width: 100,
       render: (amount: number) => (
         <Text strong style={{ color: amount > 0 ? '#52c41a' : '#ff4d4f' }}>
           RM {amount.toFixed(2)}
@@ -167,7 +176,7 @@ const MembershipFeeViewer: React.FC<MembershipFeeViewerProps> = ({
       title: '用途',
       dataIndex: 'purpose',
       key: 'purpose',
-      width: 120,
+      width: 150,
       render: (purpose: string) => (
         <Text style={{ fontSize: '12px' }}>{purpose}</Text>
       )
@@ -176,7 +185,7 @@ const MembershipFeeViewer: React.FC<MembershipFeeViewerProps> = ({
       title: '状态',
       dataIndex: 'status',
       key: 'status',
-      width: 80,
+      width: 90,
       render: (status: string) => {
         const statusConfig = {
           paid: { color: 'green', text: '已付', icon: <CheckCircleOutlined /> },
@@ -196,6 +205,7 @@ const MembershipFeeViewer: React.FC<MembershipFeeViewerProps> = ({
       title: '描述',
       dataIndex: 'description',
       key: 'description',
+      width: 200,
       ellipsis: true,
       render: (description: string) => (
         <Text style={{ fontSize: '12px' }}>{description || '-'}</Text>
@@ -271,7 +281,7 @@ const MembershipFeeViewer: React.FC<MembershipFeeViewerProps> = ({
           showTotal: (total) => `共 ${total} 条记录`
         }}
         loading={loading}
-        scroll={{ x: 600 }}
+        scroll={{ x: 770 }}
       />
     </Card>
   );

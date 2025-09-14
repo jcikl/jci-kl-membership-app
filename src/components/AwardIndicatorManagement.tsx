@@ -55,14 +55,12 @@ import { indicatorService } from '@/services/indicatorService';
 import { getMembers } from '@/services/memberService';
 import ResponsiblePersonSelector from './common/ResponsiblePersonSelector';
 import TeamManagementModal from './common/TeamManagementModal';
-import TeamManagementButton from './common/TeamManagementButton';
 import ResponsiblePersonDisplay from './common/ResponsiblePersonDisplay';
 import StandardEditModal from './common/StandardEditModal';
 
 const { Title, Text, Paragraph } = Typography;
 const { TextArea } = Input;
 const { Option } = Select;
-const { TabPane } = Tabs;
 
 interface AwardIndicatorManagementProps {
   year?: number;
@@ -85,11 +83,6 @@ const AwardIndicatorManagement: React.FC<AwardIndicatorManagementProps> = ({
   
   // Team management states
   const [teamManagementModalVisible, setTeamManagementModalVisible] = useState(false);
-  const [selectedAwardForTeam, setSelectedAwardForTeam] = useState<{
-    type: 'efficient_star' | 'star_point' | 'national_area_incentive';
-    id: string;
-    title: string;
-  } | null>(null);
   const [teamManagement, setTeamManagement] = useState<TeamManagement | null>(null);
   
   // Unified edit modal states
@@ -97,17 +90,19 @@ const AwardIndicatorManagement: React.FC<AwardIndicatorManagementProps> = ({
   const [editingItem, setEditingItem] = useState<any>(null);
   const [editModalType, setEditModalType] = useState<'efficient_star' | 'star_point' | 'national_area_incentive'>('efficient_star');
   
+  // Category management states
+  const [categoryManagementModalVisible, setCategoryManagementModalVisible] = useState(false);
+  const [selectedCategoryForStandard, setSelectedCategoryForStandard] = useState<StarCategory | null>(null);
+  
   
   // Efficient Star states
   const [efficientStarAward, setEfficientStarAward] = useState<EfficientStarAward | null>(null);
   const [efficientStarModalVisible, setEfficientStarModalVisible] = useState(false);
-  const [editingStandard, setEditingStandard] = useState<EfficientStarStandard | null>(null);
   const [efficientStarForm] = Form.useForm();
   
   // Star Point states
   const [starPointAward, setStarPointAward] = useState<StarPointAward | null>(null);
   const [starPointModalVisible, setStarPointModalVisible] = useState(false);
-  const [editingCategory, setEditingCategory] = useState<StarCategory | null>(null);
   const [starPointForm] = Form.useForm();
   
   // National & Area Incentive states
@@ -198,33 +193,6 @@ const AwardIndicatorManagement: React.FC<AwardIndicatorManagementProps> = ({
     message.info('导出功能开发中...');
   };
 
-  // ========== Team Management Functions ==========
-  
-  const handleTeamManagementOpen = (awardType: 'efficient_star' | 'star_point' | 'national_area_incentive', awardId: string, title: string) => {
-    setSelectedAwardForTeam({ type: awardType, id: awardId, title });
-    setTeamManagementModalVisible(true);
-    loadTeamManagement(awardType, awardId);
-  };
-
-  const loadTeamManagement = async (awardType: 'efficient_star' | 'star_point' | 'national_area_incentive', awardId: string) => {
-    try {
-      // 这里应该调用API加载团队管理数据
-      // 暂时创建默认的团队管理结构
-      const defaultTeamManagement: TeamManagement = {
-        id: `team_${awardType}_${awardId}`,
-        awardType,
-        awardId,
-        positions: [],
-        members: [],
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      };
-      setTeamManagement(defaultTeamManagement);
-    } catch (error) {
-      message.error('加载团队管理数据失败');
-      console.error(error);
-    }
-  };
 
 
 
@@ -236,6 +204,20 @@ const AwardIndicatorManagement: React.FC<AwardIndicatorManagementProps> = ({
     message.info('Star Point Activity删除功能待实现');
   };
 
+  // ========== Category Management Functions ==========
+  
+  const handleManageCategories = () => {
+    setCategoryManagementModalVisible(true);
+  };
+
+
+  const handleCreateStandardForStarPoint = () => {
+    setSelectedCategoryForStandard(null);
+    setEditingItem(null);
+    setEditModalType('star_point');
+    setUnifiedEditModalVisible(true);
+  };
+
   // ========== Unified Edit Modal Functions ==========
   
   const handleUnifiedEdit = (item: any, type: 'efficient_star' | 'star_point' | 'national_area_incentive') => {
@@ -244,14 +226,14 @@ const AwardIndicatorManagement: React.FC<AwardIndicatorManagementProps> = ({
     setUnifiedEditModalVisible(true);
   };
 
-  const handleUnifiedSave = async (_values: any) => {
+  const handleUnifiedSave = async (values: any) => {
     try {
       if (editModalType === 'efficient_star') {
-        await handleEfficientStarStandardSave();
+        await handleEfficientStarStandardSave(values);
       } else if (editModalType === 'star_point') {
-        await handleStarCategorySave();
+        await handleStarCategorySave(values);
       } else if (editModalType === 'national_area_incentive') {
-        await handleIncentiveAwardSave();
+        await handleIncentiveAwardSave(values);
       }
       setUnifiedEditModalVisible(false);
       setEditingItem(null);
@@ -264,14 +246,16 @@ const AwardIndicatorManagement: React.FC<AwardIndicatorManagementProps> = ({
   
 
   const handleEfficientStarStandardCreate = () => {
-    setEditingStandard(null);
+    setEditingItem(null);
     efficientStarForm.resetFields();
     setEfficientStarModalVisible(true);
   };
 
-  const handleEfficientStarStandardSave = async () => {
+  const handleEfficientStarStandardSave = async (values?: any) => {
     try {
-      const values = await efficientStarForm.validateFields();
+      // 如果是从StandardEditModal调用，使用传入的values
+      // 如果是从原有Modal调用，使用form验证
+      const formValues = values || await efficientStarForm.validateFields();
       
       if (!efficientStarAward) {
         message.error('Efficient Star奖励数据未加载');
@@ -280,24 +264,24 @@ const AwardIndicatorManagement: React.FC<AwardIndicatorManagementProps> = ({
 
       const updatedStandards = [...efficientStarAward.standards];
       
-      if (editingStandard) {
+      if (editingItem) {
         // Update existing standard
-        const index = updatedStandards.findIndex(s => s.id === editingStandard.id);
+        const index = updatedStandards.findIndex(s => s.id === editingItem.id);
         if (index >= 0) {
           updatedStandards[index] = {
-            ...values,
-            id: editingStandard.id,
-            deadline: values.deadline?.format('YYYY-MM-DD') || '',
-            status: editingStandard.status,
-            myScore: editingStandard.myScore
+            ...formValues,
+            id: editingItem.id,
+            deadline: formValues.deadline?.format('YYYY-MM-DD') || editingItem.deadline,
+            status: editingItem.status,
+            myScore: editingItem.myScore
           };
         }
       } else {
         // Create new standard
         const newStandard: EfficientStarStandard = {
-          ...values,
+          ...formValues,
           id: `standard_${Date.now()}`,
-          deadline: values.deadline?.format('YYYY-MM-DD') || '',
+          deadline: formValues.deadline?.format('YYYY-MM-DD') || '',
           status: 'pending' as const,
           myScore: 0
         };
@@ -312,8 +296,17 @@ const AwardIndicatorManagement: React.FC<AwardIndicatorManagementProps> = ({
 
       await awardService.saveEfficientStarAward(updatedAward);
       setEfficientStarAward(updatedAward);
-      setEfficientStarModalVisible(false);
-      message.success(editingStandard ? '标准更新成功' : '标准创建成功');
+      
+      // 关闭相应的Modal
+      if (values) {
+        // 来自StandardEditModal
+        setUnifiedEditModalVisible(false);
+      } else {
+        // 来自原有Modal
+        setEfficientStarModalVisible(false);
+      }
+      
+      message.success(editingItem ? '标准更新成功' : '标准创建成功');
     } catch (error) {
       message.error('保存失败');
       console.error(error);
@@ -343,15 +336,12 @@ const AwardIndicatorManagement: React.FC<AwardIndicatorManagementProps> = ({
   // ========== Star Point Management ==========
   
 
-  const handleStarCategoryCreate = () => {
-    setEditingCategory(null);
-    starPointForm.resetFields();
-    setStarPointModalVisible(true);
-  };
 
-  const handleStarCategorySave = async () => {
+  const handleStarCategorySave = async (values?: any) => {
     try {
-      const values = await starPointForm.validateFields();
+      // 如果是从StandardEditModal调用，使用传入的values
+      // 如果是从原有Modal调用，使用form验证
+      const formValues = values || await starPointForm.validateFields();
       
       if (!starPointAward) {
         message.error('Star Point奖励数据未加载');
@@ -360,21 +350,21 @@ const AwardIndicatorManagement: React.FC<AwardIndicatorManagementProps> = ({
 
       const updatedCategories = [...starPointAward.starCategories];
       
-      if (editingCategory) {
+      if (editingItem) {
         // Update existing category
-        const index = updatedCategories.findIndex(c => c.id === editingCategory.id);
+        const index = updatedCategories.findIndex(c => c.id === editingItem.id);
         if (index >= 0) {
           updatedCategories[index] = {
-            ...values,
-            id: editingCategory.id,
-            activities: editingCategory.activities,
-            myPoints: editingCategory.myPoints
+            ...formValues,
+            id: editingItem.id,
+            activities: editingItem.activities,
+            myPoints: editingItem.myPoints
           };
         }
       } else {
         // Create new category
         const newCategory: StarCategory = {
-          ...values,
+          ...formValues,
           id: `category_${Date.now()}`,
           activities: [],
           myPoints: 0
@@ -390,8 +380,17 @@ const AwardIndicatorManagement: React.FC<AwardIndicatorManagementProps> = ({
 
       await awardService.saveStarPointAward(updatedAward);
       setStarPointAward(updatedAward);
-      setStarPointModalVisible(false);
-      message.success(editingCategory ? '类别更新成功' : '类别创建成功');
+      
+      // 关闭相应的Modal
+      if (values) {
+        // 来自StandardEditModal
+        setUnifiedEditModalVisible(false);
+      } else {
+        // 来自原有Modal
+        setStarPointModalVisible(false);
+      }
+      
+      message.success(editingItem ? '类别更新成功' : '类别创建成功');
     } catch (error) {
       message.error('保存失败');
       console.error(error);
@@ -427,9 +426,11 @@ const AwardIndicatorManagement: React.FC<AwardIndicatorManagementProps> = ({
     setNationalIncentiveModalVisible(true);
   };
 
-  const handleIncentiveAwardSave = async () => {
+  const handleIncentiveAwardSave = async (values?: any) => {
     try {
-      const values = await nationalIncentiveForm.validateFields();
+      // 如果是从StandardEditModal调用，使用传入的values
+      // 如果是从原有Modal调用，使用form验证
+      const formValues = values || await nationalIncentiveForm.validateFields();
       
       if (!nationalIncentiveAward) {
         message.error('National & Area Incentive奖励数据未加载');
@@ -448,17 +449,17 @@ const AwardIndicatorManagement: React.FC<AwardIndicatorManagementProps> = ({
             a => a.id === editingIncentiveAward.id
           );
           if (awardIndex >= 0) {
-            updatedCategories[categoryIndex].awards[awardIndex] = {
-              ...values,
-              id: editingIncentiveAward.id
-            };
+          updatedCategories[categoryIndex].awards[awardIndex] = {
+            ...formValues,
+            id: editingIncentiveAward.id
+          };
           }
         }
       } else {
         // Create new award - add to first category for now
         if (updatedCategories.length > 0) {
           const newAward: IncentiveAward = {
-            ...values,
+            ...formValues,
             id: `award_${Date.now()}`
           };
           updatedCategories[0].awards.push(newAward);
@@ -473,7 +474,16 @@ const AwardIndicatorManagement: React.FC<AwardIndicatorManagementProps> = ({
 
       await awardService.saveNationalAreaIncentiveAward(updatedAward);
       setNationalIncentiveAward(updatedAward);
-      setNationalIncentiveModalVisible(false);
+      
+      // 关闭相应的Modal
+      if (values) {
+        // 来自StandardEditModal
+        setUnifiedEditModalVisible(false);
+      } else {
+        // 来自原有Modal
+        setNationalIncentiveModalVisible(false);
+      }
+      
       message.success(editingIncentiveAward ? '奖项更新成功' : '奖项创建成功');
     } catch (error) {
       message.error('保存失败');
@@ -733,9 +743,6 @@ const AwardIndicatorManagement: React.FC<AwardIndicatorManagementProps> = ({
                         onClick={() => handleUnifiedEdit(record, 'efficient_star')}
                       />
                     </Tooltip>
-                            <TeamManagementButton
-                              onClick={() => handleTeamManagementOpen('efficient_star', record.id, record.title)}
-                            />
                     <Popconfirm
                       title="确定删除此标准？"
                       onConfirm={() => handleEfficientStarStandardDelete(record.id)}
@@ -809,13 +816,22 @@ const AwardIndicatorManagement: React.FC<AwardIndicatorManagementProps> = ({
           <Card 
             title="Star Categories"
             extra={
-              <Button 
-                type="primary" 
-                icon={<PlusOutlined />} 
-                onClick={handleStarCategoryCreate}
-              >
-                Add Category
-              </Button>
+              <Space>
+                <Button 
+                  type="primary" 
+                  icon={<EditOutlined />} 
+                  onClick={handleManageCategories}
+                >
+                  Manage Category
+                </Button>
+                <Button 
+                  type="default" 
+                  icon={<PlusOutlined />} 
+                  onClick={handleCreateStandardForStarPoint}
+                >
+                  创建标准
+                </Button>
+              </Space>
             }
           >
             <Collapse
@@ -939,9 +955,6 @@ const AwardIndicatorManagement: React.FC<AwardIndicatorManagementProps> = ({
                                 onClick={() => handleUnifiedEdit(record, 'star_point')}
                               />
                             </Tooltip>
-                            <TeamManagementButton
-                              onClick={() => handleTeamManagementOpen('star_point', record.id, record.title)}
-                            />
                             <Popconfirm
                               title="确定删除此活动？"
                               onConfirm={() => handleStarActivityDelete(record.id, category.id)}
@@ -957,27 +970,6 @@ const AwardIndicatorManagement: React.FC<AwardIndicatorManagementProps> = ({
                       />
                     </Table>
 
-                    <div style={{ marginTop: 16, textAlign: 'right' }}>
-                      <Space>
-                        <Button 
-                          type="text" 
-                          icon={<EditOutlined />} 
-                          onClick={() => handleUnifiedEdit(category, 'star_point')}
-                        >
-                          Edit Category
-                        </Button>
-                        <Popconfirm
-                          title="确定删除此类别？"
-                          onConfirm={() => handleStarCategoryDelete(category.id)}
-                          okText="确定"
-                          cancelText="取消"
-                        >
-                          <Button type="text" danger icon={<DeleteOutlined />}>
-                            Delete Category
-                          </Button>
-                        </Popconfirm>
-                      </Space>
-                    </div>
                   </>
                 )
               }))}
@@ -1171,9 +1163,6 @@ const AwardIndicatorManagement: React.FC<AwardIndicatorManagementProps> = ({
                           onClick={() => handleUnifiedEdit(record, 'national_area_incentive')}
                         />
                       </Tooltip>
-                      <TeamManagementButton
-                        onClick={() => handleTeamManagementOpen('national_area_incentive', record.id, record.title)}
-                      />
                       <Popconfirm
                         title="确定删除此奖项？"
                         onConfirm={() => handleIncentiveAwardDelete(record.id)}
@@ -1274,47 +1263,46 @@ const AwardIndicatorManagement: React.FC<AwardIndicatorManagementProps> = ({
         </Row>
       </Card>
 
-      <Tabs activeKey={activeTab} onChange={setActiveTab}>
-        <TabPane 
-          tab={
-            <span>
-              <TrophyOutlined />
-              Efficient Star
-            </span>
-          } 
-          key="efficient-star"
-        >
-          {renderEfficientStarTab()}
-        </TabPane>
-        
-        <TabPane 
-          tab={
-            <span>
-              <StarOutlined />
-              Star Point
-            </span>
-          } 
-          key="star-point"
-        >
-          {renderStarPointTab()}
-        </TabPane>
-        
-        <TabPane 
-          tab={
-            <span>
-              <GiftOutlined />
-              National & Area Incentive
-            </span>
-          } 
-          key="national-incentive"
-        >
-          {renderNationalIncentiveTab()}
-        </TabPane>
-      </Tabs>
+      <Tabs 
+        activeKey={activeTab} 
+        onChange={setActiveTab}
+        items={[
+          {
+            key: 'efficient-star',
+            label: (
+              <span>
+                <TrophyOutlined />
+                Efficient Star
+              </span>
+            ),
+            children: renderEfficientStarTab()
+          },
+          {
+            key: 'star-point',
+            label: (
+              <span>
+                <StarOutlined />
+                Star Point
+              </span>
+            ),
+            children: renderStarPointTab()
+          },
+          {
+            key: 'national-incentive',
+            label: (
+              <span>
+                <GiftOutlined />
+                National & Area Incentive
+              </span>
+            ),
+            children: renderNationalIncentiveTab()
+          }
+        ]}
+      />
 
       {/* Efficient Star Modal */}
       <Modal
-        title={editingStandard ? '编辑标准' : '创建标准'}
+        title={editingItem ? '编辑标准' : '创建标准'}
         open={efficientStarModalVisible}
         onOk={handleEfficientStarStandardSave}
         onCancel={() => setEfficientStarModalVisible(false)}
@@ -1358,7 +1346,7 @@ const AwardIndicatorManagement: React.FC<AwardIndicatorManagementProps> = ({
             label="截止日期"
             rules={[{ required: true, message: '请选择截止日期' }]}
           >
-            <DatePicker style={{ width: '100%' }} />
+            <DatePicker style={{ width: '100%' }} format="YYYY-MM-DD" />
           </Form.Item>
           
           <Form.Item
@@ -1382,7 +1370,7 @@ const AwardIndicatorManagement: React.FC<AwardIndicatorManagementProps> = ({
 
       {/* Star Point Modal */}
       <Modal
-        title={editingCategory ? '编辑类别' : '创建类别'}
+        title={editingItem ? '编辑类别' : '创建类别'}
         open={starPointModalVisible}
         onOk={handleStarCategorySave}
         onCancel={() => setStarPointModalVisible(false)}
@@ -1519,7 +1507,7 @@ const AwardIndicatorManagement: React.FC<AwardIndicatorManagementProps> = ({
       <TeamManagementModal
         visible={teamManagementModalVisible}
         onClose={() => setTeamManagementModalVisible(false)}
-        title={selectedAwardForTeam?.title || ''}
+        title="团队管理"
         teamManagement={teamManagement}
         members={members}
         onUpdateTeamManagement={(updatedTeamManagement) => setTeamManagement(updatedTeamManagement)}
@@ -1530,13 +1518,117 @@ const AwardIndicatorManagement: React.FC<AwardIndicatorManagementProps> = ({
         visible={unifiedEditModalVisible}
         onClose={() => setUnifiedEditModalVisible(false)}
         onSave={handleUnifiedSave}
-        title={editingItem ? `编辑${editModalType === 'efficient_star' ? '标准' : editModalType === 'star_point' ? '类别' : '奖项'}` : '创建'}
+        title={editingItem ? `编辑${editModalType === 'efficient_star' ? '标准' : editModalType === 'star_point' ? '标准' : '奖项'}` : `创建${selectedCategoryForStandard ? ` - ${selectedCategoryForStandard.title}` : ''}`}
         initialValues={editingItem}
         members={members}
         awardType={editModalType}
-        showTargetScore={editModalType === 'efficient_star'}
         showTeamManagement={true}
+        showCategorySelection={editModalType === 'star_point' && !selectedCategoryForStandard}
+        availableCategories={starPointAward?.starCategories || []}
       />
+
+      {/* Category Management Modal */}
+      <Modal
+        title="管理Star Point类别"
+        open={categoryManagementModalVisible}
+        onCancel={() => setCategoryManagementModalVisible(false)}
+        width={800}
+        footer={null}
+      >
+        <div>
+          <div style={{ marginBottom: 16, textAlign: 'right' }}>
+            <Button 
+              type="primary" 
+              icon={<PlusOutlined />} 
+              onClick={() => {
+                setEditingItem(null);
+                setEditModalType('star_point');
+                setUnifiedEditModalVisible(true);
+                setCategoryManagementModalVisible(false);
+              }}
+            >
+              添加新类别
+            </Button>
+          </div>
+          
+          <Table
+            dataSource={starPointAward?.starCategories || []}
+            rowKey="id"
+            pagination={false}
+          >
+            <Table.Column
+              title="类别类型"
+              dataIndex="type"
+              width={150}
+              render={(type) => {
+                const typeMap: Record<string, string> = {
+                  'network_star': 'Network Star',
+                  'experience_star': 'Experience Star',
+                  'social_star': 'Social Star',
+                  'outreach_star': 'Outreach Star'
+                };
+                return typeMap[type] || type;
+              }}
+            />
+            
+            <Table.Column
+              title="类别标题"
+              dataIndex="title"
+            />
+            
+            <Table.Column
+              title="描述"
+              dataIndex="description"
+              ellipsis
+            />
+            
+            <Table.Column
+              title="分数"
+              dataIndex="points"
+              width={80}
+              align="center"
+            />
+            
+            <Table.Column
+              title="我的分数"
+              dataIndex="myPoints"
+              width={100}
+              align="center"
+            />
+            
+            <Table.Column
+              title="操作"
+              width={120}
+              render={(_, record: StarCategory) => (
+                <Space>
+                  <Tooltip title="编辑">
+                    <Button 
+                      type="text" 
+                      icon={<EditOutlined />} 
+                      onClick={() => {
+                        setEditingItem(record);
+                        setEditModalType('star_point');
+                        setUnifiedEditModalVisible(true);
+                        setCategoryManagementModalVisible(false);
+                      }}
+                    />
+                  </Tooltip>
+                  <Popconfirm
+                    title="确定删除此类别？"
+                    onConfirm={() => handleStarCategoryDelete(record.id)}
+                    okText="确定"
+                    cancelText="取消"
+                  >
+                    <Tooltip title="删除">
+                      <Button type="text" danger icon={<DeleteOutlined />} />
+                    </Tooltip>
+                  </Popconfirm>
+                </Space>
+              )}
+            />
+          </Table>
+        </div>
+      </Modal>
     </div>
   );
 };

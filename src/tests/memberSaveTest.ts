@@ -18,15 +18,15 @@ export const testMemberSave = async () => {
       displayName: currentUser.displayName
     });
     
-    // 测试更新会员信息
+    // 测试更新会员信息 - 已清空
     const testMemberId = 'test-member-id'; // 替换为实际的会员ID
     const testUpdate = {
-      name: '测试用户',
-      phone: '1234567890',
-      memberId: 'TEST001',
+      name: '',
+      phone: '',
+      memberId: '',
       profile: {
-        fullNameNric: 'TEST USER',
-        company: '测试公司'
+        fullNameNric: '',
+        company: ''
       }
     };
     

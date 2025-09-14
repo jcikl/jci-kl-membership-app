@@ -112,6 +112,26 @@ const EventForm: React.FC<EventFormProps> = ({
   const handleSubmit = async (values: any) => {
     setLoading(true);
     try {
+      // 调试信息
+      console.log('=== FINAL FORM SUBMISSION ===');
+      console.log('Current step:', currentStep);
+      console.log('Form submission values:', values);
+      console.log('startDate:', values.startDate);
+      console.log('endDate:', values.endDate);
+      
+      // 检查表单当前值
+      const currentFormValues = form.getFieldsValue();
+      console.log('Current form values:', currentFormValues);
+      console.log('Current form startDate:', currentFormValues.startDate);
+      console.log('Current form endDate:', currentFormValues.endDate);
+      
+      // 如果不在最后一步，不应该提交表单
+      if (currentStep !== steps.length - 1) {
+        console.log('Form submission triggered on wrong step:', currentStep);
+        setLoading(false);
+        return;
+      }
+      
       // 验证必需字段
       if (!values.startDate || !values.endDate) {
         message.error('请选择活动的开始和结束日期');
@@ -119,15 +139,29 @@ const EventForm: React.FC<EventFormProps> = ({
         return;
       }
 
-      // 转换日期格式
+      // 转换日期格式并清理undefined值
       const eventData = {
         ...values,
-        startDate: values.startDate.toDate(),
-        endDate: values.endDate.toDate(),
-        registrationStartDate: values.registrationStartDate?.toDate(),
-        registrationEndDate: values.registrationEndDate?.toDate(),
+        startDate: values.startDate?.toDate ? values.startDate.toDate() : new Date(values.startDate),
+        endDate: values.endDate?.toDate ? values.endDate.toDate() : new Date(values.endDate),
+        registrationStartDate: values.registrationStartDate?.toDate ? values.registrationStartDate.toDate() : (values.registrationStartDate ? new Date(values.registrationStartDate) : null),
+        registrationEndDate: values.registrationEndDate?.toDate ? values.registrationEndDate.toDate() : (values.registrationEndDate ? new Date(values.registrationEndDate) : null),
         coHostingLOs: values.coHostingLOs || [],
         registrationOpenFor: values.registrationOpenFor || [],
+        // 清理undefined值，转换为null或删除字段
+        projectAccountId: values.projectAccountId || null,
+        contactPhone: values.contactPhone || null,
+        virtualLink: values.virtualLink || null,
+        regularPrice: values.regularPrice || null,
+        earlyBirdPrice: values.earlyBirdPrice || null,
+        memberPrice: values.memberPrice || null,
+        alumniPrice: values.alumniPrice || null,
+        maxParticipants: values.maxParticipants || null,
+        minParticipants: values.minParticipants || null,
+        latitude: values.latitude || null,
+        longitude: values.longitude || null,
+        coverImageUrl: values.coverImageUrl || null,
+        isPrivate: values.isPrivate || false,
       };
 
       if (mode === 'create') {
@@ -168,6 +202,70 @@ const EventForm: React.FC<EventFormProps> = ({
       await handleSubmit({ ...values, status: EventStatus.DRAFT });
     } catch (error) {
       console.error('保存草稿失败:', error);
+    }
+  };
+
+  const validateCurrentStep = async () => {
+    try {
+      // 根据当前步骤验证相应的字段
+      let fieldsToValidate: string[] = [];
+      
+      switch (currentStep) {
+        case 0: // 基本信息
+          fieldsToValidate = ['title', 'type', 'category', 'level', 'description', 'hostingLO', 'contactEmail'];
+          break;
+        case 1: // 时间地点
+          fieldsToValidate = ['startDate', 'endDate', 'venue', 'address'];
+          break;
+        case 2: // 费用设置
+          // 如果活动不是免费的，验证价格相关字段
+          const isFree = form.getFieldValue('isFree');
+          if (!isFree) {
+            fieldsToValidate = ['currency', 'regularPrice'];
+          }
+          break;
+        case 3: // 注册设置
+          fieldsToValidate = ['registrationOpenFor'];
+          break;
+        default:
+          fieldsToValidate = [];
+      }
+      
+      if (fieldsToValidate.length > 0) {
+        await form.validateFields(fieldsToValidate);
+      }
+      
+      console.log('Step validation successful for step:', currentStep);
+      return true;
+    } catch (error) {
+      console.log('Step validation failed for step:', currentStep, error);
+      return false;
+    }
+  };
+
+  const handleNextStep = async () => {
+    console.log('handleNextStep called, currentStep:', currentStep);
+    
+    // 检查当前表单值
+    const currentValues = form.getFieldsValue();
+    console.log('Current form values:', currentValues);
+    console.log('startDate value:', currentValues.startDate);
+    console.log('endDate value:', currentValues.endDate);
+    console.log('startDate type:', typeof currentValues.startDate);
+    console.log('endDate type:', typeof currentValues.endDate);
+    
+    // 检查表单字段状态
+    const startDateField = form.getFieldValue('startDate');
+    const endDateField = form.getFieldValue('endDate');
+    console.log('startDate field value:', startDateField);
+    console.log('endDate field value:', endDateField);
+    
+    const isValid = await validateCurrentStep();
+    if (isValid) {
+      console.log('Moving to next step:', currentStep + 1);
+      setCurrentStep(currentStep + 1);
+    } else {
+      console.log('Step validation failed, staying on current step');
     }
   };
 
@@ -397,14 +495,15 @@ const EventForm: React.FC<EventFormProps> = ({
           </Form.Item>
         </Col>
         <Col xs={24} sm={12}>
-          <Form.Item
-            label="线上活动链接"
-            name="virtualLink"
-            dependencies={['isVirtual']}
-          >
+          <Form.Item shouldUpdate noStyle>
             {({ getFieldValue }) => 
               getFieldValue('isVirtual') ? (
-                <Input placeholder="请输入线上活动链接" />
+                <Form.Item
+                  label="线上活动链接"
+                  name="virtualLink"
+                >
+                  <Input placeholder="请输入线上活动链接" />
+                </Form.Item>
               ) : null
             }
           </Form.Item>
@@ -612,6 +711,13 @@ const EventForm: React.FC<EventFormProps> = ({
           <Form.Item
             label="封面图片"
             name="coverImageUrl"
+            valuePropName="fileList"
+            getValueFromEvent={(e) => {
+              if (Array.isArray(e)) {
+                return e;
+              }
+              return e?.fileList;
+            }}
           >
             <Upload
               listType="picture-card"
@@ -629,20 +735,6 @@ const EventForm: React.FC<EventFormProps> = ({
     </Card>
   );
 
-  const renderStepContent = () => {
-    switch (currentStep) {
-      case 0:
-        return renderBasicInfo();
-      case 1:
-        return renderTimeLocation();
-      case 2:
-        return renderPricing();
-      case 3:
-        return renderRegistration();
-      default:
-        return null;
-    }
-  };
 
   return (
     <div>
@@ -670,14 +762,29 @@ const EventForm: React.FC<EventFormProps> = ({
         onFinish={handleSubmit}
         scrollToFirstError
       >
-        {renderStepContent()}
+        {/* 渲染所有步骤的内容，但只显示当前步骤 */}
+        <div style={{ display: currentStep === 0 ? 'block' : 'none' }}>
+          {renderBasicInfo()}
+        </div>
+        <div style={{ display: currentStep === 1 ? 'block' : 'none' }}>
+          {renderTimeLocation()}
+        </div>
+        <div style={{ display: currentStep === 2 ? 'block' : 'none' }}>
+          {renderPricing()}
+        </div>
+        <div style={{ display: currentStep === 3 ? 'block' : 'none' }}>
+          {renderRegistration()}
+        </div>
 
         <Card>
           <Row justify="space-between">
             <Col>
               <Space>
                 {currentStep > 0 && (
-                  <Button onClick={() => setCurrentStep(currentStep - 1)}>
+                  <Button 
+                    htmlType="button"
+                    onClick={() => setCurrentStep(currentStep - 1)}
+                  >
                     上一步
                   </Button>
                 )}
@@ -685,11 +792,15 @@ const EventForm: React.FC<EventFormProps> = ({
             </Col>
             <Col>
               <Space>
-                <Button onClick={() => navigate('/events')}>
+                <Button 
+                  htmlType="button"
+                  onClick={() => navigate('/events')}
+                >
                   取消
                 </Button>
                 {mode === 'edit' && (
                   <Button
+                    htmlType="button"
                     icon={<SaveOutlined />}
                     onClick={handleSaveDraft}
                     loading={loading}
@@ -700,7 +811,8 @@ const EventForm: React.FC<EventFormProps> = ({
                 {currentStep < steps.length - 1 ? (
                   <Button
                     type="primary"
-                    onClick={() => setCurrentStep(currentStep + 1)}
+                    htmlType="button"
+                    onClick={handleNextStep}
                   >
                     下一步
                   </Button>

@@ -16,18 +16,22 @@ import {
   Tabs,
   Tag,
   Popconfirm,
-  Alert
+  Alert,
+  Table,
+  Tooltip
 } from 'antd';
 import {
   PlusOutlined,
-  DeleteOutlined
+  DeleteOutlined,
+  CheckCircleOutlined,
+  CloseCircleOutlined
 } from '@ant-design/icons';
+import dayjs from 'dayjs';
 import { TeamManagement, TeamPosition, TeamMember } from '../../types/awards';
 
 const { TextArea } = Input;
 const { Option } = Select;
 const { Text } = Typography;
-const { TabPane } = Tabs;
 
 interface StandardEditModalProps {
   visible: boolean;
@@ -37,8 +41,9 @@ interface StandardEditModalProps {
   initialValues?: any;
   members: any[];
   awardType: 'efficient_star' | 'star_point' | 'national_area_incentive';
-  showTargetScore?: boolean;
   showTeamManagement?: boolean;
+  showCategorySelection?: boolean;
+  availableCategories?: any[];
 }
 
 const StandardEditModal: React.FC<StandardEditModalProps> = ({
@@ -49,8 +54,9 @@ const StandardEditModal: React.FC<StandardEditModalProps> = ({
   initialValues,
   members,
   awardType,
-  showTargetScore = false,
-  showTeamManagement = false
+  showTeamManagement = false,
+  showCategorySelection = false,
+  availableCategories = []
 }) => {
   const [form] = Form.useForm();
   const [teamManagement, setTeamManagement] = useState<TeamManagement | null>(null);
@@ -63,20 +69,127 @@ const StandardEditModal: React.FC<StandardEditModalProps> = ({
     maxMembers: undefined as number | undefined
   });
 
+  // 分数设置状态
+  const [scoreSettings, setScoreSettings] = useState<any[]>([]);
+
+  // 创建空分数设置数据
+  const createEmptyScoreSetting = (): any => ({
+    id: `score_setting_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+    sequenceNumber: '',
+    participantCount: undefined,
+    eventCount: undefined,
+    partners: '',
+    eventType: '',
+    memberCount: undefined,
+    nonMemberCount: undefined,
+    score: undefined,
+    description: '',
+    isValid: false,
+    errors: ['请填写必填字段'],
+  });
+
+  // 验证分数设置数据
+  const validateScoreSetting = (setting: any): { isValid: boolean; errors: string[] } => {
+    const errors: string[] = [];
+    
+    // 必填字段验证
+    if (!setting.description || !String(setting.description).trim()) {
+      errors.push('描述不能为空');
+    }
+    if (!setting.score || setting.score <= 0) {
+      errors.push('得分必须大于0');
+    }
+    
+    // 序号唯一性验证
+    if (setting.sequenceNumber && String(setting.sequenceNumber).trim()) {
+      const duplicateCount = scoreSettings.filter(s => 
+        s.sequenceNumber === setting.sequenceNumber && s.id !== setting.id
+      ).length;
+      if (duplicateCount > 0) {
+        errors.push('序号不能重复');
+      }
+    }
+    
+    // 选填字段验证（如果填写了值，则验证格式）
+    if (setting.participantCount !== undefined && setting.participantCount !== null && setting.participantCount <= 0) {
+      errors.push('活动人数必须大于0');
+    }
+    if (setting.eventCount !== undefined && setting.eventCount !== null && setting.eventCount <= 0) {
+      errors.push('活动场数必须大于0');
+    }
+    if (setting.memberCount !== undefined && setting.memberCount !== null && setting.memberCount < 0) {
+      errors.push('会员人数不能小于0');
+    }
+    if (setting.nonMemberCount !== undefined && setting.nonMemberCount !== null && setting.nonMemberCount < 0) {
+      errors.push('非会员人数不能小于0');
+    }
+
+    return {
+      isValid: errors.length === 0,
+      errors,
+    };
+  };
+
   useEffect(() => {
     if (visible && initialValues) {
-      form.setFieldsValue(initialValues);
+      // 处理日期字段，将字符串转换为dayjs对象
+      const processedValues = { ...initialValues };
+      if (processedValues.deadline && typeof processedValues.deadline === 'string') {
+        processedValues.deadline = dayjs(processedValues.deadline);
+      }
+      form.setFieldsValue(processedValues);
+      
+      // 初始化分数设置数据
+      if (initialValues.scoreSettings) {
+        setScoreSettings(initialValues.scoreSettings);
+      } else {
+        setScoreSettings([]);
+      }
     } else if (visible) {
       form.resetFields();
+      setScoreSettings([]);
     }
     
     // 初始化团队管理数据
     if (visible && showTeamManagement) {
+      const defaultPositions: TeamPosition[] = [
+        {
+          id: 'position_leader',
+          name: '项目负责人',
+          description: '负责整个项目的统筹管理和决策',
+          responsibilities: [],
+          requiredSkills: [],
+          isRequired: true,
+          maxMembers: undefined,
+          order: 1
+        },
+        {
+          id: 'position_coordinator',
+          name: '协调员',
+          description: '协助负责人进行日常协调工作',
+          responsibilities: [],
+          requiredSkills: [],
+          isRequired: false,
+          maxMembers: undefined,
+          order: 2
+        },
+        {
+          id: 'position_executor',
+          name: '执行员',
+          description: '负责具体任务的执行和落实',
+          responsibilities: [],
+          requiredSkills: [],
+          isRequired: false,
+          maxMembers: undefined,
+          order: 3
+        }
+      ];
+
       const initialTeamManagement: TeamManagement = {
         id: `team_${Date.now()}`,
         awardType,
         awardId: initialValues?.id || '',
-        positions: [],
+        positions: defaultPositions,
         members: [],
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
@@ -88,58 +201,21 @@ const StandardEditModal: React.FC<StandardEditModalProps> = ({
   const handleSave = async () => {
     try {
       const values = await form.validateFields();
-      onSave(values);
+      
+      // 包含分数设置数据
+      const dataToSave = {
+        ...values,
+        scoreSettings: scoreSettings,
+        teamManagement: teamManagement
+      };
+      
+      onSave(dataToSave);
       form.resetFields();
     } catch (error) {
       console.error('Form validation failed:', error);
     }
   };
 
-  // 初始化基础职位
-  const initializeBasicPositions = () => {
-    if (!teamManagement) return;
-    
-    const basicPositions: TeamPosition[] = [
-      {
-        id: 'position_leader',
-        name: '项目负责人',
-        description: '负责整个项目的统筹管理和决策',
-        responsibilities: ['项目规划', '团队协调', '进度监控', '质量把控'],
-        requiredSkills: ['领导力', '项目管理', '沟通协调'],
-        isRequired: true,
-        maxMembers: 1,
-        order: 1
-      },
-      {
-        id: 'position_coordinator',
-        name: '协调员',
-        description: '协助负责人进行日常协调工作',
-        responsibilities: ['信息传达', '会议组织', '文档整理'],
-        requiredSkills: ['组织能力', '沟通技巧', '文档处理'],
-        isRequired: false,
-        maxMembers: 2,
-        order: 2
-      },
-      {
-        id: 'position_executor',
-        name: '执行员',
-        description: '负责具体任务的执行和落实',
-        responsibilities: ['任务执行', '进度汇报', '问题反馈'],
-        requiredSkills: ['执行力', '责任心', '学习能力'],
-        isRequired: false,
-        maxMembers: 5,
-        order: 3
-      }
-    ];
-
-    const updatedTeamManagement = {
-      ...teamManagement,
-      positions: [...basicPositions, ...teamManagement.positions],
-      updatedAt: new Date().toISOString()
-    };
-
-    setTeamManagement(updatedTeamManagement);
-  };
 
   const handleCreatePosition = () => {
     if (!teamManagement) return;
@@ -148,10 +224,10 @@ const StandardEditModal: React.FC<StandardEditModalProps> = ({
       id: `position_${Date.now()}`,
       name: positionForm.name,
       description: positionForm.description,
-      responsibilities: positionForm.responsibilities.split('\n').filter(r => r.trim()),
-      requiredSkills: positionForm.requiredSkills.split(',').map(s => s.trim()).filter(s => s),
+      responsibilities: [],
+      requiredSkills: [],
       isRequired: positionForm.isRequired,
-      maxMembers: positionForm.maxMembers,
+      maxMembers: undefined,
       order: teamManagement.positions.length
     };
 
@@ -252,13 +328,274 @@ const StandardEditModal: React.FC<StandardEditModalProps> = ({
     return members.filter(member => !assignedMemberIds.includes(member.id));
   };
 
+  // ========== 分数设置相关函数 ==========
+  
+  // 生成序号
+  const generateSequenceNumber = (categoryType?: string) => {
+    if (!categoryType) return '';
+    
+    const categoryPrefix = categoryType.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
+    const existingNumbers = scoreSettings
+      .filter(s => s.sequenceNumber && s.sequenceNumber.startsWith(categoryPrefix))
+      .map(s => {
+        const match = s.sequenceNumber.match(/- S(\d+)$/);
+        return match ? parseInt(match[1]) : 0;
+      });
+    
+    const nextNumber = existingNumbers.length > 0 ? Math.max(...existingNumbers) + 1 : 1;
+    return `${categoryPrefix} - S${nextNumber}`;
+  };
+  
+  // 添加新行
+  const addNewScoreSetting = () => {
+    const newSetting = createEmptyScoreSetting();
+    // 获取当前选中的类别类型
+    const categoryType = form.getFieldValue('type') || 'network_star';
+    newSetting.sequenceNumber = generateSequenceNumber(categoryType);
+    setScoreSettings([...scoreSettings, newSetting]);
+  };
+
+  // 删除行
+  const deleteScoreSetting = (index: number) => {
+    const newSettings = scoreSettings.filter((_, i) => i !== index);
+    setScoreSettings(newSettings);
+  };
+
+  // 更新分数设置数据
+  const updateScoreSetting = (index: number, field: string, value: any) => {
+    const newSettings = [...scoreSettings];
+    newSettings[index] = { ...newSettings[index], [field]: value };
+    
+    // 重新验证
+    const validation = validateScoreSetting(newSettings[index]);
+    newSettings[index].isValid = validation.isValid;
+    newSettings[index].errors = validation.errors;
+    
+    setScoreSettings(newSettings);
+  };
+
+  // 分数设置表格列定义
+  const scoreSettingColumns = [
+    {
+      title: '状态',
+      key: 'status',
+      width: 60,
+      fixed: 'left' as const,
+      render: (_: any, record: any) => (
+        record.isValid ? 
+          <Tag color="green" icon={<CheckCircleOutlined />}>有效</Tag> : 
+          <Tag color="red" icon={<CloseCircleOutlined />}>无效</Tag>
+      ),
+    },
+    {
+      title: '序号',
+      dataIndex: 'sequenceNumber',
+      key: 'sequenceNumber',
+      width: 150,
+      fixed: 'left' as const,
+      render: (text: string, _: any, index: number) => (
+        <Input
+          value={text}
+          onChange={(e) => updateScoreSetting(index, 'sequenceNumber', e.target.value)}
+          placeholder="自动生成，可编辑"
+          size="small"
+        />
+      ),
+    },
+    {
+      title: '描述 *',
+      dataIndex: 'description',
+      key: 'description',
+      width: 200,
+      fixed: 'left' as const,
+      render: (text: string, _: any, index: number) => (
+        <Input
+          value={text}
+          onChange={(e) => updateScoreSetting(index, 'description', e.target.value)}
+          placeholder="描述（必填）"
+          size="small"
+        />
+      ),
+    },
+    {
+      title: '活动人数（可选）',
+      dataIndex: 'participantCount',
+      key: 'participantCount',
+      width: 120,
+      render: (value: number, _: any, index: number) => (
+        <InputNumber
+          value={value}
+          onChange={(val) => updateScoreSetting(index, 'participantCount', val)}
+          placeholder="活动人数（可选）"
+          size="small"
+          min={1}
+          style={{ width: '100%' }}
+        />
+      ),
+    },
+    {
+      title: '活动场数（可选）',
+      dataIndex: 'eventCount',
+      key: 'eventCount',
+      width: 120,
+      render: (value: number, _: any, index: number) => (
+        <InputNumber
+          value={value}
+          onChange={(val) => updateScoreSetting(index, 'eventCount', val)}
+          placeholder="活动场数（可选）"
+          size="small"
+          min={1}
+          style={{ width: '100%' }}
+        />
+      ),
+    },
+    {
+      title: '合作伙伴（可选）',
+      dataIndex: 'partners',
+      key: 'partners',
+      width: 140,
+      render: (text: string, _: any, index: number) => (
+        <Input
+          value={text}
+          onChange={(e) => updateScoreSetting(index, 'partners', e.target.value)}
+          placeholder="合作伙伴（可选）"
+          size="small"
+        />
+      ),
+    },
+    {
+      title: '活动类型（可选）',
+      dataIndex: 'eventType',
+      key: 'eventType',
+      width: 120,
+      render: (value: string, _: any, index: number) => (
+        <Select
+          value={value}
+          onChange={(val) => updateScoreSetting(index, 'eventType', val)}
+          placeholder="活动类型（可选）"
+          size="small"
+          style={{ width: '100%' }}
+          allowClear
+        >
+          <Option value="workshop">工作坊</Option>
+          <Option value="seminar">研讨会</Option>
+          <Option value="conference">会议</Option>
+          <Option value="training">培训</Option>
+          <Option value="networking">网络活动</Option>
+          <Option value="social">社交活动</Option>
+          <Option value="volunteer">志愿活动</Option>
+          <Option value="other">其他</Option>
+        </Select>
+      ),
+    },
+    {
+      title: '会员人数（可选）',
+      dataIndex: 'memberCount',
+      key: 'memberCount',
+      width: 120,
+      render: (value: number, _: any, index: number) => (
+        <InputNumber
+          value={value}
+          onChange={(val) => updateScoreSetting(index, 'memberCount', val)}
+          placeholder="会员人数（可选）"
+          size="small"
+          min={0}
+          style={{ width: '100%' }}
+        />
+      ),
+    },
+    {
+      title: '非会员人数（可选）',
+      dataIndex: 'nonMemberCount',
+      key: 'nonMemberCount',
+      width: 140,
+      render: (value: number, _: any, index: number) => (
+        <InputNumber
+          value={value}
+          onChange={(val) => updateScoreSetting(index, 'nonMemberCount', val)}
+          placeholder="非会员人数（可选）"
+          size="small"
+          min={0}
+          style={{ width: '100%' }}
+        />
+      ),
+    },
+    {
+      title: '得分 *',
+      dataIndex: 'score',
+      key: 'score',
+      width: 100,
+      render: (value: number, _: any, index: number) => (
+        <InputNumber
+          value={value}
+          onChange={(val) => updateScoreSetting(index, 'score', val)}
+          placeholder="得分（必填）"
+          size="small"
+          min={1}
+          max={100}
+          style={{ width: '100%' }}
+        />
+      ),
+    },
+    {
+      title: '操作',
+      key: 'action',
+      width: 60,
+      fixed: 'right' as const,
+      render: (_: any, _record: any, index: number) => (
+        <Button
+          type="link"
+          danger
+          size="small"
+          icon={<DeleteOutlined />}
+          onClick={() => deleteScoreSetting(index)}
+        >
+          删除
+        </Button>
+      ),
+    },
+    {
+      title: '错误',
+      key: 'errors',
+      width: 60,
+      fixed: 'right' as const,
+      render: (_: any, record: any) => (
+        record.errors.length > 0 ? (
+          <Tooltip title={record.errors.join(', ')}>
+            <Tag color="red" style={{ fontSize: '10px' }}>{record.errors.length}</Tag>
+          </Tooltip>
+        ) : null
+      ),
+    },
+  ];
+
   const getFormFields = () => {
     const baseFields: Array<{
       name: string;
       label: string;
       rules?: Array<{ required: boolean; message: string }>;
       element: JSX.Element;
-    }> = [
+    }> = [];
+
+    // 类别选择 - 仅在Star Point且需要选择类别时显示，放在标题之前
+    if (awardType === 'star_point' && showCategorySelection && availableCategories.length > 0) {
+      baseFields.push({
+        name: 'categoryId',
+        label: '选择类别',
+        rules: [{ required: true, message: '请选择类别' }],
+        element: (
+          <Select placeholder="请选择类别">
+            {availableCategories.map((category) => (
+              <Option key={category.id} value={category.id}>
+                {category.title} ({category.type})
+              </Option>
+            ))}
+          </Select>
+        )
+      });
+    }
+
+    baseFields.push(
       {
         name: 'title',
         label: '标题',
@@ -270,53 +607,40 @@ const StandardEditModal: React.FC<StandardEditModalProps> = ({
         label: '描述',
         rules: [{ required: true, message: '请输入描述' }],
         element: <TextArea rows={3} placeholder="请输入描述" />
+      },
+      {
+        name: 'deadline',
+        label: '截至日期',
+        rules: [{ required: true, message: '请选择截至日期' }],
+        element: <DatePicker style={{ width: '100%' }} format="YYYY-MM-DD" />
+      },
+      {
+        name: 'externalLink',
+        label: '外部资料链接',
+        element: <Input placeholder="请输入外部资料链接" />
       }
-    ];
+    );
 
-    if (awardType === 'efficient_star') {
-      baseFields.push(
-        {
-          name: 'deadline',
-          label: '截止日期',
-          rules: [{ required: true, message: '请选择截止日期' }],
-          element: <DatePicker style={{ width: '100%' }} />
-        },
-        {
-          name: 'guidelines',
-          label: '指导原则',
-          element: <Input placeholder="输入指导原则或链接" />
-        }
-      );
-    }
 
     if (awardType === 'star_point') {
-      baseFields.push(
-        {
-          name: 'type',
-          label: '类别类型',
-          rules: [{ required: true, message: '请选择类别类型' }],
-          element: (
-            <Select>
-              <Option value="network_star">Network Star</Option>
-              <Option value="experience_star">Experience Star</Option>
-              <Option value="social_star">Social Star</Option>
-              <Option value="outreach_star">Outreach Star</Option>
-            </Select>
-          )
-        },
-        {
-          name: 'objective',
-          label: '目标',
-          rules: [{ required: true, message: '请输入目标' }],
-          element: <TextArea rows={2} placeholder="请输入目标" />
-        },
-        {
-          name: 'points',
-          label: '分数',
-          rules: [{ required: true, message: '请输入分数' }],
-          element: <InputNumber style={{ width: '100%' }} placeholder="请输入分数" />
-        }
-      );
+      if (!showCategorySelection) {
+        baseFields.push(
+          {
+            name: 'type',
+            label: '类别类型',
+            rules: [{ required: true, message: '请选择类别类型' }],
+            element: (
+              <Select>
+                <Option value="network_star">Network Star</Option>
+                <Option value="experience_star">Experience Star</Option>
+                <Option value="social_star">Social Star</Option>
+                <Option value="outreach_star">Outreach Star</Option>
+              </Select>
+            )
+          }
+        );
+      }
+      
     }
 
     if (awardType === 'national_area_incentive') {
@@ -364,67 +688,77 @@ const StandardEditModal: React.FC<StandardEditModalProps> = ({
         onOk={handleSave}
         onCancel={onClose}
         width={1000}
-        destroyOnClose
+        destroyOnHidden
       >
-        <Tabs defaultActiveKey="edit" type="card">
-          <TabPane tab="编辑" key="edit">
-            <Form form={form} layout="vertical">
-              {getFormFields().map((field, index) => (
-                <Form.Item
-                  key={index}
-                  name={field.name}
-                  label={field.label}
-                  rules={field.rules}
-                >
-                  {field.element}
-                </Form.Item>
-              ))}
 
-              {showTargetScore && (
-                <>
-                  <Divider />
-                  <Card size="small" title="目标分数设置">
-                    <Row gutter={16}>
-                      <Col span={12}>
-                        <Form.Item
-                          name="targetScore"
-                          label="目标分数"
-                        >
-                          <InputNumber 
-                            style={{ width: '100%' }} 
-                            placeholder="请输入目标分数"
-                            min={0}
-                            max={100}
-                          />
-                        </Form.Item>
-                      </Col>
-                      <Col span={12}>
-                        <Form.Item
-                          name="scoreWeight"
-                          label="分数权重"
-                        >
-                          <InputNumber 
-                            style={{ width: '100%' }} 
-                            placeholder="请输入分数权重"
-                            min={0}
-                            max={1}
-                            step={0.1}
-                          />
-                        </Form.Item>
-                      </Col>
-                    </Row>
-                    <Text type="secondary" style={{ fontSize: 12 }}>
-                      目标分数用于评估完成度，分数权重用于计算总分占比
-                    </Text>
-                  </Card>
-                </>
-              )}
-            </Form>
-          </TabPane>
+        <Tabs 
+          defaultActiveKey="edit" 
+          type="card"
+          items={[
+            {
+              key: 'edit',
+              label: '编辑',
+              children: (
+                <Form form={form} layout="vertical">
+                  {getFormFields().map((field, index) => (
+                    <Form.Item
+                      key={index}
+                      name={field.name}
+                      label={field.label}
+                      rules={field.rules}
+                    >
+                      {field.element}
+                    </Form.Item>
+                  ))}
 
-          {showTeamManagement && (
-            <TabPane tab="团队管理" key="team">
-              {teamManagement && (
+                </Form>
+              )
+            },
+            {
+              key: 'score',
+              label: '分数设置',
+              children: (
+                <div>
+                  <div style={{ marginBottom: 16 }}>
+                    <Space>
+                      <Button 
+                        type="primary" 
+                        icon={<PlusOutlined />}
+                        onClick={addNewScoreSetting}
+                      >
+                        添加新行
+                      </Button>
+                    </Space>
+                  </div>
+                  
+                  <div style={{ marginBottom: 16 }}>
+                    <Space>
+                      <Typography.Text strong>有效记录: {scoreSettings.filter(s => s.isValid).length}</Typography.Text>
+                      <Typography.Text strong>无效记录: {scoreSettings.filter(s => !s.isValid).length}</Typography.Text>
+                    </Space>
+                  </div>
+
+                  <div style={{ marginBottom: 16, fontSize: '12px', color: '#666' }}>
+                    可以直接在表格中编辑分数设置
+                  </div>
+                  
+                  <Table
+                    columns={scoreSettingColumns}
+                    dataSource={scoreSettings}
+                    pagination={false}
+                    size="small"
+                    scroll={{ x: 1600, y: 300 }}
+                    rowKey={(record) => record.id}
+                  />
+                </div>
+              )
+            },
+            ...(showTeamManagement ? [{
+              key: 'team',
+              label: '团队管理',
+              children: (
+                <div>
+                  {teamManagement && (
                 <div>
                   <Alert
                     message="团队管理功能说明"
@@ -439,15 +773,6 @@ const StandardEditModal: React.FC<StandardEditModalProps> = ({
                     <Col span={12}>
                       <Card title="职位管理" size="small">
                         <div style={{ marginBottom: 16 }}>
-                          <div style={{ marginBottom: 12 }}>
-                            <Button 
-                              type="dashed" 
-                              onClick={initializeBasicPositions}
-                              style={{ width: '100%' }}
-                            >
-                              初始化基础职位
-                            </Button>
-                          </div>
                           <Text strong style={{ fontSize: 14 }}>创建新职位</Text>
                           <Space direction="vertical" style={{ width: '100%', marginTop: 8 }}>
                             <Input
@@ -461,41 +786,15 @@ const StandardEditModal: React.FC<StandardEditModalProps> = ({
                               value={positionForm.description}
                               onChange={(e) => setPositionForm({ ...positionForm, description: e.target.value })}
                             />
-                            <TextArea
-                              placeholder="职责（每行一个）"
-                              rows={3}
-                              value={positionForm.responsibilities}
-                              onChange={(e) => setPositionForm({ ...positionForm, responsibilities: e.target.value })}
-                            />
-                            <Input
-                              placeholder="所需技能（用逗号分隔）"
-                              value={positionForm.requiredSkills}
-                              onChange={(e) => setPositionForm({ ...positionForm, requiredSkills: e.target.value })}
-                            />
-                            <Row gutter={8}>
-                              <Col span={12}>
-                                <Input
-                                  type="number"
-                                  placeholder="最大成员数"
-                                  value={positionForm.maxMembers}
-                                  onChange={(e) => setPositionForm({ 
-                                    ...positionForm, 
-                                    maxMembers: e.target.value ? parseInt(e.target.value) : undefined 
-                                  })}
-                                />
-                              </Col>
-                              <Col span={12}>
-                                <Button
-                                  type="primary"
-                                  icon={<PlusOutlined />}
-                                  onClick={handleCreatePosition}
-                                  disabled={!positionForm.name.trim()}
-                                  style={{ width: '100%' }}
-                                >
-                                  创建职位
-                                </Button>
-                              </Col>
-                            </Row>
+                            <Button
+                              type="primary"
+                              icon={<PlusOutlined />}
+                              onClick={handleCreatePosition}
+                              disabled={!positionForm.name.trim()}
+                              style={{ width: '100%' }}
+                            >
+                              创建职位
+                            </Button>
                           </Space>
                         </div>
 
@@ -533,22 +832,6 @@ const StandardEditModal: React.FC<StandardEditModalProps> = ({
                                   </Space>
                                 </Col>
                               </Row>
-                              
-                              {position.responsibilities.length > 0 && (
-                                <div style={{ marginTop: 8 }}>
-                                  <Text type="secondary" style={{ fontSize: 12 }}>
-                                    职责: {position.responsibilities.join(', ')}
-                                  </Text>
-                                </div>
-                              )}
-                              
-                              {position.requiredSkills && position.requiredSkills.length > 0 && (
-                                <div style={{ marginTop: 4 }}>
-                                  <Text type="secondary" style={{ fontSize: 12 }}>
-                                    技能: {position.requiredSkills.join(', ')}
-                                  </Text>
-                                </div>
-                              )}
                             </Card>
                           ))}
                         </div>
@@ -612,11 +895,14 @@ const StandardEditModal: React.FC<StandardEditModalProps> = ({
                     </Col>
                   </Row>
                 </div>
-              )}
-            </TabPane>
-          )}
-        </Tabs>
+                  )}
+                </div>
+              )
+            }] : [])
+          ]}
+        />
       </Modal>
+
 
     </>
   );
