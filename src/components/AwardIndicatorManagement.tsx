@@ -48,13 +48,11 @@ import {
   StarActivity,
   IncentiveAward,
   StarCategoryType,
-  AwardCategory,
-  AwardTeam,
-  TeamMember,
-  TeamRole
+  AwardCategory
 } from '@/types/awards';
 import { awardService } from '@/services/awardService';
 import { indicatorService } from '@/services/indicatorService';
+import { getMembers } from '@/services/memberService';
 
 const { Title, Text, Paragraph } = Typography;
 const { TextArea } = Input;
@@ -77,6 +75,9 @@ const AwardIndicatorManagement: React.FC<AwardIndicatorManagementProps> = ({
   const [selectedYears, setSelectedYears] = useState<number[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<AwardCategory | 'all'>('all');
   
+  // Members for responsible person and team selection
+  const [members, setMembers] = useState<any[]>([]);
+  
   // Efficient Star states
   const [efficientStarAward, setEfficientStarAward] = useState<EfficientStarAward | null>(null);
   const [efficientStarModalVisible, setEfficientStarModalVisible] = useState(false);
@@ -94,18 +95,11 @@ const AwardIndicatorManagement: React.FC<AwardIndicatorManagementProps> = ({
   const [nationalIncentiveModalVisible, setNationalIncentiveModalVisible] = useState(false);
   const [editingIncentiveAward, setEditingIncentiveAward] = useState<IncentiveAward | null>(null);
   const [nationalIncentiveForm] = Form.useForm();
-  
-  // Team management states
-  const [teamModalVisible, setTeamModalVisible] = useState(false);
-  const [editingTeam, setEditingTeam] = useState<AwardTeam | null>(null);
-  const [editingMember, setEditingMember] = useState<TeamMember | null>(null);
-  const [teamForm] = Form.useForm();
-  const [memberForm] = Form.useForm();
-  const [currentAwardType, setCurrentAwardType] = useState<AwardCategory>('efficient_star');
 
   useEffect(() => {
     loadAvailableYears();
     loadAllAwards();
+    loadMembers();
   }, [year]);
 
   useEffect(() => {
@@ -122,6 +116,16 @@ const AwardIndicatorManagement: React.FC<AwardIndicatorManagementProps> = ({
       setSelectedYears([year]);
     } catch (error) {
       message.error('加载可用年份失败');
+      console.error(error);
+    }
+  };
+
+  const loadMembers = async () => {
+    try {
+      const response = await getMembers({ page: 1, limit: 1000 });
+      setMembers(response.data);
+    } catch (error) {
+      message.error('加载会员列表失败');
       console.error(error);
     }
   };
@@ -172,175 +176,6 @@ const AwardIndicatorManagement: React.FC<AwardIndicatorManagementProps> = ({
 
   const exportData = () => {
     message.info('导出功能开发中...');
-  };
-
-  // ========== Team Management Functions ==========
-  
-  const handleTeamManagement = (awardType: AwardCategory) => {
-    setCurrentAwardType(awardType);
-    setEditingTeam(null);
-    teamForm.resetFields();
-    setTeamModalVisible(true);
-  };
-
-
-  const handleSaveTeam = async () => {
-    try {
-      const values = await teamForm.validateFields();
-      const teamData: Omit<AwardTeam, 'id' | 'createdAt' | 'updatedAt' | 'createdBy' | 'updatedBy'> = {
-        awardId: getCurrentAwardId(),
-        awardType: currentAwardType,
-        teamName: values.teamName,
-        description: values.description,
-        members: editingTeam?.members || []
-      };
-
-      if (editingTeam) {
-        // 更新团队
-        const updatedTeam = { ...editingTeam, ...teamData };
-        await updateAwardTeam(updatedTeam);
-        message.success('团队信息更新成功');
-      } else {
-        // 创建新团队
-        await createAwardTeam(teamData);
-        message.success('团队创建成功');
-      }
-      
-      setTeamModalVisible(false);
-      loadAllAwards();
-    } catch (error) {
-      message.error('保存团队信息失败');
-      console.error(error);
-    }
-  };
-
-  const handleDeleteTeam = async (teamId: string) => {
-    try {
-      await deleteAwardTeam(teamId);
-      message.success('团队删除成功');
-      loadAllAwards();
-    } catch (error) {
-      message.error('删除团队失败');
-      console.error(error);
-    }
-  };
-
-  const handleAddMember = () => {
-    setEditingMember(null);
-    memberForm.resetFields();
-  };
-
-  const handleEditMember = (member: TeamMember) => {
-    setEditingMember(member);
-    memberForm.setFieldsValue({
-      name: member.name,
-      position: member.position,
-      email: member.email,
-      phone: member.phone,
-      role: member.role,
-      isActive: member.isActive,
-      notes: member.notes
-    });
-  };
-
-  const handleSaveMember = async () => {
-    try {
-      const values = await memberForm.validateFields();
-      const memberData: Omit<TeamMember, 'id' | 'joinedAt'> = {
-        memberId: values.memberId || `member_${Date.now()}`,
-        name: values.name,
-        position: values.position,
-        email: values.email,
-        phone: values.phone,
-        role: values.role,
-        isActive: values.isActive ?? true,
-        notes: values.notes
-      };
-
-      if (editingMember) {
-        // 更新成员
-        const updatedMember = { ...editingMember, ...memberData };
-        await updateTeamMember(updatedMember);
-        message.success('成员信息更新成功');
-      } else {
-        // 添加新成员
-        await addTeamMember(memberData);
-        message.success('成员添加成功');
-      }
-      
-      loadAllAwards();
-    } catch (error) {
-      message.error('保存成员信息失败');
-      console.error(error);
-    }
-  };
-
-  const handleDeleteMember = async (memberId: string) => {
-    try {
-      await deleteTeamMember(memberId);
-      message.success('成员删除成功');
-      loadAllAwards();
-    } catch (error) {
-      message.error('删除成员失败');
-      console.error(error);
-    }
-  };
-
-  const getCurrentAwardId = (): string => {
-    switch (currentAwardType) {
-      case 'efficient_star':
-        return efficientStarAward?.id || '';
-      case 'star_point':
-        return starPointAward?.id || '';
-      case 'national_area_incentive':
-        return nationalIncentiveAward?.id || '';
-      default:
-        return '';
-    }
-  };
-
-  const getCurrentTeam = (): AwardTeam | null => {
-    switch (currentAwardType) {
-      case 'efficient_star':
-        return efficientStarAward?.team || null;
-      case 'star_point':
-        return starPointAward?.team || null;
-      case 'national_area_incentive':
-        return nationalIncentiveAward?.team || null;
-      default:
-        return null;
-    }
-  };
-
-  // 模拟的API调用函数（实际项目中应该调用真实的API）
-  const createAwardTeam = async (teamData: Omit<AwardTeam, 'id' | 'createdAt' | 'updatedAt' | 'createdBy' | 'updatedBy'>) => {
-    // 这里应该调用真实的API
-    console.log('Creating team:', teamData);
-  };
-
-  const updateAwardTeam = async (team: AwardTeam) => {
-    // 这里应该调用真实的API
-    console.log('Updating team:', team);
-  };
-
-  const deleteAwardTeam = async (teamId: string) => {
-    // 这里应该调用真实的API
-    console.log('Deleting team:', teamId);
-  };
-
-  const addTeamMember = async (memberData: Omit<TeamMember, 'id' | 'joinedAt'>) => {
-    // 这里应该调用真实的API
-    console.log('Adding member:', memberData);
-  };
-
-  const updateTeamMember = async (member: TeamMember) => {
-    // 这里应该调用真实的API
-    console.log('Updating member:', member);
-  };
-
-  const deleteTeamMember = async (memberId: string) => {
-    // 这里应该调用真实的API
-    console.log('Deleting member:', memberId);
   };
 
   // ========== Efficient Star Management ==========
@@ -687,12 +522,6 @@ const AwardIndicatorManagement: React.FC<AwardIndicatorManagementProps> = ({
                   <Button icon={<EyeOutlined />}>
                     View History
                   </Button>
-                  <Button 
-                    icon={<TrophyOutlined />}
-                    onClick={() => handleTeamManagement('efficient_star')}
-                  >
-                    Manage Team
-                  </Button>
                 </Space>
               </Col>
               <Col span={8}>
@@ -820,6 +649,41 @@ const AwardIndicatorManagement: React.FC<AwardIndicatorManagementProps> = ({
               />
               
               <Table.Column
+                title="负责人"
+                width={120}
+                align="center"
+                render={(_, record: EfficientStarStandard) => (
+                  record.responsiblePerson ? (
+                    <Text>{record.responsiblePerson}</Text>
+                  ) : (
+                    <Text type="secondary">-</Text>
+                  )
+                )}
+              />
+              
+              <Table.Column
+                title="团队"
+                width={150}
+                align="center"
+                render={(_, record: EfficientStarStandard) => (
+                  record.team && record.team.length > 0 ? (
+                    <div>
+                      {record.team.slice(0, 2).map((member, index) => (
+                        <Tag key={index} style={{ marginBottom: 2, fontSize: '12px' }}>
+                          {member}
+                        </Tag>
+                      ))}
+                      {record.team.length > 2 && (
+                        <Tag style={{ fontSize: '12px' }}>+{record.team.length - 2}</Tag>
+                      )}
+                    </div>
+                  ) : (
+                    <Text type="secondary">-</Text>
+                  )
+                )}
+              />
+              
+              <Table.Column
                 title="ACTION"
                 width={120}
                 render={(_, record: EfficientStarStandard) => (
@@ -880,12 +744,6 @@ const AwardIndicatorManagement: React.FC<AwardIndicatorManagementProps> = ({
                   </Button>
                   <Button icon={<EyeOutlined />}>
                     View History
-                  </Button>
-                  <Button 
-                    icon={<TrophyOutlined />}
-                    onClick={() => handleTeamManagement('star_point')}
-                  >
-                    Manage Team
                   </Button>
                 </Space>
               </Col>
@@ -1020,6 +878,41 @@ const AwardIndicatorManagement: React.FC<AwardIndicatorManagementProps> = ({
                       />
                       
                       <Table.Column
+                        title="负责人"
+                        width={120}
+                        align="center"
+                        render={(_, record: StarActivity) => (
+                          record.responsiblePerson ? (
+                            <Text>{record.responsiblePerson}</Text>
+                          ) : (
+                            <Text type="secondary">-</Text>
+                          )
+                        )}
+                      />
+                      
+                      <Table.Column
+                        title="团队"
+                        width={150}
+                        align="center"
+                        render={(_, record: StarActivity) => (
+                          record.team && record.team.length > 0 ? (
+                            <div>
+                              {record.team.slice(0, 2).map((member, index) => (
+                                <Tag key={index} style={{ marginBottom: 2, fontSize: '12px' }}>
+                                  {member}
+                                </Tag>
+                              ))}
+                              {record.team.length > 2 && (
+                                <Tag style={{ fontSize: '12px' }}>+{record.team.length - 2}</Tag>
+                              )}
+                            </div>
+                          ) : (
+                            <Text type="secondary">-</Text>
+                          )
+                        )}
+                      />
+                      
+                      <Table.Column
                         title="ACTION"
                         width={100}
                         render={() => (
@@ -1095,12 +988,6 @@ const AwardIndicatorManagement: React.FC<AwardIndicatorManagementProps> = ({
                   </Button>
                   <Button icon={<EyeOutlined />}>
                     View History
-                  </Button>
-                  <Button 
-                    icon={<TrophyOutlined />}
-                    onClick={() => handleTeamManagement('national_area_incentive')}
-                  >
-                    Manage Team
                   </Button>
                 </Space>
               </Col>
@@ -1231,6 +1118,41 @@ const AwardIndicatorManagement: React.FC<AwardIndicatorManagementProps> = ({
                     >
                       {allocation}
                     </Text>
+                  )}
+                />
+                
+                <Table.Column
+                  title="负责人"
+                  width={120}
+                  align="center"
+                  render={(_, record: IncentiveAward) => (
+                    record.responsiblePerson ? (
+                      <Text>{record.responsiblePerson}</Text>
+                    ) : (
+                      <Text type="secondary">-</Text>
+                    )
+                  )}
+                />
+                
+                <Table.Column
+                  title="团队"
+                  width={150}
+                  align="center"
+                  render={(_, record: IncentiveAward) => (
+                    record.team && record.team.length > 0 ? (
+                      <div>
+                        {record.team.slice(0, 2).map((member, index) => (
+                          <Tag key={index} style={{ marginBottom: 2, fontSize: '12px' }}>
+                            {member}
+                          </Tag>
+                        ))}
+                        {record.team.length > 2 && (
+                          <Tag style={{ fontSize: '12px' }}>+{record.team.length - 2}</Tag>
+                        )}
+                      </div>
+                    ) : (
+                      <Text type="secondary">-</Text>
+                    )
                   )}
                 />
                 
@@ -1439,6 +1361,47 @@ const AwardIndicatorManagement: React.FC<AwardIndicatorManagementProps> = ({
           >
             <Input placeholder="输入指导原则或链接" />
           </Form.Item>
+          
+          <Form.Item
+            name="responsiblePerson"
+            label="负责人"
+          >
+            <Select
+              placeholder="选择负责人"
+              allowClear
+              showSearch
+              filterOption={(input, option) =>
+                String(option?.children || '').toLowerCase().includes(input.toLowerCase())
+              }
+            >
+              {members.map(member => (
+                <Option key={member.id} value={member.name}>
+                  {member.name}
+                </Option>
+              ))}
+            </Select>
+          </Form.Item>
+          
+          <Form.Item
+            name="team"
+            label="团队成员"
+          >
+            <Select
+              mode="multiple"
+              placeholder="选择团队成员"
+              allowClear
+              showSearch
+              filterOption={(input, option) =>
+                String(option?.children || '').toLowerCase().includes(input.toLowerCase())
+              }
+            >
+              {members.map(member => (
+                <Option key={member.id} value={member.name}>
+                  {member.name}
+                </Option>
+              ))}
+            </Select>
+          </Form.Item>
         </Form>
       </Modal>
 
@@ -1564,241 +1527,46 @@ const AwardIndicatorManagement: React.FC<AwardIndicatorManagementProps> = ({
           >
             <TextArea rows={3} />
           </Form.Item>
-        </Form>
-      </Modal>
-
-      {/* Team Management Modal */}
-      <Modal
-        title={`团队管理 - ${getCategoryName(currentAwardType)}`}
-        open={teamModalVisible}
-        onCancel={() => setTeamModalVisible(false)}
-        width={1000}
-        footer={null}
-      >
-        <div>
-          {/* Team Information */}
-          <Card title="团队信息" style={{ marginBottom: 16 }}>
-            <Form form={teamForm} layout="vertical">
-              <Row gutter={16}>
-                <Col span={12}>
-                  <Form.Item
-                    name="teamName"
-                    label="团队名称"
-                    rules={[{ required: true, message: '请输入团队名称' }]}
-                  >
-                    <Input placeholder="如: Efficient Star 2024 团队" />
-                  </Form.Item>
-                </Col>
-                <Col span={12}>
-                  <Form.Item
-                    name="description"
-                    label="团队描述"
-                  >
-                    <TextArea rows={2} placeholder="团队职责和目标的简要描述" />
-                  </Form.Item>
-                </Col>
-              </Row>
-              <Space>
-                <Button type="primary" onClick={handleSaveTeam}>
-                  {editingTeam ? '更新团队' : '创建团队'}
-                </Button>
-                {editingTeam && (
-                  <Popconfirm
-                    title="确定删除团队吗？"
-                    onConfirm={() => handleDeleteTeam(editingTeam.id)}
-                  >
-                    <Button danger>删除团队</Button>
-                  </Popconfirm>
-                )}
-              </Space>
-            </Form>
-          </Card>
-
-          {/* Team Members */}
-          <Card 
-            title="团队成员" 
-            extra={
-              <Button 
-                type="primary" 
-                icon={<PlusOutlined />}
-                onClick={handleAddMember}
-              >
-                添加成员
-              </Button>
-            }
-          >
-            <Table
-              dataSource={getCurrentTeam()?.members || []}
-              rowKey="id"
-              pagination={false}
-              size="small"
-            >
-              <Table.Column
-                title="姓名"
-                dataIndex="name"
-                render={(name, record: TeamMember) => (
-                  <div>
-                    <Text strong>{name}</Text>
-                    {!record.isActive && (
-                      <Tag color="red" style={{ marginLeft: 8 }}>已停用</Tag>
-                    )}
-                  </div>
-                )}
-              />
-              
-              <Table.Column
-                title="职位"
-                dataIndex="position"
-              />
-              
-              <Table.Column
-                title="角色"
-                dataIndex="role"
-                render={(role: TeamRole) => {
-                  const roleMap = {
-                    leader: { color: 'red', text: '负责人' },
-                    coordinator: { color: 'blue', text: '协调员' },
-                    member: { color: 'green', text: '成员' },
-                    advisor: { color: 'purple', text: '顾问' }
-                  };
-                  const roleInfo = roleMap[role];
-                  return <Tag color={roleInfo.color}>{roleInfo.text}</Tag>;
-                }}
-              />
-              
-              <Table.Column
-                title="邮箱"
-                dataIndex="email"
-              />
-              
-              <Table.Column
-                title="电话"
-                dataIndex="phone"
-              />
-              
-              <Table.Column
-                title="操作"
-                key="action"
-                render={(_, record: TeamMember) => (
-                  <Space>
-                    <Button 
-                      type="link" 
-                      size="small"
-                      icon={<EditOutlined />}
-                      onClick={() => handleEditMember(record)}
-                    >
-                      编辑
-                    </Button>
-                    <Popconfirm
-                      title="确定删除该成员吗？"
-                      onConfirm={() => handleDeleteMember(record.id)}
-                    >
-                      <Button 
-                        type="link" 
-                        size="small"
-                        danger
-                        icon={<DeleteOutlined />}
-                      >
-                        删除
-                      </Button>
-                    </Popconfirm>
-                  </Space>
-                )}
-              />
-            </Table>
-          </Card>
-        </div>
-      </Modal>
-
-      {/* Member Management Modal */}
-      <Modal
-        title={editingMember ? '编辑成员' : '添加成员'}
-        open={!!editingMember || false}
-        onCancel={() => setEditingMember(null)}
-        onOk={handleSaveMember}
-        okText="保存"
-        cancelText="取消"
-      >
-        <Form form={memberForm} layout="vertical">
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item
-                name="name"
-                label="姓名"
-                rules={[{ required: true, message: '请输入姓名' }]}
-              >
-                <Input placeholder="成员姓名" />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
-                name="position"
-                label="职位"
-                rules={[{ required: true, message: '请输入职位' }]}
-              >
-                <Input placeholder="如: 主席、副主席、秘书等" />
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item
-                name="email"
-                label="邮箱"
-                rules={[
-                  { required: true, message: '请输入邮箱' },
-                  { type: 'email', message: '请输入有效的邮箱地址' }
-                ]}
-              >
-                <Input placeholder="邮箱地址" />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
-                name="phone"
-                label="电话"
-              >
-                <Input placeholder="联系电话" />
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item
-                name="role"
-                label="角色"
-                rules={[{ required: true, message: '请选择角色' }]}
-              >
-                <Select placeholder="选择角色">
-                  <Option value="leader">负责人</Option>
-                  <Option value="coordinator">协调员</Option>
-                  <Option value="member">成员</Option>
-                  <Option value="advisor">顾问</Option>
-                </Select>
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
-                name="isActive"
-                label="状态"
-                valuePropName="checked"
-                initialValue={true}
-              >
-                <Select>
-                  <Option value={true}>活跃</Option>
-                  <Option value={false}>停用</Option>
-                </Select>
-              </Form.Item>
-            </Col>
-          </Row>
-
+          
           <Form.Item
-            name="notes"
-            label="备注"
+            name="responsiblePerson"
+            label="负责人"
           >
-            <TextArea rows={3} placeholder="其他备注信息" />
+            <Select
+              placeholder="选择负责人"
+              allowClear
+              showSearch
+              filterOption={(input, option) =>
+                String(option?.children || '').toLowerCase().includes(input.toLowerCase())
+              }
+            >
+              {members.map(member => (
+                <Option key={member.id} value={member.name}>
+                  {member.name}
+                </Option>
+              ))}
+            </Select>
+          </Form.Item>
+          
+          <Form.Item
+            name="team"
+            label="团队成员"
+          >
+            <Select
+              mode="multiple"
+              placeholder="选择团队成员"
+              allowClear
+              showSearch
+              filterOption={(input, option) =>
+                String(option?.children || '').toLowerCase().includes(input.toLowerCase())
+              }
+            >
+              {members.map(member => (
+                <Option key={member.id} value={member.name}>
+                  {member.name}
+                </Option>
+              ))}
+            </Select>
           </Form.Item>
         </Form>
       </Modal>

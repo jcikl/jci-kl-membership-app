@@ -26,39 +26,6 @@ export type AwardStatus =
   | 'closed'
   | 'evaluating';
 
-// 团队管理相关类型
-export interface TeamMember {
-  id: string;
-  memberId: string;
-  name: string;
-  position: string; // 职位
-  email: string;
-  phone?: string;
-  role: TeamRole;
-  isActive: boolean;
-  joinedAt: string;
-  notes?: string;
-}
-
-export type TeamRole = 
-  | 'leader'      // 负责人
-  | 'coordinator'  // 协调员
-  | 'member'       // 成员
-  | 'advisor';     // 顾问
-
-export interface AwardTeam {
-  id: string;
-  awardId: string;
-  awardType: AwardCategory;
-  teamName: string;
-  description?: string;
-  members: TeamMember[];
-  createdAt: string;
-  updatedAt: string;
-  createdBy: string;
-  updatedBy: string;
-}
-
 // Efficient Star 奖励系统
 export interface EfficientStarAward extends Award {
   category: 'efficient_star';
@@ -67,7 +34,6 @@ export interface EfficientStarAward extends Award {
   currentScore: number;
   deadline: string;
   criteria: EfficientStarCriteria;
-  team?: AwardTeam; // 团队信息
 }
 
 export interface EfficientStarStandard {
@@ -81,6 +47,8 @@ export interface EfficientStarStandard {
   status: 'pending' | 'completed' | 'overdue';
   guidelines?: string;
   subStandards?: EfficientStarSubStandard[];
+  responsiblePerson?: string; // 负责人
+  team?: string[]; // 团队成员
 }
 
 export interface EfficientStarSubStandard {
@@ -93,6 +61,8 @@ export interface EfficientStarSubStandard {
   myScore?: number;
   status: 'pending' | 'completed' | 'overdue';
   guidelines?: string;
+  responsiblePerson?: string; // 负责人
+  team?: string[]; // 团队成员
 }
 
 export interface EfficientStarCriteria {
@@ -110,7 +80,6 @@ export interface StarPointAward extends Award {
   currentScore: number;
   deadline: string;
   terms: string[];
-  team?: AwardTeam; // 团队信息
 }
 
 export type StarCategoryType = 
@@ -141,6 +110,8 @@ export interface StarActivity {
   status: 'pending' | 'completed' | 'overdue';
   guidelines?: string;
   deadline?: string;
+  responsiblePerson?: string; // 负责人
+  team?: string[]; // 团队成员
 }
 
 // National & Area Incentive 奖励系统
@@ -148,7 +119,6 @@ export interface NationalAreaIncentiveAward extends Award {
   category: 'national_area_incentive';
   awardCategories: IncentiveAwardCategory[];
   submissionGuideline?: string;
-  team?: AwardTeam; // 团队信息
 }
 
 export interface IncentiveAwardCategory {
@@ -165,6 +135,8 @@ export interface IncentiveAward {
   areaAllocation: string; // 如 "-", "1*"
   guidelines?: string;
   status: 'open' | 'closed' | 'completed';
+  responsiblePerson?: string; // 负责人
+  team?: string[]; // 团队成员
 }
 
 // E-Awards 奖励系统
