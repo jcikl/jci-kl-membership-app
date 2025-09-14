@@ -49,6 +49,7 @@ export interface EfficientStarStandard {
   subStandards?: EfficientStarSubStandard[];
   responsiblePerson?: string; // 负责人
   team?: string[]; // 团队成员
+  teamManagement?: TeamManagement; // 团队管理
 }
 
 export interface EfficientStarSubStandard {
@@ -112,6 +113,7 @@ export interface StarActivity {
   deadline?: string;
   responsiblePerson?: string; // 负责人
   team?: string[]; // 团队成员
+  teamManagement?: TeamManagement; // 团队管理
 }
 
 // National & Area Incentive 奖励系统
@@ -137,6 +139,7 @@ export interface IncentiveAward {
   status: 'open' | 'closed' | 'completed';
   responsiblePerson?: string; // 负责人
   team?: string[]; // 团队成员
+  teamManagement?: TeamManagement; // 团队管理
 }
 
 // E-Awards 奖励系统
@@ -432,4 +435,38 @@ export interface AwardConfiguration {
       end: string;
     };
   };
+}
+
+// 团队管理相关类型定义
+export interface TeamManagement {
+  id: string;
+  awardType: 'efficient_star' | 'star_point' | 'national_area_incentive';
+  awardId: string; // 关联的奖励ID
+  positions: TeamPosition[];
+  members: TeamMember[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface TeamPosition {
+  id: string;
+  name: string;
+  description: string;
+  responsibilities: string[];
+  requiredSkills?: string[];
+  isRequired: boolean; // 是否必需职位
+  maxMembers?: number; // 最大成员数
+  order: number; // 排序
+}
+
+export interface TeamMember {
+  id: string;
+  memberId: string; // 关联的会员ID
+  memberName: string;
+  positionId: string; // 关联的职位ID
+  positionName: string;
+  assignedAt: string;
+  assignedBy: string;
+  status: 'active' | 'inactive' | 'pending';
+  notes?: string;
 }

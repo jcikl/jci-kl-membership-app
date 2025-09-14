@@ -38,6 +38,7 @@ import {
   ClockCircleOutlined,
   ExclamationCircleOutlined,
   DownloadOutlined,
+  UserOutlined,
 } from '@ant-design/icons';
 import { 
   EfficientStarAward,
@@ -48,7 +49,10 @@ import {
   StarActivity,
   IncentiveAward,
   StarCategoryType,
-  AwardCategory
+  AwardCategory,
+  TeamManagement,
+  TeamPosition,
+  TeamMember
 } from '@/types/awards';
 import { awardService } from '@/services/awardService';
 import { indicatorService } from '@/services/indicatorService';
@@ -77,6 +81,15 @@ const AwardIndicatorManagement: React.FC<AwardIndicatorManagementProps> = ({
   
   // Members for responsible person and team selection
   const [members, setMembers] = useState<any[]>([]);
+  
+  // Team management states
+  const [teamManagementModalVisible, setTeamManagementModalVisible] = useState(false);
+  const [selectedAwardForTeam, setSelectedAwardForTeam] = useState<{
+    type: 'efficient_star' | 'star_point' | 'national_area_incentive';
+    id: string;
+    title: string;
+  } | null>(null);
+  const [teamManagement, setTeamManagement] = useState<TeamManagement | null>(null);
   
   // Efficient Star states
   const [efficientStarAward, setEfficientStarAward] = useState<EfficientStarAward | null>(null);
@@ -176,6 +189,116 @@ const AwardIndicatorManagement: React.FC<AwardIndicatorManagementProps> = ({
 
   const exportData = () => {
     message.info('导出功能开发中...');
+  };
+
+  // ========== Team Management Functions ==========
+  
+  const handleTeamManagementOpen = (awardType: 'efficient_star' | 'star_point' | 'national_area_incentive', awardId: string, title: string) => {
+    setSelectedAwardForTeam({ type: awardType, id: awardId, title });
+    setTeamManagementModalVisible(true);
+    loadTeamManagement(awardType, awardId);
+  };
+
+  const loadTeamManagement = async (awardType: 'efficient_star' | 'star_point' | 'national_area_incentive', awardId: string) => {
+    try {
+      // 这里应该调用API加载团队管理数据
+      // 暂时创建默认的团队管理结构
+      const defaultTeamManagement: TeamManagement = {
+        id: `team_${awardType}_${awardId}`,
+        awardType,
+        awardId,
+        positions: [],
+        members: [],
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+      setTeamManagement(defaultTeamManagement);
+    } catch (error) {
+      message.error('加载团队管理数据失败');
+      console.error(error);
+    }
+  };
+
+  const handleCreatePosition = () => {
+    const newPosition: TeamPosition = {
+      id: `position_${Date.now()}`,
+      name: '',
+      description: '',
+      responsibilities: [],
+      isRequired: false,
+      order: (teamManagement?.positions.length || 0) + 1
+    };
+    
+    if (teamManagement) {
+      const updatedTeamManagement = {
+        ...teamManagement,
+        positions: [...teamManagement.positions, newPosition],
+        updatedAt: new Date().toISOString()
+      };
+      setTeamManagement(updatedTeamManagement);
+    }
+  };
+
+  const handleUpdatePosition = (positionId: string, updates: Partial<TeamPosition>) => {
+    if (teamManagement) {
+      const updatedPositions = teamManagement.positions.map(pos => 
+        pos.id === positionId ? { ...pos, ...updates } : pos
+      );
+      const updatedTeamManagement = {
+        ...teamManagement,
+        positions: updatedPositions,
+        updatedAt: new Date().toISOString()
+      };
+      setTeamManagement(updatedTeamManagement);
+    }
+  };
+
+  const handleDeletePosition = (positionId: string) => {
+    if (teamManagement) {
+      const updatedPositions = teamManagement.positions.filter(pos => pos.id !== positionId);
+      const updatedMembers = teamManagement.members.filter(member => member.positionId !== positionId);
+      const updatedTeamManagement = {
+        ...teamManagement,
+        positions: updatedPositions,
+        members: updatedMembers,
+        updatedAt: new Date().toISOString()
+      };
+      setTeamManagement(updatedTeamManagement);
+    }
+  };
+
+  const handleAssignMember = (memberId: string, memberName: string, positionId: string, positionName: string) => {
+    if (teamManagement) {
+      const newMember: TeamMember = {
+        id: `member_${Date.now()}`,
+        memberId,
+        memberName,
+        positionId,
+        positionName,
+        assignedAt: new Date().toISOString(),
+        assignedBy: 'current_user', // 这里应该从认证状态获取
+        status: 'active'
+      };
+      
+      const updatedTeamManagement = {
+        ...teamManagement,
+        members: [...teamManagement.members, newMember],
+        updatedAt: new Date().toISOString()
+      };
+      setTeamManagement(updatedTeamManagement);
+    }
+  };
+
+  const handleRemoveMember = (memberId: string) => {
+    if (teamManagement) {
+      const updatedMembers = teamManagement.members.filter(member => member.id !== memberId);
+      const updatedTeamManagement = {
+        ...teamManagement,
+        members: updatedMembers,
+        updatedAt: new Date().toISOString()
+      };
+      setTeamManagement(updatedTeamManagement);
+    }
   };
 
   // ========== Efficient Star Management ==========
@@ -685,7 +808,7 @@ const AwardIndicatorManagement: React.FC<AwardIndicatorManagementProps> = ({
               
               <Table.Column
                 title="ACTION"
-                width={120}
+                width={180}
                 render={(_, record: EfficientStarStandard) => (
                   <Space>
                     <Tooltip title="编辑">
@@ -693,6 +816,13 @@ const AwardIndicatorManagement: React.FC<AwardIndicatorManagementProps> = ({
                         type="text" 
                         icon={<EditOutlined />} 
                         onClick={() => handleEfficientStarStandardEdit(record)}
+                      />
+                    </Tooltip>
+                    <Tooltip title="团队管理">
+                      <Button 
+                        type="text" 
+                        icon={<UserOutlined />} 
+                        onClick={() => handleTeamManagementOpen('efficient_star', record.id, record.title)}
                       />
                     </Tooltip>
                     <Popconfirm
@@ -914,11 +1044,18 @@ const AwardIndicatorManagement: React.FC<AwardIndicatorManagementProps> = ({
                       
                       <Table.Column
                         title="ACTION"
-                        width={100}
-                        render={() => (
+                        width={160}
+                        render={(_, record: StarActivity) => (
                           <Space>
                             <Tooltip title="编辑活动">
                               <Button type="text" icon={<EditOutlined />} />
+                            </Tooltip>
+                            <Tooltip title="团队管理">
+                              <Button 
+                                type="text" 
+                                icon={<UserOutlined />} 
+                                onClick={() => handleTeamManagementOpen('star_point', record.id, record.title)}
+                              />
                             </Tooltip>
                             <Tooltip title="删除活动">
                               <Button type="text" danger icon={<DeleteOutlined />} />
@@ -1158,7 +1295,7 @@ const AwardIndicatorManagement: React.FC<AwardIndicatorManagementProps> = ({
                 
                 <Table.Column
                   title="ACTION"
-                  width={120}
+                  width={180}
                   render={(_, record: IncentiveAward) => (
                     <Space>
                       <Tooltip title="编辑">
@@ -1166,6 +1303,13 @@ const AwardIndicatorManagement: React.FC<AwardIndicatorManagementProps> = ({
                           type="text" 
                           icon={<EditOutlined />} 
                           onClick={() => handleIncentiveAwardEdit(record)}
+                        />
+                      </Tooltip>
+                      <Tooltip title="团队管理">
+                        <Button 
+                          type="text" 
+                          icon={<UserOutlined />} 
+                          onClick={() => handleTeamManagementOpen('national_area_incentive', record.id, record.title)}
                         />
                       </Tooltip>
                       <Popconfirm
@@ -1569,6 +1713,140 @@ const AwardIndicatorManagement: React.FC<AwardIndicatorManagementProps> = ({
             </Select>
           </Form.Item>
         </Form>
+      </Modal>
+
+      {/* Team Management Modal */}
+      <Modal
+        title={`团队管理 - ${selectedAwardForTeam?.title}`}
+        open={teamManagementModalVisible}
+        onCancel={() => setTeamManagementModalVisible(false)}
+        width={1000}
+        footer={null}
+      >
+        {teamManagement && (
+          <div>
+            <div style={{ marginBottom: 24 }}>
+              <Row gutter={16}>
+                <Col span={12}>
+                  <Card title="职位管理" size="small">
+                    <div style={{ marginBottom: 16 }}>
+                      <Button 
+                        type="primary" 
+                        icon={<PlusOutlined />}
+                        onClick={handleCreatePosition}
+                      >
+                        创建职位
+                      </Button>
+                    </div>
+                    
+                    {teamManagement.positions.map((position) => (
+                      <Card key={position.id} size="small" style={{ marginBottom: 8 }}>
+                        <Row gutter={8}>
+                          <Col span={8}>
+                            <Input
+                              placeholder="职位名称"
+                              value={position.name}
+                              onChange={(e) => handleUpdatePosition(position.id, { name: e.target.value })}
+                            />
+                          </Col>
+                          <Col span={12}>
+                            <Input
+                              placeholder="职位描述"
+                              value={position.description}
+                              onChange={(e) => handleUpdatePosition(position.id, { description: e.target.value })}
+                            />
+                          </Col>
+                          <Col span={4}>
+                            <Space>
+                              <Button 
+                                type="text" 
+                                icon={<EditOutlined />}
+                                size="small"
+                              />
+                              <Popconfirm
+                                title="确定删除此职位？"
+                                onConfirm={() => handleDeletePosition(position.id)}
+                              >
+                                <Button 
+                                  type="text" 
+                                  danger 
+                                  icon={<DeleteOutlined />}
+                                  size="small"
+                                />
+                              </Popconfirm>
+                            </Space>
+                          </Col>
+                        </Row>
+                      </Card>
+                    ))}
+                  </Card>
+                </Col>
+                
+                <Col span={12}>
+                  <Card title="成员分配" size="small">
+                    <div style={{ marginBottom: 16 }}>
+                      <Text type="secondary">选择会员分配到职位</Text>
+                    </div>
+                    
+                    {teamManagement.positions.map((position) => (
+                      <div key={position.id} style={{ marginBottom: 16 }}>
+                        <Text strong>{position.name || '未命名职位'}</Text>
+                        <Select
+                          style={{ width: '100%', marginTop: 8 }}
+                          placeholder="选择会员"
+                          allowClear
+                          showSearch
+                          filterOption={(input, option) =>
+                            String(option?.children || '').toLowerCase().includes(input.toLowerCase())
+                          }
+                          onSelect={(value) => {
+                            const member = members.find(m => m.id === value);
+                            if (member) {
+                              handleAssignMember(member.id, member.name, position.id, position.name);
+                            }
+                          }}
+                        >
+                          {members.map(member => (
+                            <Option key={member.id} value={member.id}>
+                              {member.name}
+                            </Option>
+                          ))}
+                        </Select>
+                        
+                        {/* 显示已分配的成员 */}
+                        <div style={{ marginTop: 8 }}>
+                          {teamManagement.members
+                            .filter(member => member.positionId === position.id)
+                            .map((member) => (
+                              <Tag 
+                                key={member.id} 
+                                closable
+                                onClose={() => handleRemoveMember(member.id)}
+                                style={{ marginBottom: 4 }}
+                              >
+                                {member.memberName}
+                              </Tag>
+                            ))}
+                        </div>
+                      </div>
+                    ))}
+                  </Card>
+                </Col>
+              </Row>
+            </div>
+            
+            <div style={{ textAlign: 'right' }}>
+              <Space>
+                <Button onClick={() => setTeamManagementModalVisible(false)}>
+                  关闭
+                </Button>
+                <Button type="primary">
+                  保存团队设置
+                </Button>
+              </Space>
+            </div>
+          </div>
+        )}
       </Modal>
     </div>
   );
