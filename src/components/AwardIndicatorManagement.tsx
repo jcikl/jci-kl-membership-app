@@ -16,7 +16,11 @@ import {
   Tabs,
   Tag,
   Tooltip,
-  Alert
+  Alert,
+  Collapse,
+  Row,
+  Col,
+  Divider,
 } from 'antd';
 import dayjs from 'dayjs';
 import {
@@ -26,7 +30,13 @@ import {
   TrophyOutlined,
   StarOutlined,
   GiftOutlined,
-  ReloadOutlined
+  ReloadOutlined,
+  FileTextOutlined,
+  EyeOutlined,
+  SendOutlined,
+  CheckCircleOutlined,
+  ClockCircleOutlined,
+  ExclamationCircleOutlined
 } from '@ant-design/icons';
 import { 
   EfficientStarAward,
@@ -34,11 +44,13 @@ import {
   NationalAreaIncentiveAward,
   EfficientStarStandard,
   StarCategory,
-  IncentiveAward
+  StarActivity,
+  IncentiveAward,
+  StarCategoryType
 } from '@/types/awards';
 import { awardService } from '@/services/awardService';
 
-const { Title, Text } = Typography;
+const { Title, Text, Paragraph } = Typography;
 const { TextArea } = Input;
 const { Option } = Select;
 const { TabPane } = Tabs;
@@ -132,7 +144,8 @@ const AwardIndicatorManagement: React.FC<AwardIndicatorManagementProps> = ({
             ...values,
             id: editingStandard.id,
             deadline: values.deadline?.format('YYYY-MM-DD') || '',
-            status: editingStandard.status
+            status: editingStandard.status,
+            myScore: editingStandard.myScore
           };
         }
       } else {
@@ -215,7 +228,8 @@ const AwardIndicatorManagement: React.FC<AwardIndicatorManagementProps> = ({
           updatedCategories[index] = {
             ...values,
             id: editingCategory.id,
-            activities: editingCategory.activities
+            activities: editingCategory.activities,
+            myPoints: editingCategory.myPoints
           };
         }
       } else {
@@ -357,103 +371,241 @@ const AwardIndicatorManagement: React.FC<AwardIndicatorManagementProps> = ({
     }
   };
 
+  // ========== Helper Functions ==========
+  
+  const getStarIcon = (type: StarCategoryType) => {
+    switch (type) {
+      case 'network_star':
+        return <StarOutlined style={{ color: '#1890ff' }} />;
+      case 'experience_star':
+        return <StarOutlined style={{ color: '#52c41a' }} />;
+      case 'social_star':
+        return <StarOutlined style={{ color: '#fa8c16' }} />;
+      case 'outreach_star':
+        return <StarOutlined style={{ color: '#eb2f96' }} />;
+      default:
+        return <StarOutlined style={{ color: '#d9d9d9' }} />;
+    }
+  };
+
+  const getStarTitle = (type: StarCategoryType) => {
+    switch (type) {
+      case 'network_star':
+        return 'Network Star';
+      case 'experience_star':
+        return 'Experience Star';
+      case 'social_star':
+        return 'Social Star';
+      case 'outreach_star':
+        return 'Outreach Star';
+      default:
+        return 'Unknown Star';
+    }
+  };
+
+  const getStatusTag = (status: string) => {
+    switch (status) {
+      case 'completed':
+        return <Tag color="green" icon={<CheckCircleOutlined />}>已完成</Tag>;
+      case 'closed':
+        return <Tag color="red" icon={<ExclamationCircleOutlined />}>已关闭</Tag>;
+      default:
+        return <Tag color="blue" icon={<ClockCircleOutlined />}>开放中</Tag>;
+    }
+  };
+
+  const getNationalAllocationColor = (allocation: string) => {
+    if (allocation.includes('**')) return '#f5222d';
+    if (allocation.includes('*')) return '#fa8c16';
+    return '#52c41a';
+  };
+
+  const getAreaAllocationColor = (allocation: string) => {
+    if (allocation === '-') return '#d9d9d9';
+    if (allocation.includes('*')) return '#fa8c16';
+    return '#52c41a';
+  };
+
   // ========== Render Functions ==========
   
   const renderEfficientStarTab = () => (
-    <Card>
-      <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div>
-          <Title level={4}>Efficient Star 指标管理</Title>
-          <Text type="secondary">管理Efficient Star奖励的标准和指标</Text>
-        </div>
-        <Button 
-          type="primary" 
-          icon={<PlusOutlined />} 
-          onClick={handleEfficientStarStandardCreate}
-        >
-          添加标准
-        </Button>
-      </div>
-
+    <div>
       {efficientStarAward ? (
-        <Table
-          dataSource={efficientStarAward.standards}
-          rowKey="id"
-          pagination={false}
-          scroll={{ x: 800 }}
-          columns={[
-            {
-              title: 'NO.',
-              dataIndex: 'no',
-              width: 60,
-              align: 'center'
-            },
-            {
-              title: 'STANDARDS',
-              dataIndex: 'title',
-              render: (text, record) => (
-                <div>
-                  <Text strong>{text}</Text>
-                  <br />
-                  <Text type="secondary" style={{ fontSize: '12px' }}>
-                    {record.description}
+        <>
+          {/* Header Card - 完全符合原始UI */}
+          <Card style={{ marginBottom: 24 }}>
+            <Row gutter={24}>
+              <Col span={16}>
+                <div style={{ marginBottom: 16 }}>
+                  <Title level={3} style={{ color: '#1890ff', marginBottom: 8 }}>
+                    {efficientStarAward.title}
+                  </Title>
+                  <Text strong style={{ color: '#1890ff' }}>
+                    {efficientStarAward.description}
                   </Text>
                 </div>
-              )
-            },
-            {
-              title: 'DEADLINE/CRITERIA',
-              dataIndex: 'deadline',
-              width: 120,
-              render: (deadline) => (
-                <Tag color="blue">{deadline}</Tag>
-              )
-            },
-            {
-              title: 'SCORE',
-              dataIndex: 'score',
-              width: 80,
-              align: 'center',
-              render: (score) => (
-                <Text strong>{score}%</Text>
-              )
-            },
-            {
-              title: 'MY SCORE',
-              dataIndex: 'myScore',
-              width: 80,
-              align: 'center',
-              render: (myScore) => (
-                <Text>{myScore || '-'}</Text>
-              )
-            },
-            {
-              title: 'ACTION',
-              width: 120,
-              render: (_, record) => (
-                <Space>
-                  <Tooltip title="编辑">
-                    <Button 
-                      type="text" 
-                      icon={<EditOutlined />} 
-                      onClick={() => handleEfficientStarStandardEdit(record)}
-                    />
-                  </Tooltip>
-                  <Popconfirm
-                    title="确定删除此标准？"
-                    onConfirm={() => handleEfficientStarStandardDelete(record.id)}
-                    okText="确定"
-                    cancelText="取消"
-                  >
-                    <Tooltip title="删除">
-                      <Button type="text" danger icon={<DeleteOutlined />} />
-                    </Tooltip>
-                  </Popconfirm>
+                <Divider />
+                <Space direction="vertical" size="small">
+                  <Button type="primary" icon={<FileTextOutlined />}>
+                    Submit Score
+                  </Button>
+                  <Button icon={<EyeOutlined />}>
+                    View History
+                  </Button>
                 </Space>
-              )
+              </Col>
+              <Col span={8}>
+                <Card size="small" style={{ backgroundColor: '#f0f9ff', border: '1px solid #1890ff' }}>
+                  <div style={{ textAlign: 'center' }}>
+                    <Title level={4} style={{ color: '#1890ff', marginBottom: 8 }}>
+                      Achievement Tiers
+                    </Title>
+                    {efficientStarAward.criteria.tiers.map((tier, index) => (
+                      <div key={index} style={{ marginBottom: 8 }}>
+                        <Text strong style={{ color: '#1890ff' }}>
+                          {tier.score}: {tier.award}
+                        </Text>
+                      </div>
+                    ))}
+                  </div>
+                </Card>
+              </Col>
+            </Row>
+          </Card>
+
+          {/* Standards Table - 完全符合原始UI */}
+          <Card 
+            title="Standards and Tasks"
+            extra={
+              <Button 
+                type="primary" 
+                icon={<PlusOutlined />} 
+                onClick={handleEfficientStarStandardCreate}
+              >
+                Add Standard
+              </Button>
             }
-          ]}
-        />
+          >
+            <Table
+              dataSource={efficientStarAward.standards}
+              rowKey="id"
+              pagination={false}
+              scroll={{ x: 800 }}
+            >
+              <Table.Column
+                title="NO."
+                dataIndex="no"
+                width={60}
+                align="center"
+              />
+              
+              <Table.Column
+                title="STANDARDS"
+                dataIndex="title"
+                render={(title, record: EfficientStarStandard) => (
+                  <div>
+                    <div style={{ marginBottom: 8 }}>
+                      <Text strong>{title}</Text>
+                      {record.guidelines && (
+                        <Button
+                          type="link"
+                          size="small"
+                          icon={<FileTextOutlined />}
+                          style={{ marginLeft: 8 }}
+                        >
+                          Guideline
+                        </Button>
+                      )}
+                    </div>
+                    <Text type="secondary">{record.description}</Text>
+                    
+                    {/* 子标准 */}
+                    {record.subStandards && record.subStandards.length > 0 && (
+                      <div style={{ marginTop: 12 }}>
+                        {record.subStandards.map((subStandard) => (
+                          <div key={subStandard.id} style={{ marginBottom: 8, paddingLeft: 16 }}>
+                            <div style={{ marginBottom: 4 }}>
+                              <Text strong>{subStandard.no} {subStandard.title}</Text>
+                              {subStandard.guidelines && (
+                                <Button
+                                  type="link"
+                                  size="small"
+                                  icon={<FileTextOutlined />}
+                                  style={{ marginLeft: 8 }}
+                                >
+                                  Guideline
+                                </Button>
+                              )}
+                            </div>
+                            <Text type="secondary">{subStandard.description}</Text>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              />
+              
+              <Table.Column
+                title="DEADLINE/CRITERIA"
+                dataIndex="deadline"
+                width={120}
+                align="center"
+              />
+              
+              <Table.Column
+                title="SCORE"
+                dataIndex="score"
+                width={80}
+                align="center"
+                render={(score) => (
+                  <Text strong>{score}%</Text>
+                )}
+              />
+              
+              <Table.Column
+                title="MY SCORE"
+                width={120}
+                align="center"
+                render={(_, record: EfficientStarStandard) => (
+                  record.myScore !== undefined && record.myScore > 0 ? (
+                    <Text strong style={{ color: '#52c41a' }}>
+                      {record.myScore}%
+                    </Text>
+                  ) : (
+                    <Text type="secondary">-</Text>
+                  )
+                )}
+              />
+              
+              <Table.Column
+                title="ACTION"
+                width={120}
+                render={(_, record: EfficientStarStandard) => (
+                  <Space>
+                    <Tooltip title="编辑">
+                      <Button 
+                        type="text" 
+                        icon={<EditOutlined />} 
+                        onClick={() => handleEfficientStarStandardEdit(record)}
+                      />
+                    </Tooltip>
+                    <Popconfirm
+                      title="确定删除此标准？"
+                      onConfirm={() => handleEfficientStarStandardDelete(record.id)}
+                      okText="确定"
+                      cancelText="取消"
+                    >
+                      <Tooltip title="删除">
+                        <Button type="text" danger icon={<DeleteOutlined />} />
+                      </Tooltip>
+                    </Popconfirm>
+                  </Space>
+                )}
+              />
+            </Table>
+          </Card>
+        </>
       ) : (
         <Alert 
           message="暂无数据" 
@@ -461,128 +613,208 @@ const AwardIndicatorManagement: React.FC<AwardIndicatorManagementProps> = ({
           type="info" 
         />
       )}
-    </Card>
+    </div>
   );
 
   const renderStarPointTab = () => (
-    <Card>
-      <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div>
-          <Title level={4}>Star Point 指标管理</Title>
-          <Text type="secondary">管理Star Point奖励的类别和活动</Text>
-        </div>
-        <Button 
-          type="primary" 
-          icon={<PlusOutlined />} 
-          onClick={handleStarCategoryCreate}
-        >
-          添加类别
-        </Button>
-      </div>
-
+    <div>
       {starPointAward ? (
-        <div>
-          {starPointAward.starCategories.map(category => (
-            <Card key={category.id} style={{ marginBottom: 16 }}>
-              <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div>
-                  <Title level={5}>
-                    {category.title.toUpperCase()} - [{category.myPoints} points]
+        <>
+          {/* Header Card - 完全符合原始UI */}
+          <Card style={{ marginBottom: 24 }}>
+            <Row gutter={24}>
+              <Col span={16}>
+                <div style={{ marginBottom: 16 }}>
+                  <Title level={3} style={{ color: '#52c41a', marginBottom: 8 }}>
+                    {starPointAward.title}
                   </Title>
-                  <Text type="secondary">
-                    {category.myPoints} / {category.points} Points
+                  <Text strong style={{ color: '#52c41a' }}>
+                    {starPointAward.description}
                   </Text>
-                  <br />
-                  <Text>{category.description}</Text>
-                  <br />
-                  <Text strong>Objective:</Text> {category.objective}
-                  <br />
-                  <Text strong>Note:</Text> {category.note}
                 </div>
-                <Space>
-                  <Button 
-                    type="text" 
-                    icon={<EditOutlined />} 
-                    onClick={() => handleStarCategoryEdit(category)}
-                  >
-                    编辑类别
+                <Divider />
+                <Space direction="vertical" size="small">
+                  <Button type="primary" icon={<FileTextOutlined />}>
+                    Submit Score
                   </Button>
-                  <Popconfirm
-                    title="确定删除此类别？"
-                    onConfirm={() => handleStarCategoryDelete(category.id)}
-                    okText="确定"
-                    cancelText="取消"
-                  >
-                    <Button type="text" danger icon={<DeleteOutlined />}>
-                      删除类别
-                    </Button>
-                  </Popconfirm>
+                  <Button icon={<EyeOutlined />}>
+                    View History
+                  </Button>
                 </Space>
-              </div>
-
-              <Table
-                dataSource={category.activities}
-                rowKey="id"
-                pagination={false}
-                size="small"
-                columns={[
-                  {
-                    title: 'NO.',
-                    dataIndex: 'no',
-                    width: 60,
-                    align: 'center'
-                  },
-                  {
-                    title: 'DETAILS',
-                    dataIndex: 'title',
-                    render: (text, record) => (
-                      <div>
-                        <Text strong>{text}</Text>
-                        <br />
-                        <Text type="secondary" style={{ fontSize: '12px' }}>
-                          {record.description}
-                        </Text>
+              </Col>
+              <Col span={8}>
+                <Card size="small" style={{ backgroundColor: '#f6ffed', border: '1px solid #52c41a' }}>
+                  <div style={{ textAlign: 'center' }}>
+                    <Title level={4} style={{ color: '#52c41a', marginBottom: 8 }}>
+                      Terms & Conditions
+                    </Title>
+                    {starPointAward.terms.map((term, index) => (
+                      <div key={index} style={{ marginBottom: 4 }}>
+                        <Text style={{ fontSize: 12 }}>• {term}</Text>
                       </div>
-                    )
-                  },
-                  {
-                    title: 'SCORE',
-                    dataIndex: 'score',
-                    width: 100,
-                    align: 'center'
-                  },
-                  {
-                    title: 'MY SCORE',
-                    dataIndex: 'myScore',
-                    width: 100,
-                    align: 'center',
-                    render: (myScore) => (
-                      <Text>{myScore || '-'}</Text>
-                    )
-                  },
-                  {
-                    title: 'ACTION',
-                    width: 100,
-                    render: () => (
+                    ))}
+                  </div>
+                </Card>
+              </Col>
+            </Row>
+          </Card>
+
+          {/* Star Categories - 完全符合原始UI */}
+          <Card 
+            title="Star Categories"
+            extra={
+              <Button 
+                type="primary" 
+                icon={<PlusOutlined />} 
+                onClick={handleStarCategoryCreate}
+              >
+                Add Category
+              </Button>
+            }
+          >
+            <Collapse
+              defaultActiveKey={['0']} 
+              ghost
+              items={starPointAward.starCategories.map((category, categoryIndex) => ({
+                key: categoryIndex.toString(),
+                label: (
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+                    <div style={{ display: 'flex', alignItems: 'center' }}>
+                      {getStarIcon(category.type)}
+                      <span style={{ marginLeft: 8, fontWeight: 'bold' }}>
+                        {getStarTitle(category.type)} - [{category.myPoints} point{category.myPoints !== 1 ? 's' : ''}]
+                      </span>
+                    </div>
+                    <div>
+                      <Text type="secondary">
+                        {category.myPoints} / {category.points} Points
+                      </Text>
+                    </div>
+                  </div>
+                ),
+                children: (
+                  <>
+                    <Card size="small" style={{ marginBottom: 16 }}>
+                      <Paragraph style={{ marginBottom: 8 }}>
+                        <Text strong>Description:</Text> {category.description}
+                      </Paragraph>
+                      <Paragraph style={{ marginBottom: 8 }}>
+                        <Text strong>Objective:</Text> {category.objective}
+                      </Paragraph>
+                      {category.note && (
+                        <Alert
+                          message="Note"
+                          description={category.note}
+                          type="warning"
+                          showIcon
+                          style={{ marginTop: 8 }}
+                        />
+                      )}
+                    </Card>
+
+                    <Table
+                      dataSource={category.activities}
+                      rowKey="id"
+                      pagination={false}
+                      size="small"
+                    >
+                      <Table.Column
+                        title="NO."
+                        dataIndex="no"
+                        width={60}
+                        align="center"
+                      />
+                      
+                      <Table.Column
+                        title="DETAILS"
+                        dataIndex="title"
+                        render={(title, record: StarActivity) => (
+                          <div>
+                            <div style={{ marginBottom: 4 }}>
+                              <Text strong>{title}</Text>
+                              {record.guidelines && (
+                                <Button
+                                  type="link"
+                                  size="small"
+                                  icon={<FileTextOutlined />}
+                                  style={{ marginLeft: 8 }}
+                                >
+                                  Guideline
+                                </Button>
+                              )}
+                            </div>
+                            <Text type="secondary">{record.description}</Text>
+                          </div>
+                        )}
+                      />
+                      
+                      <Table.Column
+                        title="SCORE"
+                        dataIndex="score"
+                        width={200}
+                        render={(score) => (
+                          <Text style={{ fontSize: 12 }}>{score}</Text>
+                        )}
+                      />
+                      
+                      <Table.Column
+                        title="MY SCORE"
+                        width={100}
+                        align="center"
+                        render={(_, record: StarActivity) => (
+                          record.myScore !== undefined ? (
+                            <Text strong style={{ color: '#52c41a' }}>
+                              {record.myScore}
+                            </Text>
+                          ) : (
+                            <Text type="secondary">-</Text>
+                          )
+                        )}
+                      />
+                      
+                      <Table.Column
+                        title="ACTION"
+                        width={100}
+                        render={() => (
+                          <Space>
+                            <Tooltip title="编辑活动">
+                              <Button type="text" icon={<EditOutlined />} />
+                            </Tooltip>
+                            <Tooltip title="删除活动">
+                              <Button type="text" danger icon={<DeleteOutlined />} />
+                            </Tooltip>
+                          </Space>
+                        )}
+                      />
+                    </Table>
+
+                    <div style={{ marginTop: 16, textAlign: 'right' }}>
                       <Space>
-                        <Tooltip title="编辑活动">
-                          <Button 
-                            type="text" 
-                            icon={<EditOutlined />} 
-                            onClick={() => {/* TODO: Implement activity editing */}}
-                          />
-                        </Tooltip>
-                        <Tooltip title="删除活动">
-                          <Button type="text" danger icon={<DeleteOutlined />} />
-                        </Tooltip>
+                        <Button 
+                          type="text" 
+                          icon={<EditOutlined />} 
+                          onClick={() => handleStarCategoryEdit(category)}
+                        >
+                          Edit Category
+                        </Button>
+                        <Popconfirm
+                          title="确定删除此类别？"
+                          onConfirm={() => handleStarCategoryDelete(category.id)}
+                          okText="确定"
+                          cancelText="取消"
+                        >
+                          <Button type="text" danger icon={<DeleteOutlined />}>
+                            Delete Category
+                          </Button>
+                        </Popconfirm>
                       </Space>
-                    )
-                  }
-                ]}
-              />
-            </Card>
-          ))}
-        </div>
+                    </div>
+                  </>
+                )
+              }))}
+            />
+          </Card>
+        </>
       ) : (
         <Alert 
           message="暂无数据" 
@@ -590,136 +822,194 @@ const AwardIndicatorManagement: React.FC<AwardIndicatorManagementProps> = ({
           type="info" 
         />
       )}
-    </Card>
+    </div>
   );
 
   const renderNationalIncentiveTab = () => (
-    <Card>
-      <div style={{ marginBottom: 16 }}>
-        <Title level={4}>National & Area Incentive 指标管理</Title>
-        <Text type="secondary">管理National & Area Incentive奖励的奖项</Text>
-      </div>
-
+    <div>
       {nationalIncentiveAward ? (
-        <div>
-          <Alert 
-            message="National Incentive简介" 
-            description={
-              <div>
-                <Text strong>{nationalIncentiveAward.title}</Text>
-                <br />
-                <Text>{nationalIncentiveAward.description}</Text>
-                <br />
-                <Text>The Award categories are divided into:</Text>
-                <ul>
-                  <li>A. Individual Awards</li>
-                  <li>B. Local Organisation Awards</li>
-                  <li>C. Area Awards</li>
-                  <li>D. Special Awards</li>
-                  <li>E. JCI Junior, Youth Awards</li>
-                </ul>
-              </div>
-            }
-            type="info"
-            style={{ marginBottom: 16 }}
-          />
+        <>
+          {/* Header Card - 完全符合原始UI */}
+          <Card style={{ marginBottom: 24 }}>
+            <Row gutter={24}>
+              <Col span={16}>
+                <div style={{ marginBottom: 16 }}>
+                  <Title level={3} style={{ color: '#13c2c2', marginBottom: 8 }}>
+                    {nationalIncentiveAward.title}
+                  </Title>
+                  <Text strong style={{ color: '#13c2c2' }}>
+                    {nationalIncentiveAward.description}
+                  </Text>
+                </div>
+                <Divider />
+                <Space direction="vertical" size="small">
+                  <Button type="primary" icon={<FileTextOutlined />}>
+                    Submit Score
+                  </Button>
+                  <Button icon={<EyeOutlined />}>
+                    View History
+                  </Button>
+                </Space>
+              </Col>
+              <Col span={8}>
+                <Card size="small" style={{ backgroundColor: '#e6fffb', border: '1px solid #13c2c2' }}>
+                  <div style={{ textAlign: 'center' }}>
+                    <Title level={4} style={{ color: '#13c2c2', marginBottom: 8 }}>
+                      Award Categories
+                    </Title>
+                    <div style={{ marginBottom: 4 }}>
+                      <Text style={{ fontSize: 12 }}>A. Individual Awards</Text>
+                    </div>
+                    <div style={{ marginBottom: 4 }}>
+                      <Text style={{ fontSize: 12 }}>B. Local Organisation Awards</Text>
+                    </div>
+                    <div style={{ marginBottom: 4 }}>
+                      <Text style={{ fontSize: 12 }}>C. Area Awards</Text>
+                    </div>
+                    <div style={{ marginBottom: 4 }}>
+                      <Text style={{ fontSize: 12 }}>D. Special Awards</Text>
+                    </div>
+                    <div style={{ marginBottom: 4 }}>
+                      <Text style={{ fontSize: 12 }}>E. JCI Junior, Youth Awards</Text>
+                    </div>
+                  </div>
+                </Card>
+              </Col>
+            </Row>
+          </Card>
 
-          {nationalIncentiveAward.awardCategories.map(category => (
-            <Card key={category.id} style={{ marginBottom: 16 }}>
+          {/* 提交指南 */}
+          {nationalIncentiveAward.submissionGuideline && (
+            <div style={{ marginBottom: 24 }}>
+              <Button
+                type="primary"
+                icon={<SendOutlined />}
+                style={{ backgroundColor: '#13c2c2', borderColor: '#13c2c2' }}
+              >
+                Submission Guideline
+              </Button>
+            </div>
+          )}
+
+          {/* 奖励列表 - 完全符合原始UI */}
+          {nationalIncentiveAward.awardCategories.map((category) => (
+            <Card key={category.id} style={{ marginBottom: 24 }}>
               <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <Title level={5}>{category.category}</Title>
+                <Title level={4} style={{ color: '#52c41a', marginBottom: 16 }}>
+                  {category.category}
+                </Title>
                 <Button 
                   type="primary" 
                   icon={<PlusOutlined />} 
-                  onClick={() => handleIncentiveAwardCreate()}
+                  onClick={handleIncentiveAwardCreate}
                 >
-                  添加奖项
+                  Add Award
                 </Button>
               </div>
-
+              
               <Table
                 dataSource={category.awards}
                 rowKey="id"
                 pagination={false}
-                columns={[
-                  {
-                    title: 'NO.',
-                    dataIndex: 'no',
-                    width: 80,
-                    align: 'center'
-                  },
-                  {
-                    title: 'AWARDS',
-                    dataIndex: 'title',
-                    render: (text, record) => (
-                      <div>
-                        <Text strong>{text}</Text>
-                        <br />
-                        <Text type="secondary" style={{ fontSize: '12px' }}>
-                          {record.guidelines}
-                        </Text>
+                scroll={{ x: 800 }}
+              >
+                <Table.Column
+                  title="NO."
+                  dataIndex="no"
+                  width={80}
+                  align="center"
+                />
+                
+                <Table.Column
+                  title="AWARDS"
+                  dataIndex="title"
+                  render={(title, record: IncentiveAward) => (
+                    <div>
+                      <div style={{ marginBottom: 4 }}>
+                        <Text strong>{title}</Text>
+                        {record.guidelines && (
+                          <Button
+                            type="link"
+                            size="small"
+                            icon={<FileTextOutlined />}
+                            style={{ marginLeft: 8 }}
+                          >
+                            Guideline
+                          </Button>
+                        )}
                       </div>
-                    )
-                  },
-                  {
-                    title: 'NATIONAL',
-                    dataIndex: 'nationalAllocation',
-                    width: 100,
-                    align: 'center',
-                    render: (allocation) => (
-                      <Text strong>{allocation}</Text>
-                    )
-                  },
-                  {
-                    title: 'AREA',
-                    dataIndex: 'areaAllocation',
-                    width: 100,
-                    align: 'center',
-                    render: (allocation) => (
-                      <Text strong>{allocation}</Text>
-                    )
-                  },
-                  {
-                    title: 'STATUS',
-                    dataIndex: 'status',
-                    width: 100,
-                    align: 'center',
-                    render: (status) => (
-                      <Tag color={status === 'open' ? 'green' : status === 'closed' ? 'red' : 'blue'}>
-                        {status === 'open' ? '开放中' : status === 'closed' ? '已关闭' : '已完成'}
-                      </Tag>
-                    )
-                  },
-                  {
-                    title: 'ACTION',
-                    width: 120,
-                    render: (_, record) => (
-                      <Space>
-                        <Tooltip title="编辑">
-                          <Button 
-                            type="text" 
-                            icon={<EditOutlined />} 
-                            onClick={() => handleIncentiveAwardEdit(record)}
-                          />
+                      <div>
+                        {getStatusTag(record.status)}
+                      </div>
+                    </div>
+                  )}
+                />
+                
+                <Table.Column
+                  title="NATIONAL"
+                  dataIndex="nationalAllocation"
+                  width={100}
+                  align="center"
+                  render={(allocation) => (
+                    <Text 
+                      strong 
+                      style={{ 
+                        color: getNationalAllocationColor(allocation),
+                        fontSize: 16
+                      }}
+                    >
+                      {allocation}
+                    </Text>
+                  )}
+                />
+                
+                <Table.Column
+                  title="AREA"
+                  dataIndex="areaAllocation"
+                  width={100}
+                  align="center"
+                  render={(allocation) => (
+                    <Text 
+                      strong 
+                      style={{ 
+                        color: getAreaAllocationColor(allocation),
+                        fontSize: 16
+                      }}
+                    >
+                      {allocation}
+                    </Text>
+                  )}
+                />
+                
+                <Table.Column
+                  title="ACTION"
+                  width={120}
+                  render={(_, record: IncentiveAward) => (
+                    <Space>
+                      <Tooltip title="编辑">
+                        <Button 
+                          type="text" 
+                          icon={<EditOutlined />} 
+                          onClick={() => handleIncentiveAwardEdit(record)}
+                        />
+                      </Tooltip>
+                      <Popconfirm
+                        title="确定删除此奖项？"
+                        onConfirm={() => handleIncentiveAwardDelete(record.id)}
+                        okText="确定"
+                        cancelText="取消"
+                      >
+                        <Tooltip title="删除">
+                          <Button type="text" danger icon={<DeleteOutlined />} />
                         </Tooltip>
-                        <Popconfirm
-                          title="确定删除此奖项？"
-                          onConfirm={() => handleIncentiveAwardDelete(record.id)}
-                          okText="确定"
-                          cancelText="取消"
-                        >
-                          <Tooltip title="删除">
-                            <Button type="text" danger icon={<DeleteOutlined />} />
-                          </Tooltip>
-                        </Popconfirm>
-                      </Space>
-                    )
-                  }
-                ]}
-              />
+                      </Popconfirm>
+                    </Space>
+                  )}
+                />
+              </Table>
             </Card>
           ))}
-        </div>
+        </>
       ) : (
         <Alert 
           message="暂无数据" 
@@ -727,7 +1017,7 @@ const AwardIndicatorManagement: React.FC<AwardIndicatorManagementProps> = ({
           type="info" 
         />
       )}
-    </Card>
+    </div>
   );
 
   return (
@@ -861,8 +1151,8 @@ const AwardIndicatorManagement: React.FC<AwardIndicatorManagementProps> = ({
             <Select>
               <Option value="network_star">Network Star</Option>
               <Option value="experience_star">Experience Star</Option>
-              <Option value="outreach_star">Outreach Star</Option>
               <Option value="social_star">Social Star</Option>
+              <Option value="outreach_star">Outreach Star</Option>
             </Select>
           </Form.Item>
           
