@@ -19,7 +19,9 @@ const app = initializeApp(firebaseConfig);
 // 初始化服务
 export const auth = getAuth(app);
 export const db = getFirestore(app);
-export const storage = getStorage(app);
+
+// 初始化 Storage，添加配置以避免CORS问题
+export const storage = getStorage(app, 'gs://jci-kl-membership-app.firebasestorage.app');
 
 // 显式开启时连接本地 Firebase 模拟器
 const useEmulators = String(import.meta.env.VITE_USE_FIREBASE_EMULATORS || '').toLowerCase() === 'true';

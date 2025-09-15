@@ -28,6 +28,7 @@ import {
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { TeamManagement, TeamPosition, TeamMember } from '../../types/awards';
+import { awardService } from '../../services/awardService';
 
 const { TextArea } = Input;
 const { Option } = Select;
@@ -44,6 +45,7 @@ interface StandardEditModalProps {
   showTeamManagement?: boolean;
   showCategorySelection?: boolean;
   availableCategories?: any[];
+  standardId?: string; // 新增：通过document ID读取standard
 }
 
 const StandardEditModal: React.FC<StandardEditModalProps> = ({
@@ -56,7 +58,8 @@ const StandardEditModal: React.FC<StandardEditModalProps> = ({
   awardType,
   showTeamManagement = false,
   showCategorySelection = false,
-  availableCategories = []
+  availableCategories = [],
+  standardId
 }) => {
   const [form] = Form.useForm();
   const [teamManagement, setTeamManagement] = useState<TeamManagement | null>(null);
@@ -131,24 +134,50 @@ const StandardEditModal: React.FC<StandardEditModalProps> = ({
   };
 
   useEffect(() => {
-    if (visible && initialValues) {
-      // 处理日期字段，将字符串转换为dayjs对象
-      const processedValues = { ...initialValues };
-      if (processedValues.deadline && typeof processedValues.deadline === 'string') {
-        processedValues.deadline = dayjs(processedValues.deadline);
-      }
-      form.setFieldsValue(processedValues);
-      
-      // 初始化分数设置数据
-      if (initialValues.scoreSettings) {
-        setScoreSettings(initialValues.scoreSettings);
-      } else {
+    const loadStandardData = async () => {
+      if (visible && standardId) {
+        try {
+          // 通过document ID加载standard数据
+          const standardData = await awardService.getStandardById(standardId);
+          if (standardData) {
+            // 处理日期字段，将字符串转换为dayjs对象
+            const processedValues = { ...standardData };
+            if (processedValues.deadline && typeof processedValues.deadline === 'string') {
+              (processedValues as any).deadline = dayjs(processedValues.deadline);
+            }
+            form.setFieldsValue(processedValues);
+            
+            // 初始化分数设置数据
+            if (standardData.scoreSettings) {
+              setScoreSettings(standardData.scoreSettings);
+            } else {
+              setScoreSettings([]);
+            }
+          }
+        } catch (error) {
+          console.error('加载standard数据失败:', error);
+        }
+      } else if (visible && initialValues) {
+        // 处理日期字段，将字符串转换为dayjs对象
+        const processedValues = { ...initialValues };
+        if (processedValues.deadline && typeof processedValues.deadline === 'string') {
+          processedValues.deadline = dayjs(processedValues.deadline);
+        }
+        form.setFieldsValue(processedValues);
+        
+        // 初始化分数设置数据
+        if (initialValues.scoreSettings) {
+          setScoreSettings(initialValues.scoreSettings);
+        } else {
+          setScoreSettings([]);
+        }
+      } else if (visible) {
+        form.resetFields();
         setScoreSettings([]);
       }
-    } else if (visible) {
-      form.resetFields();
-      setScoreSettings([]);
-    }
+    };
+
+    loadStandardData();
     
     // 初始化团队管理数据
     if (visible && showTeamManagement) {
@@ -198,18 +227,61 @@ const StandardEditModal: React.FC<StandardEditModalProps> = ({
     }
   }, [visible, initialValues, form, showTeamManagement, awardType]);
 
+  // 移除undefined值的工具函数
+  const removeUndefinedFields = (obj: any): any => {
+    if (obj === null || obj === undefined) {
+      return obj;
+    }
+    
+    if (Array.isArray(obj)) {
+      return obj.map(item => removeUndefinedFields(item));
+    }
+    
+    if (typeof obj === 'object') {
+      const cleaned: any = {};
+      for (const [key, value] of Object.entries(obj)) {
+        if (value !== undefined) {
+          cleaned[key] = removeUndefinedFields(value);
+        }
+      }
+      return cleaned;
+    }
+    
+    return obj;
+  };
+
   const handleSave = async () => {
     try {
       const values = await form.validateFields();
       
+      // 处理日期字段，确保deadline是字符串格式
+      const processedValues = { ...values };
+      if (processedValues.deadline) {
+        // 如果deadline是dayjs对象，转换为字符串
+        if (processedValues.deadline.format && typeof processedValues.deadline.format === 'function') {
+          processedValues.deadline = processedValues.deadline.format('YYYY-MM-DD');
+        }
+        // 如果deadline是其他格式，使用全局日期工具处理
+        else if (typeof processedValues.deadline === 'string') {
+          processedValues.deadline = processedValues.deadline;
+        }
+        // 如果是其他类型，尝试转换为字符串
+        else {
+          processedValues.deadline = String(processedValues.deadline);
+        }
+      }
+      
       // 包含分数设置数据
       const dataToSave = {
-        ...values,
+        ...processedValues,
         scoreSettings: scoreSettings,
         teamManagement: teamManagement
       };
       
-      onSave(dataToSave);
+      // 清理undefined值
+      const cleanDataToSave = removeUndefinedFields(dataToSave);
+      
+      onSave(cleanDataToSave);
       form.resetFields();
     } catch (error) {
       console.error('Form validation failed:', error);
@@ -621,6 +693,29 @@ const StandardEditModal: React.FC<StandardEditModalProps> = ({
       }
     );
 
+    // Efficient Star 专用字段
+    if (awardType === 'efficient_star') {
+      baseFields.push(
+        {
+          name: 'no',
+          label: '序号',
+          rules: [{ required: true, message: '请输入序号' }],
+          element: <InputNumber placeholder="请输入序号" min={1} style={{ width: '100%' }} />
+        },
+        {
+          name: 'score',
+          label: '分数',
+          rules: [{ required: true, message: '请输入分数' }],
+          element: <InputNumber placeholder="请输入分数" min={0} max={100} style={{ width: '100%' }} />
+        },
+        {
+          name: 'guidelines',
+          label: '指导原则',
+          element: <Input placeholder="请输入指导原则链接" />
+        }
+      );
+    }
+
 
     if (awardType === 'star_point') {
       if (!showCategorySelection) {
@@ -641,6 +736,26 @@ const StandardEditModal: React.FC<StandardEditModalProps> = ({
         );
       }
       
+      // Star Point 专用字段
+      baseFields.push(
+        {
+          name: 'objective',
+          label: '目标',
+          rules: [{ required: true, message: '请输入目标' }],
+          element: <Input placeholder="请输入目标" />
+        },
+        {
+          name: 'note',
+          label: '备注',
+          element: <Input placeholder="请输入备注" />
+        },
+        {
+          name: 'points',
+          label: '分数',
+          rules: [{ required: true, message: '请输入分数' }],
+          element: <InputNumber placeholder="请输入分数" min={0} style={{ width: '100%' }} />
+        }
+      );
     }
 
     if (awardType === 'national_area_incentive') {

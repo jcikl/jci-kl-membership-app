@@ -14,7 +14,8 @@ import {
   StarOutlined,
   GiftOutlined,
   SendOutlined,
-  BarChartOutlined
+  BarChartOutlined,
+  SwapOutlined
 } from '@ant-design/icons';
 import { useNavigate, useLocation } from 'react-router-dom';
 
@@ -108,6 +109,11 @@ const AppSider: React.FC = () => {
       key: '/profile',
       icon: <UserOutlined />,
       label: '个人资料',
+    },
+    {
+      key: '/migration',
+      icon: <SwapOutlined />,
+      label: '数据迁移',
     },
     {
       key: '/rbac-management',

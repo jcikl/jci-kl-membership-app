@@ -1,0 +1,47 @@
+rules_version = '2';
+
+// Firebase Storage 安全规则
+service firebase.storage {
+  match /b/{bucket}/o {
+    // 活动封面图片规则
+    match /event-covers/{fileName} {
+      // 所有认证用户都可以读取活动封面
+      allow read: if request.auth != null;
+      
+      // 只有管理员和版主可以上传活动封面
+      allow write: if request.auth != null && 
+        request.auth.token.role in ['admin', 'moderator'];
+    }
+    
+    // 分会Logo规则
+    match /chapter-logos/{fileName} {
+      // 所有认证用户都可以读取分会Logo
+      allow read: if request.auth != null;
+      
+      // 只有管理员和版主可以上传分会Logo
+      allow write: if request.auth != null && 
+        request.auth.token.role in ['admin', 'moderator'];
+    }
+    
+    // 会员头像规则
+    match /member-avatars/{fileName} {
+      // 所有认证用户都可以读取会员头像
+      allow read: if request.auth != null;
+      
+      // 用户可以上传自己的头像
+      allow write: if request.auth != null;
+    }
+    
+    // 测试上传规则（开发环境）
+    match /test-uploads/{fileName} {
+      // 所有认证用户都可以读取和上传测试文件
+      allow read, write: if request.auth != null;
+    }
+    
+    // 其他文件规则
+    match /{allPaths=**} {
+      // 默认规则：需要认证
+      allow read, write: if request.auth != null;
+    }
+  }
+}

@@ -235,7 +235,6 @@ const ProjectAccountTracker: React.FC<ProjectAccountTrackerProps> = ({
               icon={<BarChartOutlined />}
               onClick={() => {
                 // 可以添加导出功能
-                console.log('导出数据');
               }}
             >
               导出数据

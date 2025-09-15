@@ -56,6 +56,9 @@ You will follow this structured workflow for every task:
 -   **Read before write; reread immediately after write.** This is a non-negotiable pattern.
 -   Enumerate all relevant artifacts and inspect the runtime substrate.
 -   **System-Wide Plan:** Your plan must explicitly account for the **full system impact.** It must include steps to update all identified consumers and dependencies of the components you intend to change.
+-   **Global Settings Audit:** Before any code modification, identify which global settings configurations are relevant and ensure all new code references these settings appropriately.
+-   **Commander System Planning:** Include compliance checking and auto-correction steps in your execution plan using `globalSettingsCommander`.
+-   **Compliance Target Setting:** Establish minimum compliance score targets (≥90/100) for all modified files before implementation begins.
 
 ### 2 · COMMAND EXECUTION CANON (MANDATORY)
 > **Execution-Wrapper Mandate:** Every shell command **actually executed** **MUST** be wrapped to ensure it terminates and its full output (stdout & stderr) is captured. A `timeout` is the preferred method. Non-executed, illustrative snippets may omit the wrapper but **must** be clearly marked.
@@ -70,6 +73,9 @@ You will follow this structured workflow for every task:
 -   If a gate fails, you are expected to **autonomously diagnose and fix the failure.**
 -   After any modification, **reread the altered artifacts** to verify the change was applied correctly and had no unintended side effects.
 -   Perform end-to-end verification of the primary user workflow to ensure no regressions were introduced.
+-   **Global Settings Compliance Check:** Verify all new code properly imports and uses global configuration services instead of hardcoded values.
+-   **Commander System Verification:** Run `globalSettingsCommander.checkFileCompliance()` on all modified files and ensure compliance score ≥ 90/100.
+-   **Auto-Correction Application:** Use `globalSettingsCommander.autoCorrectCode()` to fix any compliance violations before final verification.
 
 ### 4 · REPORTING & ARTIFACT GOVERNANCE
 -   **Ephemeral Narratives:** All transient information—your plan, thought process, logs, and summaries—**must** remain in the chat.
@@ -89,6 +95,74 @@ You will follow this structured workflow for every task:
 -   **REQUIRED:** Convert `undefined` to `null` or omit the field entirely
 -   **PATTERN:** Use `value ?? null` or `...(value && { field: value })`
 -   **ENFORCEMENT:** All external system interactions must validate parameters
+
+### GLOBAL SETTINGS INTEGRATION MANDATE
+-   **MANDATORY:** All code MUST reference and utilize global settings configurations
+-   **REQUIRED:** Import and use appropriate global configuration services:
+    -   `GLOBAL_SYSTEM_CONFIG` from `@/config/globalSystemSettings` for system-wide settings
+    -   `GLOBAL_COMPONENT_CONFIG` from `@/config/globalComponentSettings` for UI components
+    -   `GLOBAL_VALIDATION_CONFIG` from `@/config/globalValidationSettings` for data validation
+    -   `GLOBAL_DATE_CONFIG` from `@/config/globalDateSettings` for date handling
+    -   `GLOBAL_PERMISSION_CONFIG` from `@/config/globalPermissions` for RBAC permissions
+    -   `GLOBAL_COLLECTIONS` from `@/config/globalCollections` for Firebase collection IDs
+-   **PATTERN:** Use `globalSystemService`, `globalComponentService`, `globalValidationService`, `globalDateService`, `globalPermissionService` for all operations
+-   **ENFORCEMENT:** No hardcoded values; all configuration must come from global settings
+-   **EXAMPLES:**
+    -   Use `GLOBAL_VALIDATION_CONFIG.VALIDATION_RULES.email` instead of hardcoded regex
+    -   Use `globalComponentService.getTableConfig()` instead of inline table props
+    -   Use `globalDateService.formatDate()` instead of manual date formatting
+    -   Use `globalPermissionService.checkPermission()` for all access control
+    -   Use `GLOBAL_COLLECTIONS.MEMBERS` instead of hardcoded collection names
+
+### CODING STANDARDS & GLOBAL SETTINGS INTEGRATION
+-   **Configuration-First Development:** All new code must reference global settings configurations
+-   **Import Standards:** Always import the appropriate global configuration service:
+    ```typescript
+    import { GLOBAL_SYSTEM_CONFIG, globalSystemService } from '@/config/globalSystemSettings';
+    import { GLOBAL_COMPONENT_CONFIG, globalComponentService } from '@/config/globalComponentSettings';
+    import { GLOBAL_VALIDATION_CONFIG, globalValidationService } from '@/config/globalValidationSettings';
+    import { GLOBAL_DATE_CONFIG, globalDateService } from '@/config/globalDateSettings';
+    import { GLOBAL_PERMISSION_CONFIG, globalPermissionService } from '@/config/globalPermissions';
+    import { GLOBAL_COLLECTIONS } from '@/config/globalCollections';
+    ```
+-   **Service Usage Patterns:**
+    -   Use `globalValidationService.validateEmail()` instead of custom regex
+    -   Use `globalComponentService.getTableConfig()` for all table configurations
+    -   Use `globalDateService.formatDate()` for all date formatting
+    -   Use `globalPermissionService.checkPermission()` for all access control
+    -   Use `globalSystemService.logError()` for error handling
+    -   Use `GLOBAL_COLLECTIONS.MEMBERS` for Firebase collection references
+-   **Prohibition List:** Never use hardcoded values for:
+    -   Validation rules (email, phone, password patterns)
+    -   UI component configurations (table pagination, form layouts)
+    -   Date formats and timezone settings
+    -   Permission checks and access control
+    -   System configuration (cache times, file limits, etc.)
+    -   Firebase collection IDs and database references
+
+### GLOBAL SETTINGS COMMANDER SYSTEM
+-   **MANDATORY:** Use the Global Settings Commander for all compliance checking and code correction
+-   **REQUIRED:** Import and utilize the commander system:
+    ```typescript
+    import { globalSettingsCommander } from '@/config/globalSettingsCommander';
+    import { runGlobalSettingsComplianceCheck } from '@/scripts/globalSettingsComplianceChecker';
+    ```
+-   **COMPLIANCE CHECKING:** Before any code modification, run compliance checks:
+    -   Use `globalSettingsCommander.checkFileCompliance()` for single file checks
+    -   Use `runGlobalSettingsComplianceCheck()` for full codebase analysis
+    -   Target minimum compliance score of 90/100 for all files
+-   **AUTO-CORRECTION:** Utilize automatic code correction:
+    -   Use `globalSettingsCommander.autoCorrectCode()` for fixing violations
+    -   Apply corrections before manual intervention
+    -   Verify corrections maintain functionality
+-   **REPORTING:** Generate and review compliance reports:
+    -   Use `globalSettingsCommander.generateComplianceReport()` for detailed analysis
+    -   Address all error-level violations immediately
+    -   Track compliance improvements over time
+-   **INTEGRATION:** Ensure commander system is properly initialized:
+    -   Verify `globalSettingsCommander.initialize()` is called during app startup
+    -   Use `GlobalServices.Commander` for easy access
+    -   Monitor compliance metrics in development workflow
 
 ### FAILURE ANALYSIS & REMEDIATION
 -   Pursue holistic root-cause diagnosis; reject superficial patches.

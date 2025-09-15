@@ -18,6 +18,7 @@ import StarPointAwardComponent from '@/components/StarPointAward';
 import NationalAreaIncentiveAwardComponent from '@/components/NationalAreaIncentiveAward';
 import AwardsDashboard from '@/components/AwardsDashboard';
 import AwardIndicatorManagement from '@/components/AwardIndicatorManagement';
+import NewAwardIndicatorManagement from '@/components/NewAwardIndicatorManagement';
 import ActivityParticipationTracker from '@/components/ActivityParticipationTracker';
 import CompetitorScoreTracker from '@/components/CompetitorScoreTracker';
 import EAwardsComponent from '@/components/EAwardsComponent';
@@ -54,6 +55,8 @@ const AwardsManagementPage: React.FC<AwardsManagementPageProps> = ({
       setActiveTab('e_awards');
     } else if (path === '/awards/award-indicators') {
       setActiveTab('award_indicators');
+    } else if (path === '/awards/new-award-indicators') {
+      setActiveTab('new_award_indicators');
     } else if (path === '/awards/tracker') {
       setActiveTab('tracker');
     } else if (path === '/awards/competitors') {
@@ -71,6 +74,7 @@ const AwardsManagementPage: React.FC<AwardsManagementPageProps> = ({
       national_area_incentive: '/awards/national-area-incentive',
       e_awards: '/awards/e-awards',
       award_indicators: '/awards/award-indicators',
+      new_award_indicators: '/awards/new-award-indicators',
       tracker: '/awards/tracker',
       competitors: '/awards/competitors'
     };
@@ -159,11 +163,23 @@ const AwardsManagementPage: React.FC<AwardsManagementPageProps> = ({
        label: (
          <span>
            <TrophyOutlined />
-           Award Indicators
+           Award Indicators (Legacy)
          </span>
        ),
        children: (
          <AwardIndicatorManagement />
+       ),
+     },
+     {
+       key: 'new_award_indicators',
+       label: (
+         <span>
+           <TrophyOutlined />
+           New Award Indicators
+         </span>
+       ),
+       children: (
+         <NewAwardIndicatorManagement />
        ),
      },
     ...(isDeveloper ? [{

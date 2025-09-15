@@ -64,8 +64,23 @@ const EfficientStarAwardComponent: React.FC<EfficientStarAwardProps> = ({
   const loadAward = async () => {
     try {
       setLoading(true);
+      // 从awards collection获取基础奖励信息
       const awardData = await awardService.getEfficientStarAward(year);
-      setAward(awardData);
+      
+      // 从standards collection获取standards数据
+      const standardsData = await awardService.getStandardsByCategoryAndYear('efficient_star', year);
+      
+      // 合并数据
+      if (awardData) {
+        const updatedAward = {
+          ...awardData,
+          standards: standardsData,
+          categories: ['efficient_star', 'network_star', 'experience_star', 'outreach_star', 'social_star']
+        };
+        setAward(updatedAward);
+      } else {
+        setAward(null);
+      }
     } catch (error) {
       message.error('加载Efficient Star奖励失败');
       console.error(error);

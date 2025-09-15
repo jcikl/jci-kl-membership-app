@@ -486,7 +486,6 @@ const BatchImportModal: React.FC<BatchImportModalProps> = ({
     const lines = pastedData.trim().split('\n');
     if (lines.length >= 1) {
       const firstLineFields = lines[0].split('\t');
-      // console.log(`粘贴数据字段数量: ${firstLineFields.length}`);
       
       if (firstLineFields.length < 47) {
         message.warning(`检测到只有 ${firstLineFields.length} 个字段，预期 47 个字段。请确保使用制表符分隔数据，不是空格。`);

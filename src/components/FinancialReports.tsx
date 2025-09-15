@@ -120,12 +120,6 @@ const FinancialReports: React.FC<FinancialReportsProps> = ({
 
     setIsGenerating(true);
     try {
-      console.log('开始生成财务报告:', {
-        reportType: selectedReportType,
-        startDate: dateRange[0].format('YYYY-MM-DD'),
-        endDate: dateRange[1].format('YYYY-MM-DD'),
-        fiscalYear
-      });
       
       await onGenerateReport(
         selectedReportType,

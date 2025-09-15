@@ -54,8 +54,29 @@ const StarPointAwardComponent: React.FC<StarPointAwardProps> = ({
   const loadAward = async () => {
     try {
       setLoading(true);
-      const awardData = await awardService.getStarPointAward(year);
-      setAward(awardData);
+      // 从awards collection获取基础奖励信息
+      const awardData = await awardService.getStarPointAward('network_star', year);
+      
+      // 从standards collection获取所有Star Point类别的standards数据
+      const starCategories = ['network_star', 'experience_star', 'outreach_star', 'social_star'];
+      const allStandards = [];
+      
+      for (const category of starCategories) {
+        const categoryStandards = await awardService.getStandardsByCategoryAndYear(category as any, year);
+        allStandards.push(...categoryStandards);
+      }
+      
+      // 合并数据
+      if (awardData) {
+        const updatedAward = {
+          ...awardData,
+          standards: allStandards,
+          categories: starCategories
+        };
+        setAward(updatedAward);
+      } else {
+        setAward(null);
+      }
     } catch (error) {
       message.error('加载Star Point奖励失败');
       console.error(error);
@@ -128,9 +149,10 @@ const StarPointAwardComponent: React.FC<StarPointAwardProps> = ({
       const awardData = {
         title: `${year} JCI Malaysia Star Point Award`,
         description: 'The JCI Malaysia Star Point Award recognizes members who excel in various areas of personal and professional development.',
-        category: 'star_point' as const,
+        category: 'network_star' as const,
         year: year,
         status: 'active' as const,
+        starType: 'network_star' as const,
         totalScore: 100,
         currentScore: 0,
         deadline: '2025-12-31',
@@ -142,68 +164,65 @@ const StarPointAwardComponent: React.FC<StarPointAwardProps> = ({
           'Minimum 50 points required for qualification',
           'All activities must be documented with evidence'
         ],
-        starCategories: [
+        standards: [
           {
-            id: 'network_star',
-            type: 'network_star' as const,
-            title: 'Network Star',
-            description: 'Recognition for networking excellence',
+            id: 'network_star_1',
+            no: 1,
+            title: 'Attend networking events',
+            description: 'Participate in professional networking events',
+            category: 'network_star',
+            type: 'network_star',
             objective: 'To encourage members to build professional networks',
-            points: 25,
-            myPoints: 0,
-            note: 'Points awarded for networking events and professional connections',
-            activities: [
-              {
-                id: 'net_1',
-                no: 1,
-                title: 'Attend networking events',
-                description: 'Participate in professional networking events',
-                score: '5 points',
-                guidelines: 'https://example.com/networking',
-                status: 'pending' as const
-              },
-              {
-                id: 'net_2',
-                no: 2,
-                title: 'Professional connections',
-                description: 'Make meaningful professional connections',
-                score: '10 points',
-                guidelines: 'https://example.com/connections',
-                status: 'pending' as const
-              }
-            ]
+            points: 5,
+            score: 5,
+            deadline: '2025-12-31',
+            guidelines: 'https://example.com/networking',
+            status: 'pending' as const
           },
           {
-            id: 'experience_star',
-            type: 'experience_star' as const,
-            title: 'Experience Star',
-            description: 'Recognition for experiential learning',
+            id: 'network_star_2',
+            no: 2,
+            title: 'Professional connections',
+            description: 'Make meaningful professional connections',
+            category: 'network_star',
+            type: 'network_star',
+            objective: 'To encourage members to build professional networks',
+            points: 10,
+            score: 10,
+            deadline: '2025-12-31',
+            guidelines: 'https://example.com/connections',
+            status: 'pending' as const
+          },
+          {
+            id: 'experience_star_1',
+            no: 1,
+            title: 'Workshop participation',
+            description: 'Participate in skill development workshops',
+            category: 'experience_star',
+            type: 'experience_star',
             objective: 'To promote hands-on learning experiences',
-            points: 25,
-            myPoints: 0,
-            note: 'Points awarded for experiential learning activities',
-            activities: [
-              {
-                id: 'exp_1',
-                no: 1,
-                title: 'Workshop participation',
-                description: 'Participate in skill development workshops',
-                score: '15 points',
-                guidelines: 'https://example.com/workshops',
-                status: 'pending' as const
-              },
-              {
-                id: 'exp_2',
-                no: 2,
-                title: 'Mentorship program',
-                description: 'Participate in mentorship activities',
-                score: '10 points',
-                guidelines: 'https://example.com/mentorship',
-                status: 'pending' as const
-              }
-            ]
+            points: 15,
+            score: 15,
+            deadline: '2025-12-31',
+            guidelines: 'https://example.com/workshops',
+            status: 'pending' as const
+          },
+          {
+            id: 'experience_star_2',
+            no: 2,
+            title: 'Mentorship program',
+            description: 'Participate in mentorship activities',
+            category: 'experience_star',
+            type: 'experience_star',
+            objective: 'To promote hands-on learning experiences',
+            points: 10,
+            score: 10,
+            deadline: '2025-12-31',
+            guidelines: 'https://example.com/mentorship',
+            status: 'pending' as const
           }
-        ]
+        ],
+        categories: ['network_star', 'experience_star', 'outreach_star', 'social_star']
       };
       
       await awardService.saveStarPointAward(awardData);
@@ -235,9 +254,20 @@ const StarPointAwardComponent: React.FC<StarPointAwardProps> = ({
     );
   }
 
-  const totalPoints = award.starCategories.reduce((sum, category) => sum + category.points, 0);
-  const currentPoints = award.starCategories.reduce((sum, category) => sum + category.myPoints, 0);
+  // 计算总分和当前分数（基于standards）
+  const totalPoints = award.standards.reduce((sum, standard) => sum + (standard.points || standard.score || 0), 0);
+  const currentPoints = award.standards.reduce((sum, standard) => sum + (standard.myScore || 0), 0);
   const currentPercentage = totalPoints > 0 ? (currentPoints / totalPoints) * 100 : 0;
+  
+  // 按类别分组standards
+  const standardsByCategory = award.standards.reduce((acc, standard) => {
+    const category = standard.category || 'unknown';
+    if (!acc[category]) {
+      acc[category] = [];
+    }
+    acc[category].push(standard);
+    return acc;
+  }, {} as Record<string, any[]>);
 
   return (
     <div>
@@ -299,126 +329,135 @@ const StarPointAwardComponent: React.FC<StarPointAwardProps> = ({
       <Collapse 
         defaultActiveKey={['0']} 
         ghost
-        items={award.starCategories.map((category, categoryIndex) => ({
-          key: categoryIndex.toString(),
-          label: (
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
-              <div style={{ display: 'flex', alignItems: 'center' }}>
-                {getStarIcon(category.type)}
-                <span style={{ marginLeft: 8, fontWeight: 'bold' }}>
-                  {getStarTitle(category.type)} - [{category.myPoints} point{category.myPoints !== 1 ? 's' : ''}]
-                </span>
+        items={Object.entries(standardsByCategory).map(([categoryType, standards], categoryIndex) => {
+          const categoryPoints = standards.reduce((sum, standard) => sum + (standard.points || standard.score || 0), 0);
+          const categoryMyPoints = standards.reduce((sum, standard) => sum + (standard.myScore || 0), 0);
+          
+          return {
+            key: categoryIndex.toString(),
+            label: (
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+                <div style={{ display: 'flex', alignItems: 'center' }}>
+                  {getStarIcon(categoryType)}
+                  <span style={{ marginLeft: 8, fontWeight: 'bold' }}>
+                    {getStarTitle(categoryType)} - [{categoryMyPoints} point{categoryMyPoints !== 1 ? 's' : ''}]
+                  </span>
+                </div>
+                <div>
+                  <Text type="secondary">
+                    {categoryMyPoints} / {categoryPoints} Points
+                  </Text>
+                </div>
               </div>
-              <div>
-                <Text type="secondary">
-                  {category.myPoints} / {category.points} Points
-                </Text>
-              </div>
-            </div>
-          ),
-          children: (
-            <>
-              <Card size="small" style={{ marginBottom: 16 }}>
-                <Paragraph style={{ marginBottom: 8 }}>
-                  <Text strong>Description:</Text> {category.description}
-                </Paragraph>
-                <Paragraph style={{ marginBottom: 8 }}>
-                  <Text strong>Objective:</Text> {category.objective}
-                </Paragraph>
-                {category.note && (
-                  <Alert
-                    message="Note"
-                    description={category.note}
-                    type="warning"
-                    showIcon
-                    style={{ marginTop: 8 }}
-                  />
-                )}
-              </Card>
+            ),
+            children: (
+              <>
+                <Card size="small" style={{ marginBottom: 16 }}>
+                  <Paragraph style={{ marginBottom: 8 }}>
+                    <Text strong>Category:</Text> {getStarTitle(categoryType)}
+                  </Paragraph>
+                  {standards[0]?.objective && (
+                    <Paragraph style={{ marginBottom: 8 }}>
+                      <Text strong>Objective:</Text> {standards[0].objective}
+                    </Paragraph>
+                  )}
+                  {standards[0]?.note && (
+                    <Alert
+                      message="Note"
+                      description={standards[0].note}
+                      type="warning"
+                      showIcon
+                      style={{ marginTop: 8 }}
+                    />
+                  )}
+                </Card>
 
-              <Table
-                dataSource={category.activities}
-                rowKey="id"
-                pagination={false}
-                size="small"
-              >
-                <Table.Column
-                  title="NO."
-                  dataIndex="no"
-                  width={60}
-                  align="center"
-                />
-                
-                <Table.Column
-                  title="DETAILS"
-                  dataIndex="title"
-                  render={(title, record: StarActivity) => (
-                    <div>
-                      <div style={{ marginBottom: 4 }}>
-                        <Text strong>{title}</Text>
-                        {record.guidelines && (
-                          <Button
-                            type="link"
-                            size="small"
-                            icon={<FileTextOutlined />}
-                            style={{ marginLeft: 8 }}
-                          >
-                            Guideline
-                          </Button>
-                        )}
+                <Table
+                  dataSource={standards}
+                  rowKey="id"
+                  pagination={false}
+                  size="small"
+                >
+                  <Table.Column
+                    title="NO."
+                    dataIndex="no"
+                    width={60}
+                    align="center"
+                  />
+                  
+                  <Table.Column
+                    title="DETAILS"
+                    dataIndex="title"
+                    render={(title, record: any) => (
+                      <div>
+                        <div style={{ marginBottom: 4 }}>
+                          <Text strong>{title}</Text>
+                          {record.guidelines && (
+                            <Button
+                              type="link"
+                              size="small"
+                              icon={<FileTextOutlined />}
+                              style={{ marginLeft: 8 }}
+                            >
+                              Guideline
+                            </Button>
+                          )}
+                        </div>
+                        <Text type="secondary">{record.description}</Text>
                       </div>
-                      <Text type="secondary">{record.description}</Text>
-                    </div>
-                  )}
-                />
-                
-                <Table.Column
-                  title="SCORE"
-                  dataIndex="score"
-                  width={200}
-                  render={(score) => (
-                    <Text style={{ fontSize: 12 }}>{score}</Text>
-                  )}
-                />
-                
-                <Table.Column
-                  title="MY SCORE"
-                  width={100}
-                  align="center"
-                  render={(_, record: StarActivity) => (
-                    record.myScore !== undefined ? (
-                      <Text strong style={{ color: '#52c41a' }}>
-                        {record.myScore}
+                    )}
+                  />
+                  
+                  <Table.Column
+                    title="SCORE"
+                    dataIndex="score"
+                    width={200}
+                    render={(score, record: any) => (
+                      <Text style={{ fontSize: 12 }}>
+                        {record.points ? `${record.points} points` : `${score}%`}
                       </Text>
-                    ) : (
-                      <Text type="secondary">-</Text>
-                    )
-                  )}
-                />
-                
-                <Table.Column
-                  title="ACTION"
-                  width={100}
-                  align="center"
-                  render={(_, record: StarActivity) => (
-                    <Button
-                      type="primary"
-                      size="small"
-                      onClick={() => {
-                        setSelectedActivity(record);
-                        setSelectedCategory(category);
-                        setScoreModalVisible(true);
-                      }}
-                      disabled={!memberId}
-                    >
-                      View
-                    </Button>
-                  )}
-                />
-              </Table>
-            </>
-          )
-        }))}
+                    )}
+                  />
+                  
+                  <Table.Column
+                    title="MY SCORE"
+                    width={100}
+                    align="center"
+                    render={(_, record: any) => (
+                      record.myScore !== undefined ? (
+                        <Text strong style={{ color: '#52c41a' }}>
+                          {record.myScore}
+                        </Text>
+                      ) : (
+                        <Text type="secondary">-</Text>
+                      )
+                    )}
+                  />
+                  
+                  <Table.Column
+                    title="ACTION"
+                    width={100}
+                    align="center"
+                    render={(_, record: any) => (
+                      <Button
+                        type="primary"
+                        size="small"
+                        onClick={() => {
+                          setSelectedActivity(record);
+                          setSelectedCategory(null);
+                          setScoreModalVisible(true);
+                        }}
+                        disabled={!memberId}
+                      >
+                        View
+                      </Button>
+                    )}
+                  />
+                </Table>
+              </>
+            )
+          };
+        })}
       />
 
       {/* 分数提交模态框 */}

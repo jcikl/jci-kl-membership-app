@@ -12,8 +12,6 @@ import { PERMISSION_SEED_DATA, ROLE_SEED_DATA, POLICY_SEED_DATA } from '@/data/r
 
 // 初始化权限数据
 export const initPermissions = async () => {
-  console.log('开始初始化权限数据...');
-  
   try {
     const batch = writeBatch(db);
     
@@ -27,17 +25,13 @@ export const initPermissions = async () => {
     }
     
     await batch.commit();
-    console.log('权限数据初始化完成');
   } catch (error) {
-    console.error('权限数据初始化失败:', error);
     throw error;
   }
 };
 
 // 初始化角色数据
 export const initRoles = async () => {
-  console.log('开始初始化角色数据...');
-  
   try {
     const batch = writeBatch(db);
     
@@ -51,17 +45,13 @@ export const initRoles = async () => {
     }
     
     await batch.commit();
-    console.log('角色数据初始化完成');
   } catch (error) {
-    console.error('角色数据初始化失败:', error);
     throw error;
   }
 };
 
 // 初始化策略配置
 export const initPolicy = async () => {
-  console.log('开始初始化策略配置...');
-  
   try {
     const docRef = doc(db, 'rbac_policies', 'default');
     await setDoc(docRef, {
@@ -69,10 +59,7 @@ export const initPolicy = async () => {
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp()
     });
-    
-    console.log('策略配置初始化完成');
   } catch (error) {
-    console.error('策略配置初始化失败:', error);
     throw error;
   }
 };
@@ -90,21 +77,17 @@ export const checkDataExists = async () => {
       rolesExist: !rolesSnapshot.empty
     };
   } catch (error) {
-    console.error('检查数据存在性失败:', error);
     return { permissionsExist: false, rolesExist: false };
   }
 };
 
 // 完整初始化
 export const initRBAC = async (force = false) => {
-  console.log('开始初始化 RBAC 系统...');
-  
   try {
     if (!force) {
       const { permissionsExist, rolesExist } = await checkDataExists();
       
       if (permissionsExist || rolesExist) {
-        console.log('RBAC 数据已存在，跳过初始化');
         return;
       }
     }
@@ -112,10 +95,7 @@ export const initRBAC = async (force = false) => {
     await initPermissions();
     await initRoles();
     await initPolicy();
-    
-    console.log('RBAC 系统初始化完成');
   } catch (error) {
-    console.error('RBAC 系统初始化失败:', error);
     throw error;
   }
 };
@@ -124,6 +104,6 @@ export const initRBAC = async (force = false) => {
 if (import.meta.env.DEV) {
   // 延迟执行，确保 Firebase 已初始化
   setTimeout(() => {
-    initRBAC().catch(console.error);
+    initRBAC().catch(() => {});
   }, 2000);
 }

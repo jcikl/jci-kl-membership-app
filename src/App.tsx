@@ -28,6 +28,7 @@ import EventDetailPage from '@/pages/EventDetailPage';
 import EventRegistrationPage from '@/pages/EventRegistrationPage';
 import EventRegistrationSuccessPage from '@/pages/EventRegistrationSuccessPage';
 import AwardsManagementPage from '@/pages/AwardsManagementPage';
+import MigrationPage from '@/pages/MigrationPage';
 
 // RBAC组件
 import RBACManagement from '@/components/rbac/RBACManagement';
@@ -114,8 +115,10 @@ const App: React.FC = () => {
         <Route path="/awards/national-area-incentive" element={<AwardsManagementPage />} />
         <Route path="/awards/e-awards" element={<AwardsManagementPage />} />
         <Route path="/awards/award-indicators" element={<AwardsManagementPage />} />
+        <Route path="/awards/new-award-indicators" element={<AwardsManagementPage />} />
         <Route path="/awards/tracker" element={<AwardsManagementPage />} />
         <Route path="/awards/competitors" element={<AwardsManagementPage />} />
+              <Route path="/migration" element={<MigrationPage />} />
               <Route path="/rbac-management" element={<RBACManagement />} />
               <Route path="/system-settings" element={<SystemSettingsPage />} />
               <Route path="*" element={<Navigate to="/dashboard" replace />} />

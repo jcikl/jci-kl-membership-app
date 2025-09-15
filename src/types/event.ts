@@ -169,6 +169,7 @@ export interface EventProgram {
   eventId: string;
   date: Timestamp;
   time: string;
+  duration?: number; // 时长（分钟）
   program: string;
   sessionChair?: string;
   registrationRequired: boolean;
@@ -187,10 +188,12 @@ export interface CommitteeMember {
   position: string;
   contact: string;
   email: string;
-  isRegistered: boolean;
-  isCommittee: boolean;
-  isPersonInCharge: boolean;
+  canEditEvent: boolean;
+  canApproveTickets: boolean;
   sequence: number;
+  isRegistered?: boolean;
+  isCommittee?: boolean;
+  isPersonInCharge?: boolean;
   createdAt: Timestamp;
   updatedAt: Timestamp;
 }

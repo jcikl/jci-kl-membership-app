@@ -1,6 +1,18 @@
 rules_version = '2';
+
+// Firestore 数据库规则
 service cloud.firestore {
   match /databases/{database}/documents {
+    // 临时开发规则：允许所有访问（2025年10月10日到期）
+    // 这个规则允许任何拥有Firestore数据库引用的人查看、编辑和删除所有数据
+    // 它对于开始开发很有用，但配置为在30天后过期，因为它会让你的应用对攻击者开放
+    // 请确保在该时间之前为你的应用编写安全规则，否则所有客户端请求都将被拒绝
+    match /{document=**} {
+      allow read, write: if request.time < timestamp.date(2025, 10, 10);
+    }
+    
+    // 详细的生产环境规则（当前被临时规则覆盖，但保留用于将来使用）
+    /*
     // 会员集合规则
     match /members/{memberId} {
       // 允许认证用户读取和写入自己的会员信息
@@ -111,5 +123,35 @@ service cloud.firestore {
       allow delete: if request.auth != null && 
         request.auth.token.role in ['developer', 'admin'];
     }
+    */
+  }
+}
+
+// Firebase Storage 安全规则
+service firebase.storage {
+  match /b/{bucket}/o {
+    // 临时开发规则：允许所有访问（2025年10月10日到期）
+    // 在生产环境中应该添加更严格的认证规则
+    match /{allPaths=**} {
+      allow read, write: if request.time < timestamp.date(2025, 10, 10);
+    }
+    
+    // 更严格的生产环境规则（注释掉，需要时启用）
+    /*
+    match /event-covers/{fileName} {
+      allow read: if true; // 任何人都可以读取
+      allow write: if request.auth != null; // 只有认证用户可以上传
+    }
+    
+    match /chapter-logos/{fileName} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+    
+    match /member-avatars/{fileName} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+    */
   }
 }

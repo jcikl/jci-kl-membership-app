@@ -18,8 +18,6 @@ interface LegacyMember {
 }
 
 export const migrateAccountTypeData = async () => {
-  console.log('开始迁移账户类型数据...');
-  
   try {
     // 1. 获取所有会员数据
     const membersSnapshot = await getDocs(collection(db, MEMBERS_COLLECTION));
@@ -27,8 +25,6 @@ export const migrateAccountTypeData = async () => {
       id: doc.id,
       ...doc.data()
     })) as LegacyMember[];
-
-    console.log(`找到 ${members.length} 个会员记录`);
 
     let migratedCount = 0;
     let skippedCount = 0;
@@ -39,7 +35,6 @@ export const migrateAccountTypeData = async () => {
         // 检查是否已有分类记录
         const existingCategory = await categoryService.getMemberCategory(member.id);
         if (existingCategory) {
-          console.log(`会员 ${member.id} 已有分类记录，跳过`);
           skippedCount++;
           continue;
         }
@@ -59,7 +54,6 @@ export const migrateAccountTypeData = async () => {
           }
         );
 
-        console.log(`已迁移会员 ${member.id}: ${accountType}/${membershipCategory}`);
         migratedCount++;
 
       } catch (error) {
@@ -68,10 +62,11 @@ export const migrateAccountTypeData = async () => {
       }
     }
 
-    console.log('迁移完成:');
-    console.log(`- 成功迁移: ${migratedCount}`);
-    console.log(`- 跳过（已有记录）: ${skippedCount}`);
-    console.log(`- 错误: ${errorCount}`);
+    return {
+      migratedCount,
+      skippedCount,
+      errorCount
+    };
 
     return {
       total: members.length,
@@ -88,7 +83,6 @@ export const migrateAccountTypeData = async () => {
 
 // 清理冗余字段（可选，谨慎使用）
 export const cleanupRedundantFields = async () => {
-  console.log('开始清理冗余字段...');
   
   try {
     const membersSnapshot = await getDocs(collection(db, MEMBERS_COLLECTION));
@@ -125,10 +119,8 @@ export const cleanupRedundantFields = async () => {
 
     if (batch.length > 0) {
       // 注意：这里需要根据实际情况决定是否执行清理
-      console.log(`准备清理 ${cleanedCount} 个会员的冗余字段`);
-      console.log('警告：此操作将删除冗余字段，请确保数据已正确迁移');
       // await Promise.all(batch);
-      console.log('清理操作已注释，如需执行请手动取消注释');
+      return cleanedCount;
     }
 
     return { cleaned: cleanedCount };
@@ -141,7 +133,6 @@ export const cleanupRedundantFields = async () => {
 
 // 验证迁移结果
 export const validateMigration = async () => {
-  console.log('验证迁移结果...');
   
   try {
     const membersSnapshot = await getDocs(collection(db, MEMBERS_COLLECTION));
@@ -149,9 +140,6 @@ export const validateMigration = async () => {
 
     const memberCount = membersSnapshot.size;
     const categoryCount = categoriesSnapshot.size;
-
-    console.log(`会员总数: ${memberCount}`);
-    console.log(`分类记录数: ${categoryCount}`);
 
     // 检查是否有会员没有分类记录
     const membersWithoutCategory = [];
@@ -163,16 +151,11 @@ export const validateMigration = async () => {
       }
     }
 
-    if (membersWithoutCategory.length > 0) {
-      console.log(`警告：${membersWithoutCategory.length} 个会员没有分类记录:`, membersWithoutCategory);
-    } else {
-      console.log('所有会员都有对应的分类记录');
-    }
-
     return {
       memberCount,
       categoryCount,
-      membersWithoutCategory: membersWithoutCategory.length
+      membersWithoutCategory,
+      hasMissingCategories: membersWithoutCategory.length > 0
     };
 
   } catch (error) {

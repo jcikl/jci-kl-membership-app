@@ -30,11 +30,10 @@ const EventSettings: React.FC = () => {
   const [form] = useForm();
   const [loading, setLoading] = useState(false);
 
-  const handleSave = async (values: any) => {
+  const handleSave = async (_values: any) => {
     setLoading(true);
     try {
       // 保存设置逻辑
-      console.log('保存设置:', values);
       message.success('设置保存成功');
     } catch (error) {
       console.error('保存设置失败:', error);

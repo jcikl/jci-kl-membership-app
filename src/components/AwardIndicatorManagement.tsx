@@ -47,12 +47,14 @@ import {
   StarActivity,
   IncentiveAward,
   StarCategoryType,
+  Standard,
   AwardCategory,
   TeamManagement,
 } from '@/types/awards';
 import { awardService } from '@/services/awardService';
 import { indicatorService } from '@/services/indicatorService';
 import { getMembers } from '@/services/memberService';
+import { globalDateService } from '@/config/globalDateSettings';
 import ResponsiblePersonSelector from './common/ResponsiblePersonSelector';
 import TeamManagementModal from './common/TeamManagementModal';
 import ResponsiblePersonDisplay from './common/ResponsiblePersonDisplay';
@@ -89,19 +91,30 @@ const AwardIndicatorManagement: React.FC<AwardIndicatorManagementProps> = ({
   const [unifiedEditModalVisible, setUnifiedEditModalVisible] = useState(false);
   const [editingItem, setEditingItem] = useState<any>(null);
   const [editModalType, setEditModalType] = useState<'efficient_star' | 'star_point' | 'national_area_incentive'>('efficient_star');
+  const [editingStandardId, setEditingStandardId] = useState<string | null>(null);
   
   // Category management states
   const [categoryManagementModalVisible, setCategoryManagementModalVisible] = useState(false);
   const [selectedCategoryForStandard, setSelectedCategoryForStandard] = useState<StarCategory | null>(null);
   
+  // Inline editing states for category management
+  const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null);
+  const [newCategoryForm] = Form.useForm();
+  
+  // Initialize award states
+  const [initializeModalVisible, setInitializeModalVisible] = useState(false);
+  const [sourceYear, setSourceYear] = useState<number | null>(null);
+  const [targetYear, setTargetYear] = useState<number>(new Date().getFullYear());
+  const [availableYearsForInit, setAvailableYearsForInit] = useState<number[]>([]);
   
   // Efficient Star states
   const [efficientStarAward, setEfficientStarAward] = useState<EfficientStarAward | null>(null);
   const [efficientStarModalVisible, setEfficientStarModalVisible] = useState(false);
   const [efficientStarForm] = Form.useForm();
   
-  // Star Point states
-  const [starPointAward, setStarPointAward] = useState<StarPointAward | null>(null);
+  // Star Point states - 支持多个Star类别
+  const [starPointAwards, setStarPointAwards] = useState<StarPointAward[]>([]);
+  const [selectedStarType, setSelectedStarType] = useState<StarCategoryType>('network_star');
   const [starPointModalVisible, setStarPointModalVisible] = useState(false);
   const [starPointForm] = Form.useForm();
   
@@ -135,6 +148,16 @@ const AwardIndicatorManagement: React.FC<AwardIndicatorManagementProps> = ({
     }
   };
 
+  const loadAvailableYearsForInit = async () => {
+    try {
+      const years = await awardService.getAvailableYears();
+      setAvailableYearsForInit(years);
+    } catch (error) {
+      message.error('加载初始化可用年份失败');
+      console.error(error);
+    }
+  };
+
   const loadMembers = async () => {
     try {
       const response = await getMembers({ page: 1, limit: 1000 });
@@ -148,14 +171,14 @@ const AwardIndicatorManagement: React.FC<AwardIndicatorManagementProps> = ({
   const loadAllAwards = async () => {
     try {
       setLoading(true);
-      const [efficientStar, starPoint, nationalIncentive] = await Promise.all([
+      const [efficientStar, starPointAwards, nationalIncentive] = await Promise.all([
         awardService.getEfficientStarAward(year),
-        awardService.getStarPointAward(year),
+        awardService.getAllStarPointAwards(year),
         awardService.getNationalAreaIncentiveAward(year)
       ]);
       
       setEfficientStarAward(efficientStar);
-      setStarPointAward(starPoint);
+      setStarPointAwards(starPointAwards);
       setNationalIncentiveAward(nationalIncentive);
     } catch (error) {
       message.error('加载奖励数据失败');
@@ -163,6 +186,34 @@ const AwardIndicatorManagement: React.FC<AwardIndicatorManagementProps> = ({
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleInitializeAward = async () => {
+    if (!sourceYear) {
+      message.error('请选择参考年份');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      await awardService.initializeAwardsFromYear(sourceYear, targetYear);
+      message.success(`成功从 ${sourceYear} 年创建 ${targetYear} 年的奖励配置`);
+      setInitializeModalVisible(false);
+      setSourceYear(null);
+      setTargetYear(new Date().getFullYear());
+      // 重新加载数据
+      await loadAllAwards();
+    } catch (error) {
+      message.error('初始化奖励配置失败');
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const showInitializeModal = () => {
+    setInitializeModalVisible(true);
+    loadAvailableYearsForInit();
   };
 
   const handleYearChange = (years: number[]) => {
@@ -204,18 +255,274 @@ const AwardIndicatorManagement: React.FC<AwardIndicatorManagementProps> = ({
     message.info('Star Point Activity删除功能待实现');
   };
 
+  // ========== Star Point Helper Functions ==========
+  
+  // 获取当前选中的Star Point Award
+  const getCurrentStarPointAward = (): StarPointAward | null => {
+    return starPointAwards.find(award => award.starType === selectedStarType) || null;
+  };
+
   // ========== Category Management Functions ==========
   
-  const handleManageCategories = () => {
-    setCategoryManagementModalVisible(true);
+  const handleManageCategories = async () => {
+    try {
+      // 从awards collection读取选定年份的Star Point记录参数
+      const currentAward = getCurrentStarPointAward();
+      if (!currentAward) {
+        message.error('未找到当前Star Point奖励数据');
+        return;
+      }
+      
+      // 确保standards数据是最新的
+      const standardsData = await awardService.getStandardsByCategoryAndYear(selectedStarType, year);
+      if (standardsData && standardsData.length > 0) {
+        // 更新当前award的standards数据
+        const updatedAwards = starPointAwards.map(award => 
+          award.starType === selectedStarType 
+            ? { ...award, standards: standardsData }
+            : award
+        );
+        setStarPointAwards(updatedAwards);
+      }
+      
+      setCategoryManagementModalVisible(true);
+      
+      // 总是自动添加一行，确保用户有可编辑的行
+      setTimeout(() => {
+        autoAddNewRow();
+      }, 200); // 延迟执行，确保Modal已完全打开
+    } catch (error) {
+      message.error('加载Star Point类别数据失败');
+      console.error(error);
+    }
   };
 
 
   const handleCreateStandardForStarPoint = () => {
     setSelectedCategoryForStandard(null);
-    setEditingItem(null);
-    setEditModalType('star_point');
-    setUnifiedEditModalVisible(true);
+    handleStandardCreate('star_point');
+  };
+
+  // ========== Inline Category Management Functions ==========
+  
+
+  const handleCancelEditingCategory = () => {
+    setEditingCategoryId(null);
+    newCategoryForm.resetFields();
+  };
+
+  // 检查行是否具备完整参数输入
+  const isRowComplete = (standard: Standard): boolean => {
+    return !!(
+      standard.title?.trim() &&
+      standard.description?.trim() &&
+      standard.objective?.trim() &&
+      (standard.points || 0) > 0 &&
+      standard.deadline?.trim()
+    );
+  };
+
+
+  // 自动添加新行
+  const autoAddNewRow = () => {
+    const currentAward = getCurrentStarPointAward();
+    if (!currentAward) return;
+    
+    const newCategory = createEmptyStarPointCategory();
+    newCategory.no = (currentAward.standards?.length || 0) + 1;
+    
+    const updatedStandards = [...(currentAward.standards || []), newCategory];
+    const updatedAward = {
+      ...currentAward,
+      standards: updatedStandards,
+      updatedAt: new Date().toISOString()
+    };
+    
+    // 更新对应的Star Point Award
+    const updatedAwards = starPointAwards.map(award => 
+      award.starType === selectedStarType ? updatedAward : award
+    );
+    setStarPointAwards(updatedAwards);
+    setEditingCategoryId(newCategory.id);
+    
+    // 设置表单初始值
+    newCategoryForm.resetFields();
+    newCategoryForm.setFieldsValue({
+      no: newCategory.no,
+      type: newCategory.type,
+      title: newCategory.title,
+      description: newCategory.description,
+      objective: newCategory.objective,
+      points: newCategory.points,
+      deadline: newCategory.deadline ? globalDateService.parseDate(newCategory.deadline) : null
+    });
+  };
+
+  // 自动删除空行
+  const autoRemoveEmptyRows = () => {
+    const currentAward = getCurrentStarPointAward();
+    if (!currentAward) return;
+    
+    const updatedStandards = (currentAward.standards || []).filter(standard => 
+      isRowComplete(standard)
+    );
+    
+    // 重新编号
+    updatedStandards.forEach((standard, index) => {
+      standard.no = index + 1;
+    });
+    
+    const updatedAward = {
+      ...currentAward,
+      standards: updatedStandards,
+      updatedAt: new Date().toISOString()
+    };
+    
+    // 更新对应的Star Point Award
+    const updatedAwards = starPointAwards.map(award => 
+      award.starType === selectedStarType ? updatedAward : award
+    );
+    setStarPointAwards(updatedAwards);
+  };
+
+  const handleSaveInlineCategory = async () => {
+    try {
+      const values = await newCategoryForm.validateFields();
+      
+      const currentAward = getCurrentStarPointAward();
+      if (!currentAward) {
+        message.error('Star Point奖励数据未加载');
+        return;
+      }
+
+      const updatedStandards = [...(currentAward.standards || [])];
+      
+      if (editingCategoryId) {
+        // 更新现有类别 - 保存到awards collection
+        const index = updatedStandards.findIndex(s => s.id === editingCategoryId);
+        if (index >= 0) {
+          const updatedCategory: Standard = {
+            ...updatedStandards[index],
+            no: values.no,
+            title: values.title,
+            description: values.description,
+            category: values.type as StarCategoryType,
+            type: values.type,
+            objective: values.objective,
+            points: values.points || 0,
+            score: values.score || values.points || updatedStandards[index].score,
+            deadline: globalDateService.formatDate(values.deadline, 'YYYY-MM-DD') || updatedStandards[index].deadline,
+            status: 'pending' as const
+          };
+          
+          // 创建或更新到standards collection
+          await awardService.upsertStandard(updatedCategory);
+          
+          // 更新本地状态
+          updatedStandards[index] = updatedCategory;
+        }
+      } else {
+        // 添加新类别 - 保存到awards collection
+        const newCategory: Standard = {
+          id: `star-category-${Date.now()}`,
+          no: values.no,
+          title: values.title,
+          description: values.description,
+          category: values.type as StarCategoryType,
+          type: values.type,
+          objective: values.objective,
+          note: '',
+          points: values.points || 0,
+          score: values.score || values.points || 0,
+          deadline: globalDateService.formatDate(values.deadline, 'YYYY-MM-DD') || '',
+          externalLink: '',
+          guidelines: '',
+          status: 'pending' as const,
+          myScore: 0,
+          responsiblePerson: '',
+          team: [],
+          teamManagement: {
+            id: `team-${Date.now()}`,
+            awardType: 'star_point' as const,
+            awardId: currentAward.id,
+            positions: [],
+            members: [],
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+          },
+          scoreSettings: []
+        };
+        
+        // 创建或更新到standards collection
+        await awardService.upsertStandard(newCategory);
+        
+        // 更新本地状态
+        updatedStandards.push(newCategory);
+      }
+
+      const updatedAward = {
+        ...currentAward,
+        standards: updatedStandards,
+        updatedAt: new Date().toISOString()
+      };
+
+      // 保存到awards collection
+      await awardService.saveStarPointAward(updatedAward);
+      
+      // 更新对应的Star Point Award
+      const updatedAwards = starPointAwards.map(award => 
+        award.starType === selectedStarType ? updatedAward : award
+      );
+      setStarPointAwards(updatedAwards);
+      setEditingCategoryId(null);
+      newCategoryForm.resetFields();
+      
+      // 自动管理行：保存后自动添加新行
+      setTimeout(() => {
+        autoAddNewRow();
+      }, 100);
+      
+      message.success(editingCategoryId ? '类别更新成功' : '类别添加成功');
+    } catch (error) {
+      message.error('保存类别失败');
+      console.error(error);
+    }
+  };
+
+  const handleDeleteInlineCategory = async (categoryId: string) => {
+    try {
+      const currentAward = getCurrentStarPointAward();
+      if (!currentAward) return;
+
+      const updatedStandards = (currentAward.standards || []).filter((s: any) => s.id !== categoryId);
+      
+      // 重新编号
+      updatedStandards.forEach((standard: any, index: number) => {
+        standard.no = index + 1;
+      });
+      
+      const updatedAward = {
+        ...currentAward,
+        standards: updatedStandards,
+        updatedAt: new Date().toISOString()
+      };
+
+      await awardService.saveStarPointAward(updatedAward);
+      
+      // 更新对应的Star Point Award
+      const updatedAwards = starPointAwards.map(award => 
+        award.starType === selectedStarType ? updatedAward : award
+      );
+      setStarPointAwards(updatedAwards);
+      
+      // 自动删除空行
+      autoRemoveEmptyRows();
+      
+      message.success('类别删除成功');
+    } catch (error) {
+      message.error('删除类别失败');
+      console.error(error);
+    }
   };
 
   // ========== Unified Edit Modal Functions ==========
@@ -228,10 +535,8 @@ const AwardIndicatorManagement: React.FC<AwardIndicatorManagementProps> = ({
 
   const handleUnifiedSave = async (values: any) => {
     try {
-      if (editModalType === 'efficient_star') {
-        await handleEfficientStarStandardSave(values);
-      } else if (editModalType === 'star_point') {
-        await handleStarCategorySave(values);
+      if (editModalType === 'efficient_star' || editModalType === 'star_point') {
+        await handleStandardSave(values);
       } else if (editModalType === 'national_area_incentive') {
         await handleIncentiveAwardSave(values);
       }
@@ -245,57 +550,130 @@ const AwardIndicatorManagement: React.FC<AwardIndicatorManagementProps> = ({
   // ========== Efficient Star Management ==========
   
 
-  const handleEfficientStarStandardCreate = () => {
+  // ========== 统一的Standard创建处理函数 ==========
+  
+  const handleStandardCreate = (awardType: 'efficient_star' | 'star_point') => {
     setEditingItem(null);
-    efficientStarForm.resetFields();
-    setEfficientStarModalVisible(true);
+    setEditingStandardId(null);
+    setEditModalType(awardType);
+    setUnifiedEditModalVisible(true);
   };
 
-  const handleEfficientStarStandardSave = async (values?: any) => {
+  // ========== 统一的Standard保存处理函数 ==========
+  
+  const handleStandardSave = async (values?: any) => {
     try {
       // 如果是从StandardEditModal调用，使用传入的values
       // 如果是从原有Modal调用，使用form验证
-      const formValues = values || await efficientStarForm.validateFields();
+      const formValues = values || await (editModalType === 'efficient_star' ? efficientStarForm : starPointForm).validateFields();
       
-      if (!efficientStarAward) {
-        message.error('Efficient Star奖励数据未加载');
+      // 根据awardType获取相应的数据源
+      let currentAward: any;
+      let saveMethod: (award: any) => Promise<string>;
+      let setAwardMethod: (award: any) => void;
+      let successMessage: string;
+      
+      if (editModalType === 'efficient_star') {
+        currentAward = efficientStarAward;
+        saveMethod = awardService.saveEfficientStarAward;
+        setAwardMethod = setEfficientStarAward;
+        successMessage = editingItem ? '标准更新成功' : '标准创建成功';
+        
+        if (!currentAward) {
+          message.error('Efficient Star奖励数据未加载');
+          return;
+        }
+      } else if (editModalType === 'star_point') {
+        currentAward = getCurrentStarPointAward();
+        saveMethod = awardService.saveStarPointAward;
+        setAwardMethod = (award: any) => {
+          const updatedAwards = starPointAwards.map(a => 
+            a.starType === selectedStarType ? award : a
+          );
+          setStarPointAwards(updatedAwards);
+        };
+        successMessage = editingItem ? '类别更新成功' : '类别创建成功';
+        
+        if (!currentAward) {
+          message.error('Star Point奖励数据未加载');
+          return;
+        }
+      } else {
+        message.error('未知的奖励类型');
         return;
       }
 
-      const updatedStandards = [...efficientStarAward.standards];
+      const updatedStandards = [...(currentAward.standards || [])];
       
       if (editingItem) {
-        // Update existing standard
+        // Update existing standard - 确保包含所有StandardEditModal字段
         const index = updatedStandards.findIndex(s => s.id === editingItem.id);
         if (index >= 0) {
-          updatedStandards[index] = {
+          const updatedStandard = {
             ...formValues,
             id: editingItem.id,
-            deadline: formValues.deadline?.format('YYYY-MM-DD') || editingItem.deadline,
+            deadline: globalDateService.formatDate(formValues.deadline, 'YYYY-MM-DD') || editingItem.deadline,
             status: editingItem.status,
-            myScore: editingItem.myScore
+            myScore: editingItem.myScore || 0,
+            // 确保所有StandardEditModal字段都被保存
+            externalLink: formValues.externalLink || editingItem.externalLink,
+            scoreSettings: formValues.scoreSettings || editingItem.scoreSettings,
+            teamManagement: formValues.teamManagement || editingItem.teamManagement,
+            responsiblePerson: formValues.responsiblePerson || editingItem.responsiblePerson,
+            team: formValues.team || editingItem.team,
+            guidelines: formValues.guidelines || editingItem.guidelines
           };
+          
+          // Star Point特有的字段
+          if (editModalType === 'star_point') {
+            updatedStandard.activities = editingItem.activities;
+            updatedStandard.myPoints = editingItem.myPoints;
+            updatedStandard.objective = formValues.objective || editingItem.objective;
+            updatedStandard.note = formValues.note || editingItem.note;
+            updatedStandard.points = formValues.points || editingItem.points;
+          }
+          
+          updatedStandards[index] = updatedStandard;
         }
       } else {
-        // Create new standard
-        const newStandard: EfficientStarStandard = {
+        // Create new standard - 确保包含所有StandardEditModal字段
+        const newStandard: any = {
           ...formValues,
-          id: `standard_${Date.now()}`,
-          deadline: formValues.deadline?.format('YYYY-MM-DD') || '',
+          id: editModalType === 'efficient_star' ? `standard_${Date.now()}` : `category_${Date.now()}`,
+          deadline: globalDateService.formatDate(formValues.deadline, 'YYYY-MM-DD') || '',
           status: 'pending' as const,
-          myScore: 0
+          myScore: 0,
+          // 包含所有可能的字段
+          externalLink: formValues.externalLink,
+          scoreSettings: formValues.scoreSettings,
+          teamManagement: formValues.teamManagement,
+          responsiblePerson: formValues.responsiblePerson,
+          team: formValues.team,
+          guidelines: formValues.guidelines,
+          // 确保基础字段存在
+          no: formValues.no || updatedStandards.length + 1,
+          score: formValues.score || 0
         };
+        
+        // Star Point特有的字段
+        if (editModalType === 'star_point') {
+          newStandard.objective = formValues.objective || '';
+          newStandard.note = formValues.note;
+          newStandard.points = formValues.points || 0;
+          newStandard.score = formValues.score || formValues.points || 0;
+        }
+        
         updatedStandards.push(newStandard);
       }
 
       const updatedAward = {
-        ...efficientStarAward,
+        ...currentAward,
         standards: updatedStandards,
         updatedAt: new Date().toISOString()
       };
 
-      await awardService.saveEfficientStarAward(updatedAward);
-      setEfficientStarAward(updatedAward);
+      await saveMethod(updatedAward);
+      setAwardMethod(updatedAward);
       
       // 关闭相应的Modal
       if (values) {
@@ -303,10 +681,14 @@ const AwardIndicatorManagement: React.FC<AwardIndicatorManagementProps> = ({
         setUnifiedEditModalVisible(false);
       } else {
         // 来自原有Modal
-        setEfficientStarModalVisible(false);
+        if (editModalType === 'efficient_star') {
+          setEfficientStarModalVisible(false);
+        } else {
+          setStarPointModalVisible(false);
+        }
       }
       
-      message.success(editingItem ? '标准更新成功' : '标准创建成功');
+      message.success(successMessage);
     } catch (error) {
       message.error('保存失败');
       console.error(error);
@@ -335,87 +717,42 @@ const AwardIndicatorManagement: React.FC<AwardIndicatorManagementProps> = ({
 
   // ========== Star Point Management ==========
   
-
-
-  const handleStarCategorySave = async (values?: any) => {
-    try {
-      // 如果是从StandardEditModal调用，使用传入的values
-      // 如果是从原有Modal调用，使用form验证
-      const formValues = values || await starPointForm.validateFields();
-      
-      if (!starPointAward) {
-        message.error('Star Point奖励数据未加载');
-        return;
-      }
-
-      const updatedCategories = [...starPointAward.starCategories];
-      
-      if (editingItem) {
-        // Update existing category
-        const index = updatedCategories.findIndex(c => c.id === editingItem.id);
-        if (index >= 0) {
-          updatedCategories[index] = {
-            ...formValues,
-            id: editingItem.id,
-            activities: editingItem.activities,
-            myPoints: editingItem.myPoints
-          };
-        }
-      } else {
-        // Create new category
-        const newCategory: StarCategory = {
-          ...formValues,
-          id: `category_${Date.now()}`,
-          activities: [],
-          myPoints: 0
-        };
-        updatedCategories.push(newCategory);
-      }
-
-      const updatedAward = {
-        ...starPointAward,
-        starCategories: updatedCategories,
+  // 创建空的Star Point类别数据
+  const createEmptyStarPointCategory = (): Standard => {
+    const currentAward = getCurrentStarPointAward();
+    return {
+      id: `star-category-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      no: (currentAward?.standards?.length || 0) + 1,
+      title: '',
+      description: '',
+      category: selectedStarType,
+      type: selectedStarType,
+      objective: '',
+      note: '',
+      points: 0,
+      score: 0,
+      deadline: '',
+      externalLink: '',
+      guidelines: '',
+      status: 'pending' as const,
+      myScore: 0,
+      responsiblePerson: '',
+      team: [],
+      teamManagement: {
+        id: `team-${Date.now()}`,
+        awardType: 'star_point' as const,
+        awardId: currentAward?.id || '',
+        positions: [],
+        members: [],
+        createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
-      };
-
-      await awardService.saveStarPointAward(updatedAward);
-      setStarPointAward(updatedAward);
-      
-      // 关闭相应的Modal
-      if (values) {
-        // 来自StandardEditModal
-        setUnifiedEditModalVisible(false);
-      } else {
-        // 来自原有Modal
-        setStarPointModalVisible(false);
-      }
-      
-      message.success(editingItem ? '类别更新成功' : '类别创建成功');
-    } catch (error) {
-      message.error('保存失败');
-      console.error(error);
-    }
+      },
+      scoreSettings: []
+    };
   };
 
-  const handleStarCategoryDelete = async (categoryId: string) => {
-    try {
-      if (!starPointAward) return;
 
-      const updatedCategories = starPointAward.starCategories.filter(c => c.id !== categoryId);
-      const updatedAward = {
-        ...starPointAward,
-        starCategories: updatedCategories,
-        updatedAt: new Date().toISOString()
-      };
 
-      await awardService.saveStarPointAward(updatedAward);
-      setStarPointAward(updatedAward);
-      message.success('类别删除成功');
-    } catch (error) {
-      message.error('删除失败');
-      console.error(error);
-    }
-  };
 
   // ========== National & Area Incentive Management ==========
   
@@ -451,16 +788,34 @@ const AwardIndicatorManagement: React.FC<AwardIndicatorManagementProps> = ({
           if (awardIndex >= 0) {
           updatedCategories[categoryIndex].awards[awardIndex] = {
             ...formValues,
-            id: editingIncentiveAward.id
+            id: editingIncentiveAward.id,
+            // 确保所有StandardEditModal字段都被保存
+            deadline: globalDateService.formatDate(formValues.deadline, 'YYYY-MM-DD') || editingIncentiveAward.deadline,
+            externalLink: formValues.externalLink || editingIncentiveAward.externalLink,
+            scoreSettings: formValues.scoreSettings || editingIncentiveAward.scoreSettings,
+            teamManagement: formValues.teamManagement || editingIncentiveAward.teamManagement,
+            nationalAllocation: formValues.nationalAllocation || editingIncentiveAward.nationalAllocation,
+            areaAllocation: formValues.areaAllocation || editingIncentiveAward.areaAllocation,
+            guidelines: formValues.guidelines || editingIncentiveAward.guidelines,
+            status: formValues.status || editingIncentiveAward.status
           };
           }
         }
       } else {
-        // Create new award - add to first category for now
+        // Create new award - 确保包含所有StandardEditModal字段
         if (updatedCategories.length > 0) {
           const newAward: IncentiveAward = {
             ...formValues,
-            id: `award_${Date.now()}`
+            id: `award_${Date.now()}`,
+            // 包含所有可能的字段
+            deadline: globalDateService.formatDate(formValues.deadline, 'YYYY-MM-DD'),
+            externalLink: formValues.externalLink,
+            scoreSettings: formValues.scoreSettings,
+            teamManagement: formValues.teamManagement,
+            nationalAllocation: formValues.nationalAllocation || '',
+            areaAllocation: formValues.areaAllocation || '',
+            guidelines: formValues.guidelines,
+            status: formValues.status || 'open'
           };
           updatedCategories[0].awards.push(newAward);
         }
@@ -624,7 +979,7 @@ const AwardIndicatorManagement: React.FC<AwardIndicatorManagementProps> = ({
               <Button 
                 type="primary" 
                 icon={<PlusOutlined />} 
-                onClick={handleEfficientStarStandardCreate}
+                onClick={() => handleStandardCreate('efficient_star')}
               >
                 Add Standard
               </Button>
@@ -769,9 +1124,28 @@ const AwardIndicatorManagement: React.FC<AwardIndicatorManagementProps> = ({
     </div>
   );
 
-  const renderStarPointTab = () => (
+  const renderStarPointTab = () => {
+    const currentAward = getCurrentStarPointAward();
+    return (
     <div>
-      {starPointAward ? (
+      {/* Star类别选择器 */}
+      <Card style={{ marginBottom: 16 }}>
+        <Space>
+          <Text strong>选择Star类别:</Text>
+          <Select
+            value={selectedStarType}
+            onChange={setSelectedStarType}
+            style={{ width: 200 }}
+          >
+            <Option value="network_star">Network Star</Option>
+            <Option value="experience_star">Experience Star</Option>
+            <Option value="social_star">Social Star</Option>
+            <Option value="outreach_star">Outreach Star</Option>
+          </Select>
+        </Space>
+      </Card>
+
+      {currentAward ? (
         <>
           {/* Header Card - 完全符合原始UI */}
           <Card style={{ marginBottom: 24 }}>
@@ -779,10 +1153,10 @@ const AwardIndicatorManagement: React.FC<AwardIndicatorManagementProps> = ({
               <Col span={16}>
                 <div style={{ marginBottom: 16 }}>
                   <Title level={3} style={{ color: '#52c41a', marginBottom: 8 }}>
-                    {starPointAward.title}
+                    {currentAward.title}
                   </Title>
                   <Text strong style={{ color: '#52c41a' }}>
-                    {starPointAward.description}
+                    {currentAward.description}
                   </Text>
                 </div>
                 <Divider />
@@ -801,7 +1175,7 @@ const AwardIndicatorManagement: React.FC<AwardIndicatorManagementProps> = ({
                     <Title level={4} style={{ color: '#52c41a', marginBottom: 8 }}>
                       Terms & Conditions
                     </Title>
-                    {starPointAward.terms.map((term, index) => (
+                    {currentAward.terms.map((term, index) => (
                       <div key={index} style={{ marginBottom: 4 }}>
                         <Text style={{ fontSize: 12 }}>• {term}</Text>
                       </div>
@@ -837,7 +1211,7 @@ const AwardIndicatorManagement: React.FC<AwardIndicatorManagementProps> = ({
             <Collapse
               defaultActiveKey={['0']} 
               ghost
-              items={starPointAward.starCategories.map((category, categoryIndex) => ({
+              items={(currentAward.standards || []).map((category: any, categoryIndex: number) => ({
                 key: categoryIndex.toString(),
                 label: (
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
@@ -985,6 +1359,7 @@ const AwardIndicatorManagement: React.FC<AwardIndicatorManagementProps> = ({
       )}
     </div>
   );
+  };
 
   const renderNationalIncentiveTab = () => (
     <div>
@@ -1211,6 +1586,14 @@ const AwardIndicatorManagement: React.FC<AwardIndicatorManagementProps> = ({
               >
                 刷新数据
               </Button>
+              <Button 
+                type="primary"
+                icon={<PlusOutlined />} 
+                onClick={showInitializeModal}
+                loading={loading}
+              >
+                初始化奖励配置
+              </Button>
               <Button icon={<DownloadOutlined />} onClick={exportData}>
                 导出数据
               </Button>
@@ -1304,7 +1687,7 @@ const AwardIndicatorManagement: React.FC<AwardIndicatorManagementProps> = ({
       <Modal
         title={editingItem ? '编辑标准' : '创建标准'}
         open={efficientStarModalVisible}
-        onOk={handleEfficientStarStandardSave}
+        onOk={() => handleStandardSave()}
         onCancel={() => setEfficientStarModalVisible(false)}
         width={600}
       >
@@ -1372,7 +1755,7 @@ const AwardIndicatorManagement: React.FC<AwardIndicatorManagementProps> = ({
       <Modal
         title={editingItem ? '编辑类别' : '创建类别'}
         open={starPointModalVisible}
-        onOk={handleStarCategorySave}
+        onOk={() => handleStandardSave()}
         onCancel={() => setStarPointModalVisible(false)}
         width={600}
       >
@@ -1516,7 +1899,10 @@ const AwardIndicatorManagement: React.FC<AwardIndicatorManagementProps> = ({
       {/* Unified Edit Modal */}
       <StandardEditModal
         visible={unifiedEditModalVisible}
-        onClose={() => setUnifiedEditModalVisible(false)}
+        onClose={() => {
+          setUnifiedEditModalVisible(false);
+          setEditingStandardId(null);
+        }}
         onSave={handleUnifiedSave}
         title={editingItem ? `编辑${editModalType === 'efficient_star' ? '标准' : editModalType === 'star_point' ? '标准' : '奖项'}` : `创建${selectedCategoryForStandard ? ` - ${selectedCategoryForStandard.title}` : ''}`}
         initialValues={editingItem}
@@ -1524,110 +1910,320 @@ const AwardIndicatorManagement: React.FC<AwardIndicatorManagementProps> = ({
         awardType={editModalType}
         showTeamManagement={true}
         showCategorySelection={editModalType === 'star_point' && !selectedCategoryForStandard}
-        availableCategories={starPointAward?.starCategories || []}
+        availableCategories={getCurrentStarPointAward()?.standards || []}
+        standardId={editingStandardId || undefined}
       />
 
       {/* Category Management Modal */}
       <Modal
         title="管理Star Point类别"
         open={categoryManagementModalVisible}
-        onCancel={() => setCategoryManagementModalVisible(false)}
-        width={800}
-        footer={null}
+        onCancel={() => {
+          setCategoryManagementModalVisible(false);
+          setEditingCategoryId(null);
+          newCategoryForm.resetFields();
+        }}
+        width={1000}
+        footer={
+          <div style={{ textAlign: 'right' }}>
+            <Space>
+              <Button onClick={() => {
+                setCategoryManagementModalVisible(false);
+                setEditingCategoryId(null);
+                newCategoryForm.resetFields();
+              }}>
+                取消
+              </Button>
+              <Button 
+                type="primary" 
+                onClick={async () => {
+                  try {
+                    // 保存所有修改到awards collection
+                    const currentAward = getCurrentStarPointAward();
+                    if (currentAward) {
+                      await awardService.saveStarPointAward(currentAward);
+                      message.success('保存成功');
+                      // 关闭弹出窗口
+                      setCategoryManagementModalVisible(false);
+                      setEditingCategoryId(null);
+                      newCategoryForm.resetFields();
+                    }
+                  } catch (error) {
+                    message.error('保存失败');
+                    console.error(error);
+                  }
+                }}
+              >
+                保存
+              </Button>
+            </Space>
+          </div>
+        }
       >
         <div>
-          <div style={{ marginBottom: 16, textAlign: 'right' }}>
-            <Button 
-              type="primary" 
-              icon={<PlusOutlined />} 
-              onClick={() => {
-                setEditingItem(null);
-                setEditModalType('star_point');
-                setUnifiedEditModalVisible(true);
-                setCategoryManagementModalVisible(false);
-              }}
-            >
-              添加新类别
-            </Button>
-          </div>
-          
-          <Table
-            dataSource={starPointAward?.starCategories || []}
-            rowKey="id"
-            pagination={false}
+          <Form 
+            form={newCategoryForm} 
+            layout="vertical"
+            onFinish={() => {
+              // 阻止表单自动提交
+              return false;
+            }}
           >
-            <Table.Column
-              title="类别类型"
-              dataIndex="type"
-              width={150}
-              render={(type) => {
-                const typeMap: Record<string, string> = {
-                  'network_star': 'Network Star',
-                  'experience_star': 'Experience Star',
-                  'social_star': 'Social Star',
-                  'outreach_star': 'Outreach Star'
-                };
-                return typeMap[type] || type;
-              }}
-            />
+            <Table
+              dataSource={getCurrentStarPointAward()?.standards || []}
+              rowKey="id"
+              pagination={false}
+              size="small"
+            >
+              <Table.Column
+                title="序号"
+                dataIndex="no"
+                width={60}
+                align="center"
+                render={(no, record: any) => (
+                  editingCategoryId === record.id ? (
+                    <Form.Item name="no" style={{ margin: 0 }}>
+                      <InputNumber min={1} style={{ width: '100%' }} />
+                    </Form.Item>
+                  ) : (
+                    no
+                  )
+                )}
+              />
+              
+              <Table.Column
+                title="类别类型"
+                dataIndex="type"
+                width={120}
+                render={(type, record: any) => (
+                  editingCategoryId === record.id ? (
+                    <Form.Item name="type" style={{ margin: 0 }}>
+                      <Select placeholder="选择类型">
+                        <Option value="network_star">Network Star</Option>
+                        <Option value="experience_star">Experience Star</Option>
+                        <Option value="social_star">Social Star</Option>
+                        <Option value="outreach_star">Outreach Star</Option>
+                      </Select>
+                    </Form.Item>
+                  ) : (
+                    (() => {
+                      const typeMap: Record<string, string> = {
+                        'network_star': 'Network Star',
+                        'experience_star': 'Experience Star',
+                        'social_star': 'Social Star',
+                        'outreach_star': 'Outreach Star'
+                      };
+                      return typeMap[type] || type;
+                    })()
+                  )
+                )}
+              />
+              
+              <Table.Column
+                title="标题"
+                dataIndex="title"
+                render={(title, record: any) => (
+                  editingCategoryId === record.id ? (
+                    <Form.Item name="title" style={{ margin: 0 }}>
+                      <Input placeholder="请输入标题" />
+                    </Form.Item>
+                  ) : (
+                    title
+                  )
+                )}
+              />
+              
+              <Table.Column
+                title="描述"
+                dataIndex="description"
+                width={200}
+                render={(description, record: any) => (
+                  editingCategoryId === record.id ? (
+                    <Form.Item name="description" style={{ margin: 0 }}>
+                      <Input placeholder="请输入描述" />
+                    </Form.Item>
+                  ) : (
+                    <div style={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {description}
+                    </div>
+                  )
+                )}
+              />
+              
+              <Table.Column
+                title="目标"
+                dataIndex="objective"
+                width={150}
+                render={(objective, record: any) => (
+                  editingCategoryId === record.id ? (
+                    <Form.Item name="objective" style={{ margin: 0 }}>
+                      <Input placeholder="请输入目标" />
+                    </Form.Item>
+                  ) : (
+                    <div style={{ maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {objective}
+                    </div>
+                  )
+                )}
+              />
+              
+              <Table.Column
+                title="分数"
+                dataIndex="points"
+                width={80}
+                align="center"
+                render={(points, record: any) => (
+                  editingCategoryId === record.id ? (
+                    <Form.Item name="points" style={{ margin: 0 }}>
+                      <InputNumber min={0} style={{ width: '100%' }} />
+                    </Form.Item>
+                  ) : (
+                    points
+                  )
+                )}
+              />
+              
+              <Table.Column
+                title="截止日期"
+                dataIndex="deadline"
+                width={120}
+                render={(deadline, record: any) => (
+                  editingCategoryId === record.id ? (
+                    <Form.Item name="deadline" style={{ margin: 0 }}>
+                      <DatePicker style={{ width: '100%' }} format="YYYY-MM-DD" />
+                    </Form.Item>
+                  ) : (
+                    deadline
+                  )
+                )}
+              />
+              
+              <Table.Column
+                title="操作"
+                width={120}
+                align="center"
+                render={(_, record: any) => (
+                  <Space>
+                    {editingCategoryId === record.id ? (
+                      <>
+                        <Tooltip title="保存">
+                          <Button 
+                            type="primary" 
+                            size="small"
+                            icon={<CheckCircleOutlined />} 
+                            onClick={handleSaveInlineCategory}
+                          />
+                        </Tooltip>
+                        <Tooltip title="取消">
+                          <Button 
+                            size="small"
+                            icon={<ExclamationCircleOutlined />} 
+                            onClick={handleCancelEditingCategory}
+                          />
+                        </Tooltip>
+                      </>
+                    ) : (
+                      <>
+                        <Tooltip title="编辑">
+                          <Button 
+                            type="text" 
+                            size="small"
+                            icon={<EditOutlined />} 
+                            onClick={() => {
+                              setEditingCategoryId(record.id);
+                              newCategoryForm.setFieldsValue({
+                                no: record.no,
+                                type: record.type,
+                                title: record.title,
+                                description: record.description,
+                                objective: record.objective,
+                                points: record.points,
+                                deadline: record.deadline ? globalDateService.parseDate(record.deadline) : null
+                              });
+                            }}
+                          />
+                        </Tooltip>
+                        <Popconfirm
+                          title="确定删除此类别？"
+                          onConfirm={() => handleDeleteInlineCategory(record.id)}
+                          okText="确定"
+                          cancelText="取消"
+                        >
+                          <Tooltip title="删除">
+                            <Button type="text" danger size="small" icon={<DeleteOutlined />} />
+                          </Tooltip>
+                        </Popconfirm>
+                      </>
+                    )}
+                  </Space>
+                )}
+              />
+            </Table>
             
-            <Table.Column
-              title="类别标题"
-              dataIndex="title"
-            />
-            
-            <Table.Column
-              title="描述"
-              dataIndex="description"
-              ellipsis
-            />
-            
-            <Table.Column
-              title="分数"
-              dataIndex="points"
-              width={80}
-              align="center"
-            />
-            
-            <Table.Column
-              title="我的分数"
-              dataIndex="myPoints"
-              width={100}
-              align="center"
-            />
-            
-            <Table.Column
-              title="操作"
-              width={120}
-              render={(_, record: StarCategory) => (
-                <Space>
-                  <Tooltip title="编辑">
-                    <Button 
-                      type="text" 
-                      icon={<EditOutlined />} 
-                      onClick={() => {
-                        setEditingItem(record);
-                        setEditModalType('star_point');
-                        setUnifiedEditModalVisible(true);
-                        setCategoryManagementModalVisible(false);
-                      }}
-                    />
-                  </Tooltip>
-                  <Popconfirm
-                    title="确定删除此类别？"
-                    onConfirm={() => handleStarCategoryDelete(record.id)}
-                    okText="确定"
-                    cancelText="取消"
-                  >
-                    <Tooltip title="删除">
-                      <Button type="text" danger icon={<DeleteOutlined />} />
-                    </Tooltip>
-                  </Popconfirm>
-                </Space>
-              )}
-            />
-          </Table>
+          </Form>
         </div>
+      </Modal>
+
+      {/* 初始化奖励配置模态框 */}
+      <Modal
+        title="初始化奖励配置"
+        open={initializeModalVisible}
+        onOk={handleInitializeAward}
+        onCancel={() => setInitializeModalVisible(false)}
+        width={500}
+        okText="创建"
+        cancelText="取消"
+      >
+        <Alert
+          message="初始化说明"
+          description="此功能将根据您选择的参考年份，创建新年份的所有奖励配置（Efficient Star、Star Point、National & Area Incentive、E-Awards）"
+          type="info"
+          showIcon
+          style={{ marginBottom: 24 }}
+        />
+        
+        <Form layout="vertical">
+          <Form.Item
+            label="参考年份"
+            required
+            help="选择要复制的奖励配置年份"
+          >
+            <Select
+              placeholder="请选择参考年份"
+              value={sourceYear}
+              onChange={setSourceYear}
+              style={{ width: '100%' }}
+            >
+              {availableYearsForInit.map(year => (
+                <Option key={year} value={year}>
+                  {year} 年
+                </Option>
+              ))}
+            </Select>
+          </Form.Item>
+          
+          <Form.Item
+            label="目标年份"
+            required
+            help="要创建的新年份"
+          >
+            <InputNumber
+              min={2020}
+              max={2030}
+              value={targetYear}
+              onChange={(value) => setTargetYear(value || new Date().getFullYear())}
+              style={{ width: '100%' }}
+            />
+          </Form.Item>
+        </Form>
+        
+        <Alert
+          message="注意事项"
+          description="初始化后，新年份的奖励配置将完全复制参考年份的设置，包括所有标准和分数设置。"
+          type="warning"
+          showIcon
+          style={{ marginTop: 16 }}
+        />
       </Modal>
     </div>
   );

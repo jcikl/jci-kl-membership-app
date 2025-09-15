@@ -7,26 +7,46 @@ export const uploadImageToStorage = async (
   path: string = 'chapter-logos'
 ): Promise<string> => {
   try {
-
     // 检查 storage 是否可用
     if (!storage) {
       throw new Error('Firebase Storage 未初始化');
     }
 
-    // 生成唯一文件名
+    // 生成唯一文件名，确保文件名安全
     const timestamp = Date.now();
-    const fileName = `${timestamp}_${file.name}`;
+    const safeFileName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_'); // 替换特殊字符
+    const fileName = `${timestamp}_${safeFileName}`;
     const fullPath = `${path}/${fileName}`;
     
     const imageRef = ref(storage, fullPath);
     
-    // 上传文件
-    const snapshot = await uploadBytes(imageRef, file);
+    // 添加重试机制
+    let retryCount = 0;
+    const maxRetries = 3;
     
-    // 获取下载URL
-    const downloadURL = await getDownloadURL(snapshot.ref);
+    while (retryCount < maxRetries) {
+      try {
+        // 上传文件
+        const snapshot = await uploadBytes(imageRef, file);
+        
+        // 获取下载URL
+        const downloadURL = await getDownloadURL(snapshot.ref);
+        
+        return downloadURL;
+      } catch (uploadError) {
+        retryCount++;
+        console.warn(`上传尝试 ${retryCount}/${maxRetries} 失败:`, uploadError);
+        
+        if (retryCount >= maxRetries) {
+          throw uploadError;
+        }
+        
+        // 等待一段时间后重试
+        await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
+      }
+    }
     
-    return downloadURL;
+    throw new Error('上传重试次数超限');
   } catch (error) {
     console.error('图片上传失败，详细错误:', error);
     
@@ -40,6 +60,10 @@ export const uploadImageToStorage = async (
         throw new Error('存储空间不足');
       } else if (error.message.includes('storage/unauthenticated')) {
         throw new Error('用户未认证，请先登录');
+      } else if (error.message.includes('storage/network-request-failed')) {
+        throw new Error('网络连接失败，请检查网络连接');
+      } else if (error.message.includes('storage/canceled')) {
+        throw new Error('上传被取消');
       } else {
         throw new Error(`图片上传失败: ${error.message}`);
       }

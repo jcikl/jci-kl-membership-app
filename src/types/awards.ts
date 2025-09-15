@@ -15,7 +15,11 @@ export type AwardCategory =
   | 'efficient_star'
   | 'star_point'
   | 'national_area_incentive'
-  | 'e_awards';
+  | 'e_awards'
+  | 'network_star'
+  | 'experience_star'
+  | 'social_star'
+  | 'outreach_star';
 
 export type AwardStatus = 
   | 'draft'
@@ -26,17 +30,8 @@ export type AwardStatus =
   | 'closed'
   | 'evaluating';
 
-// Efficient Star 奖励系统
-export interface EfficientStarAward extends Award {
-  category: 'efficient_star';
-  standards: EfficientStarStandard[];
-  totalScore: number;
-  currentScore: number;
-  deadline: string;
-  criteria: EfficientStarCriteria;
-}
-
-export interface EfficientStarStandard {
+// 统一的Standard接口
+export interface Standard {
   id: string;
   no: number;
   title: string;
@@ -47,14 +42,20 @@ export interface EfficientStarStandard {
   myScore?: number;
   status: 'pending' | 'completed' | 'overdue';
   guidelines?: string;
-  subStandards?: EfficientStarSubStandard[];
+  subStandards?: SubStandard[];
   responsiblePerson?: string; // 负责人
   team?: string[]; // 团队成员
   teamManagement?: TeamManagement; // 团队管理
   scoreSettings?: any[]; // 分数设置
+  // 新增字段用于统一管理
+  category?: string; // 类别：efficient_star, network_star, experience_star, outreach_star, social_star
+  type?: string; // 类型标识
+  objective?: string; // 目标（Star Point专用）
+  note?: string; // 备注（Star Point专用）
+  points?: number; // 分数（Star Point专用）
 }
 
-export interface EfficientStarSubStandard {
+export interface SubStandard {
   id: string;
   no: string; // 如 "2.1", "2.2"
   title: string;
@@ -68,6 +69,21 @@ export interface EfficientStarSubStandard {
   team?: string[]; // 团队成员
 }
 
+// Efficient Star 奖励系统
+export interface EfficientStarAward extends Award {
+  category: 'efficient_star';
+  standards: Standard[]; // 使用统一的Standard接口
+  totalScore: number;
+  currentScore: number;
+  deadline: string;
+  criteria: EfficientStarCriteria;
+  categories?: string[]; // 新增：支持的类别列表
+}
+
+// 保持向后兼容的别名
+export type EfficientStarStandard = Standard;
+export type EfficientStarSubStandard = SubStandard;
+
 export interface EfficientStarCriteria {
   tiers: {
     score: string; // 如 "90%-99%"
@@ -75,22 +91,38 @@ export interface EfficientStarCriteria {
   }[];
 }
 
-// Star Point 奖励系统
+// Star Point 奖励系统 - 按具体Star类别独立存储
 export interface StarPointAward extends Award {
-  category: 'star_point';
-  starCategories: StarCategory[];
+  category: StarCategoryType; // 具体类别：network_star, experience_star, social_star, outreach_star
+  standards: Standard[]; // 统一使用Standard接口
   totalScore: number;
   currentScore: number;
   deadline: string;
   terms: string[];
+  starType: StarCategoryType; // 明确的Star类型
 }
 
+// Star Point 统称接口 - 用于管理所有Star类别
+export interface StarPointManagement {
+  year: number;
+  starCategories: StarCategoryType[]; // 支持的Star类别列表
+  totalStarScore: number; // 所有Star类别的总分
+  currentStarScore: number; // 当前所有Star类别的分数
+  deadline: string; // 统一截止日期
+  terms: string[]; // 统一条款
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Star Category类型定义
 export type StarCategoryType = 
+  | 'efficient_star'
   | 'network_star'
   | 'experience_star'
   | 'outreach_star'
   | 'social_star';
 
+// 保持向后兼容的接口
 export interface StarCategory {
   id: string;
   type: StarCategoryType;
