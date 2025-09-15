@@ -67,7 +67,7 @@ export const GLOBAL_COMPONENT_CONFIG = {
   MODAL_DEFAULTS: {
     width: 800,
     centered: true,
-    destroyOnClose: true,
+    destroyOnHidden: true,
     maskClosable: false,
     keyboard: true
   },

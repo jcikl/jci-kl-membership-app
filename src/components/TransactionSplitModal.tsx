@@ -262,7 +262,7 @@ const TransactionSplitModal: React.FC<TransactionSplitModalProps> = ({
       onOk={handleOk}
       onCancel={onCancel}
       width={800}
-      destroyOnClose
+      destroyOnHidden
     >
       <div style={{ marginBottom: 16 }}>
         <Card size="small">

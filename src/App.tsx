@@ -7,6 +7,7 @@ import { getMemberByEmail } from '@/services/memberService';
 import { User } from 'firebase/auth';
 import { initChapterSettings } from '@/scripts/initChapterSettings';
 import { FiscalYearProvider } from '@/contexts/FiscalYearContext';
+import { SidebarProvider, useSidebar } from '@/contexts/SidebarContext';
 
 // 页面组件
 import LoginPage from '@/pages/LoginPage';
@@ -27,11 +28,7 @@ import EventCreatePage from '@/pages/EventCreatePage';
 import EventDetailPage from '@/pages/EventDetailPage';
 import EventRegistrationPage from '@/pages/EventRegistrationPage';
 import EventRegistrationSuccessPage from '@/pages/EventRegistrationSuccessPage';
-import AwardsManagementPage from '@/pages/AwardsManagementPage';
-import MigrationPage from '@/pages/MigrationPage';
-
-// RBAC组件
-import RBACManagement from '@/components/rbac/RBACManagement';
+import AwardsManagementWrapper from '@/components/AwardsManagementWrapper';
 
 // 布局组件
 import AppHeader from '@/components/AppHeader';
@@ -39,6 +36,54 @@ import AppSider from '@/components/AppSider';
 import LoadingSpinner from '@/components/LoadingSpinner';
 
 const { Content } = Layout;
+
+// Main content component that uses sidebar context
+const MainContent: React.FC = () => {
+  const { collapsed, isMobile } = useSidebar();
+  
+  // 计算侧边栏宽度
+  const sidebarWidth = isMobile ? 0 : (collapsed ? 80 : 200);
+  
+  return (
+    <Content style={{ 
+      margin: `${isMobile ? '56px' : '64px'} 16px 24px 16px`, 
+      padding: isMobile ? 16 : 24, 
+      background: '#fff',
+      marginLeft: `${sidebarWidth}px`,
+      transition: 'margin-left 0.2s ease',
+      minHeight: `calc(100vh - ${isMobile ? '56px' : '64px'})`
+    }}>
+      <Routes>
+        <Route path="/" element={<Navigate to="/dashboard" replace />} />
+        <Route path="/dashboard" element={<DashboardPage />} />
+        <Route path="/members" element={<MemberListPage />} />
+        <Route path="/members/:id" element={<MemberDetailPage />} />
+        <Route path="/surveys" element={<SurveyListPage />} />
+        <Route path="/surveys/create" element={<SurveyCreatePage />} />
+        <Route path="/surveys/:id" element={<SurveyDetailPage />} />
+        <Route path="/surveys/:id/edit" element={<SurveyEditPage />} />
+        <Route path="/surveys/:id/response" element={<SurveyResponsePage />} />
+        <Route path="/profile" element={<ProfilePage />} />
+        <Route path="/finance" element={<FinancePage />} />
+        <Route path="/events" element={<EventManagementPage />} />
+        <Route path="/events/create" element={<EventCreatePage />} />
+        <Route path="/events/:id" element={<EventDetailPage />} />
+        <Route path="/events/:id/edit" element={<EventCreatePage />} />
+        <Route path="/events/:id/register" element={<EventRegistrationPage />} />
+        <Route path="/events/:id/registration-success" element={<EventRegistrationSuccessPage />} />
+        <Route path="/awards" element={<AwardsManagementWrapper />} />
+        <Route path="/awards/efficient-star" element={<AwardsManagementWrapper />} />
+        <Route path="/awards/star-point" element={<AwardsManagementWrapper />} />
+        <Route path="/awards/national-area-incentive" element={<AwardsManagementWrapper />} />
+        <Route path="/awards/e-awards" element={<AwardsManagementWrapper />} />
+        <Route path="/awards/tracker" element={<AwardsManagementWrapper />} />
+        <Route path="/awards/competitors" element={<AwardsManagementWrapper />} />
+              <Route path="/system-settings" element={<SystemSettingsPage />} />
+        <Route path="*" element={<Navigate to="/dashboard" replace />} />
+      </Routes>
+    </Content>
+  );
+};
 
 const App: React.FC = () => {
   const { user, isLoading, setUser, setMember, setLoading } = useAuthStore();
@@ -86,46 +131,15 @@ const App: React.FC = () => {
 
   return (
     <FiscalYearProvider>
-      <Layout style={{ minHeight: '100vh' }}>
-        <AppSider />
-        <Layout>
-          <AppHeader />
-          <Content style={{ margin: '24px 16px', padding: 24, background: '#fff' }}>
-            <Routes>
-              <Route path="/" element={<Navigate to="/dashboard" replace />} />
-              <Route path="/dashboard" element={<DashboardPage />} />
-              <Route path="/members" element={<MemberListPage />} />
-              <Route path="/members/:id" element={<MemberDetailPage />} />
-              <Route path="/surveys" element={<SurveyListPage />} />
-              <Route path="/surveys/create" element={<SurveyCreatePage />} />
-              <Route path="/surveys/:id" element={<SurveyDetailPage />} />
-              <Route path="/surveys/:id/edit" element={<SurveyEditPage />} />
-              <Route path="/surveys/:id/response" element={<SurveyResponsePage />} />
-              <Route path="/profile" element={<ProfilePage />} />
-              <Route path="/finance" element={<FinancePage />} />
-              <Route path="/events" element={<EventManagementPage />} />
-              <Route path="/events/create" element={<EventCreatePage />} />
-              <Route path="/events/:id" element={<EventDetailPage />} />
-              <Route path="/events/:id/edit" element={<EventCreatePage />} />
-              <Route path="/events/:id/register" element={<EventRegistrationPage />} />
-              <Route path="/events/:id/registration-success" element={<EventRegistrationSuccessPage />} />
-        <Route path="/awards" element={<AwardsManagementPage />} />
-        <Route path="/awards/efficient-star" element={<AwardsManagementPage />} />
-        <Route path="/awards/star-point" element={<AwardsManagementPage />} />
-        <Route path="/awards/national-area-incentive" element={<AwardsManagementPage />} />
-        <Route path="/awards/e-awards" element={<AwardsManagementPage />} />
-        <Route path="/awards/award-indicators" element={<AwardsManagementPage />} />
-        <Route path="/awards/new-award-indicators" element={<AwardsManagementPage />} />
-        <Route path="/awards/tracker" element={<AwardsManagementPage />} />
-        <Route path="/awards/competitors" element={<AwardsManagementPage />} />
-              <Route path="/migration" element={<MigrationPage />} />
-              <Route path="/rbac-management" element={<RBACManagement />} />
-              <Route path="/system-settings" element={<SystemSettingsPage />} />
-              <Route path="*" element={<Navigate to="/dashboard" replace />} />
-            </Routes>
-          </Content>
+      <SidebarProvider>
+        <Layout style={{ minHeight: '100vh' }}>
+          <AppSider />
+          <Layout>
+            <AppHeader />
+            <MainContent />
+          </Layout>
         </Layout>
-      </Layout>
+      </SidebarProvider>
     </FiscalYearProvider>
   );
 };

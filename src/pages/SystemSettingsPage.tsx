@@ -1,16 +1,24 @@
 import React from 'react';
-import { Card, Typography, Tabs, Row, Col, Space, Statistic } from 'antd';
+import { Card, Typography, Tabs, Row, Col, Space } from 'antd';
 import { 
   SettingOutlined, 
   TeamOutlined, 
   TrophyOutlined, 
   SafetyOutlined,
-  UserOutlined
+  UserOutlined,
+  BarChartOutlined,
+  AuditOutlined,
+  TagsOutlined
 } from '@ant-design/icons';
 import RBACAudit from '@/components/rbac/RBACAudit';
+import PermissionMatrix from '@/components/rbac/PermissionMatrix';
+import PermissionMatrixChart from '@/components/rbac/PermissionMatrixChart';
+import PositionManagement from '@/components/rbac/PositionManagement';
+import CategoryManagement from '@/components/rbac/CategoryManagement';
 import ChapterSettings from '@/components/ChapterSettings';
 import CouncilTasksManager from '@/components/CouncilTasksManager';
 import MembershipTasksManager from '@/components/MembershipTasksManager.tsx';
+import NewAwardIndicatorManagement from '@/components/NewAwardIndicatorManagement';
 
 const { Title } = Typography;
 
@@ -55,94 +63,12 @@ const SystemSettingsPage: React.FC = () => {
         </Row>
       </Card>
 
-      {/* 统计卡片 */}
-      <Row gutter={[24, 24]} style={{ marginBottom: '24px' }}>
-        <Col xs={12} sm={6}>
-          <Card 
-            style={{ 
-              background: 'linear-gradient(135deg, #52c41a 0%, #3f8600 100%)',
-              color: 'white',
-              border: 'none'
-            }}
-            styles={{ body: { padding: '24px' } }}
-          >
-            <Statistic 
-              title={<span style={{ color: 'white', opacity: 0.9 }}>分会配置</span>}
-              value="已配置" 
-              prefix={<TeamOutlined style={{ color: 'white' }} />}
-              valueStyle={{ color: 'white', fontSize: '20px', fontWeight: 'bold' }}
-            />
-            <div style={{ marginTop: '8px', color: 'white', opacity: 0.8, fontSize: '14px' }}>
-              分会基本信息设置
-            </div>
-          </Card>
-        </Col>
-        <Col xs={12} sm={6}>
-          <Card 
-            style={{ 
-              background: 'linear-gradient(135deg, #1890ff 0%, #096dd9 100%)',
-              color: 'white',
-              border: 'none'
-            }}
-            styles={{ body: { padding: '24px' } }}
-          >
-            <Statistic 
-              title={<span style={{ color: 'white', opacity: 0.9 }}>会员任务</span>}
-              value={5} 
-              prefix={<UserOutlined style={{ color: 'white' }} />}
-              valueStyle={{ color: 'white', fontSize: '28px', fontWeight: 'bold' }}
-            />
-            <div style={{ marginTop: '8px', color: 'white', opacity: 0.8, fontSize: '14px' }}>
-              活跃的会员管理任务
-            </div>
-          </Card>
-        </Col>
-        <Col xs={12} sm={6}>
-          <Card 
-            style={{ 
-              background: 'linear-gradient(135deg, #fa8c16 0%, #d46b08 100%)',
-              color: 'white',
-              border: 'none'
-            }}
-            styles={{ body: { padding: '24px' } }}
-          >
-            <Statistic 
-              title={<span style={{ color: 'white', opacity: 0.9 }}>理事团任务</span>}
-              value={3} 
-              prefix={<TrophyOutlined style={{ color: 'white' }} />}
-              valueStyle={{ color: 'white', fontSize: '28px', fontWeight: 'bold' }}
-            />
-            <div style={{ marginTop: '8px', color: 'white', opacity: 0.8, fontSize: '14px' }}>
-              理事团管理任务
-            </div>
-          </Card>
-        </Col>
-        <Col xs={12} sm={6}>
-          <Card 
-            style={{ 
-              background: 'linear-gradient(135deg, #722ed1 0%, #531dab 100%)',
-              color: 'white',
-              border: 'none'
-            }}
-            styles={{ body: { padding: '24px' } }}
-          >
-            <Statistic 
-              title={<span style={{ color: 'white', opacity: 0.9 }}>审计日志</span>}
-              value={128} 
-              prefix={<SafetyOutlined style={{ color: 'white' }} />}
-              valueStyle={{ color: 'white', fontSize: '28px', fontWeight: 'bold' }}
-            />
-            <div style={{ marginTop: '8px', color: 'white', opacity: 0.8, fontSize: '14px' }}>
-              系统操作审计记录
-            </div>
-          </Card>
-        </Col>
-      </Row>
 
       <Card>
         <Tabs
           defaultActiveKey="chapter"
           size="large"
+          tabPosition="left"
           items={[
             {
               key: 'chapter',
@@ -175,10 +101,60 @@ const SystemSettingsPage: React.FC = () => {
               children: <CouncilTasksManager />
             },
             {
-              key: 'audit',
+              key: 'award-indicators',
+              label: (
+                <span>
+                  <TrophyOutlined />
+                  奖励指标管理
+                </span>
+              ),
+              children: <NewAwardIndicatorManagement />
+            },
+            {
+              key: 'rbac-matrix',
               label: (
                 <span>
                   <SafetyOutlined />
+                  JCI权限矩阵
+                </span>
+              ),
+              children: <PermissionMatrix />
+            },
+            {
+              key: 'rbac-chart',
+              label: (
+                <span>
+                  <BarChartOutlined />
+                  权限矩阵图表
+                </span>
+              ),
+              children: <PermissionMatrixChart />
+            },
+            {
+              key: 'positions',
+              label: (
+                <span>
+                  <UserOutlined />
+                  职位管理
+                </span>
+              ),
+              children: <PositionManagement />
+            },
+            {
+              key: 'categories',
+              label: (
+                <span>
+                  <TagsOutlined />
+                  分类管理
+                </span>
+              ),
+              children: <CategoryManagement />
+            },
+            {
+              key: 'audit',
+              label: (
+                <span>
+                  <AuditOutlined />
                   审计日志
                 </span>
               ),

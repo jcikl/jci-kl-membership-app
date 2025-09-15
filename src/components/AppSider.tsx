@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Layout, Menu, Typography } from 'antd';
 import {
   DashboardOutlined, 
@@ -8,16 +8,12 @@ import {
   DollarOutlined,
   MessageOutlined,
   SettingOutlined,
-  SafetyOutlined,
   FileTextOutlined,
-  TrophyOutlined,
-  StarOutlined,
-  GiftOutlined,
-  SendOutlined,
-  BarChartOutlined,
-  SwapOutlined
+  TrophyOutlined
 } from '@ant-design/icons';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { useSidebar } from '@/contexts/SidebarContext';
+// import { globalComponentService } from '@/config/globalComponentSettings';
 
 const { Sider } = Layout;
 const { Title } = Typography;
@@ -25,7 +21,7 @@ const { Title } = Typography;
 const AppSider: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const [collapsed, setCollapsed] = useState(false);
+  const { collapsed, setCollapsed, isMobile } = useSidebar();
 
   const menuItems = [
     {
@@ -54,51 +50,9 @@ const AppSider: React.FC = () => {
       label: '财务管理',
     },
     {
-      key: 'awards',
+      key: '/awards',
       icon: <TrophyOutlined />,
       label: '奖励管理',
-      children: [
-        {
-          key: '/awards',
-          icon: <TrophyOutlined />,
-          label: '奖励仪表板',
-        },
-        {
-          key: '/awards/efficient-star',
-          icon: <StarOutlined />,
-          label: 'Efficient Star',
-        },
-        {
-          key: '/awards/star-point',
-          icon: <GiftOutlined />,
-          label: 'Star Point',
-        },
-        {
-          key: '/awards/national-area-incentive',
-          icon: <SendOutlined />,
-          label: 'National & Area Incentive',
-        },
-        {
-          key: '/awards/e-awards',
-          icon: <TrophyOutlined />,
-          label: 'E-Awards',
-        },
-        {
-          key: '/awards/award-indicators',
-          icon: <TrophyOutlined />,
-          label: '奖励指标',
-        },
-        {
-          key: '/awards/tracker',
-          icon: <UserOutlined />,
-          label: '活动追踪',
-        },
-        {
-          key: '/awards/competitors',
-          icon: <BarChartOutlined />,
-          label: '竞争对手追踪',
-        },
-      ],
     },
     {
       key: '/messages',
@@ -111,16 +65,6 @@ const AppSider: React.FC = () => {
       label: '个人资料',
     },
     {
-      key: '/migration',
-      icon: <SwapOutlined />,
-      label: '数据迁移',
-    },
-    {
-      key: '/rbac-management',
-      icon: <SafetyOutlined />,
-      label: '权限管理',
-    },
-    {
       key: '/system-settings',
       icon: <SettingOutlined />,
       label: '系统设置',
@@ -131,18 +75,30 @@ const AppSider: React.FC = () => {
     navigate(key);
   };
 
+  // 获取响应式配置
+  // const responsiveConfig = globalComponentService.getResponsiveConfig();
+
   return (
     <Sider 
-      collapsible 
-      collapsed={collapsed} 
+      collapsible
+      collapsed={collapsed}
       onCollapse={setCollapsed}
+      breakpoint="md"
+      collapsedWidth={isMobile ? 0 : 80}
       style={{
         background: '#fff',
         boxShadow: '2px 0 8px rgba(0,0,0,0.1)',
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        bottom: 0,
+        zIndex: 999,
+        height: '100vh',
+        transition: 'all 0.2s ease-in-out'
       }}
     >
       <div style={{ 
-        padding: '16px', 
+        padding: isMobile ? '12px' : '16px', 
         textAlign: 'center',
         borderBottom: '1px solid #f0f0f0'
       }}>
@@ -151,10 +107,11 @@ const AppSider: React.FC = () => {
           style={{ 
             margin: 0, 
             color: '#1890ff',
-            fontSize: collapsed ? '14px' : '16px'
+            fontSize: collapsed || isMobile ? '14px' : '16px',
+            transition: 'font-size 0.2s ease-in-out'
           }}
         >
-          {collapsed ? 'JCI' : 'JCI KL'}
+          {collapsed || isMobile ? 'JCI' : 'JCI KL'}
         </Title>
       </div>
       
@@ -165,8 +122,10 @@ const AppSider: React.FC = () => {
         onClick={handleMenuClick}
         style={{ 
           border: 'none',
-          background: 'transparent'
+          background: 'transparent',
+          fontSize: isMobile ? '12px' : '14px'
         }}
+        inlineCollapsed={collapsed || isMobile}
       />
     </Sider>
   );

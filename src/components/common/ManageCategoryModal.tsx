@@ -592,7 +592,7 @@ const ManageCategoryModal: React.FC<ManageCategoryModalProps> = ({
       onCancel={onClose}
       width={1000}
       footer={null}
-      destroyOnClose
+      destroyOnHidden
     >
       <Tabs
         activeKey={activeTab}

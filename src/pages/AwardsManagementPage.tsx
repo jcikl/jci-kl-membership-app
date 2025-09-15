@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import {
   Tabs,
-  Typography
+  Typography,
+  Tag,
+  Space
 } from 'antd';
 import {
   StarOutlined,
@@ -10,15 +12,15 @@ import {
   GiftOutlined,
   DashboardOutlined,
   UserOutlined,
-  BarChartOutlined
+  BarChartOutlined,
+  EyeOutlined,
+  TeamOutlined
 } from '@ant-design/icons';
 import { useLocation, useNavigate } from 'react-router-dom';
 import EfficientStarAwardComponent from '@/components/EfficientStarAward';
 import StarPointAwardComponent from '@/components/StarPointAward';
 import NationalAreaIncentiveAwardComponent from '@/components/NationalAreaIncentiveAward';
 import AwardsDashboard from '@/components/AwardsDashboard';
-import AwardIndicatorManagement from '@/components/AwardIndicatorManagement';
-import NewAwardIndicatorManagement from '@/components/NewAwardIndicatorManagement';
 import ActivityParticipationTracker from '@/components/ActivityParticipationTracker';
 import CompetitorScoreTracker from '@/components/CompetitorScoreTracker';
 import EAwardsComponent from '@/components/EAwardsComponent';
@@ -40,6 +42,9 @@ const AwardsManagementPage: React.FC<AwardsManagementPageProps> = ({
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('dashboard');
 
+  // 检查是否有权限访问追踪功能
+  const canAccessTracking = isAdmin || isDeveloper;
+
   // 根据URL路径设置活动标签页
   useEffect(() => {
     const path = location.pathname;
@@ -55,8 +60,6 @@ const AwardsManagementPage: React.FC<AwardsManagementPageProps> = ({
       setActiveTab('e_awards');
     } else if (path === '/awards/award-indicators') {
       setActiveTab('award_indicators');
-    } else if (path === '/awards/new-award-indicators') {
-      setActiveTab('new_award_indicators');
     } else if (path === '/awards/tracker') {
       setActiveTab('tracker');
     } else if (path === '/awards/competitors') {
@@ -74,7 +77,6 @@ const AwardsManagementPage: React.FC<AwardsManagementPageProps> = ({
       national_area_incentive: '/awards/national-area-incentive',
       e_awards: '/awards/e-awards',
       award_indicators: '/awards/award-indicators',
-      new_award_indicators: '/awards/new-award-indicators',
       tracker: '/awards/tracker',
       competitors: '/awards/competitors'
     };
@@ -158,36 +160,18 @@ const AwardsManagementPage: React.FC<AwardsManagementPageProps> = ({
         />
       ),
     },
-     {
-       key: 'award_indicators',
-       label: (
-         <span>
-           <TrophyOutlined />
-           Award Indicators (Legacy)
-         </span>
-       ),
-       children: (
-         <AwardIndicatorManagement />
-       ),
-     },
-     {
-       key: 'new_award_indicators',
-       label: (
-         <span>
-           <TrophyOutlined />
-           New Award Indicators
-         </span>
-       ),
-       children: (
-         <NewAwardIndicatorManagement />
-       ),
-     },
-    ...(isDeveloper ? [{
+    // 活动追踪标签 - 现在对管理员和开发者都可见
+    ...(canAccessTracking ? [{
       key: 'tracker',
       label: (
         <span>
           <UserOutlined />
-          Activity Tracker
+          <Space>
+            Activity Tracker
+            <Tag color="blue" icon={<EyeOutlined />}>
+              Tracking
+            </Tag>
+          </Space>
         </span>
       ),
       children: (
@@ -197,12 +181,18 @@ const AwardsManagementPage: React.FC<AwardsManagementPageProps> = ({
         />
       ),
     }] : []),
-    ...(isDeveloper ? [{
+    // 竞争对手追踪标签 - 现在对管理员和开发者都可见
+    ...(canAccessTracking ? [{
       key: 'competitors',
       label: (
         <span>
           <BarChartOutlined />
-          Competitor Tracker
+          <Space>
+            Competitor Tracker
+            <Tag color="green" icon={<TeamOutlined />}>
+              Analysis
+            </Tag>
+          </Space>
         </span>
       ),
       children: (
@@ -218,6 +208,16 @@ const AwardsManagementPage: React.FC<AwardsManagementPageProps> = ({
       <Title level={2} style={{ marginBottom: 24 }}>
         <TrophyOutlined style={{ marginRight: 8 }} />
         Awards Management
+        {canAccessTracking && (
+          <Space style={{ marginLeft: 16 }}>
+            <Tag color="blue" icon={<EyeOutlined />}>
+              Activity Tracking Available
+            </Tag>
+            <Tag color="green" icon={<TeamOutlined />}>
+              Competitor Analysis Available
+            </Tag>
+          </Space>
+        )}
       </Title>
 
       <Tabs activeKey={activeTab} onChange={handleTabChange} items={tabItems} />

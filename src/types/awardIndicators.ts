@@ -199,6 +199,7 @@ export interface CreateIndicatorInput {
 
 // 更新指标的输入类型
 export interface UpdateIndicatorInput {
+  awardIndicatorId?: string; // 支持类别变更
   no?: number;
   title?: string;
   description?: string;
