@@ -16,6 +16,7 @@
     "firebase:deploy": "firebase deploy"
   },
   "dependencies": {
+    "@ant-design/charts": "^2.6.4",
     "@google/generative-ai": "^0.24.1",
     "@hookform/resolvers": "^3.3.2",
     "@reduxjs/toolkit": "^2.0.1",

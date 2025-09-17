@@ -33,6 +33,7 @@ import {
   SearchOutlined,
   SplitCellsOutlined,
   TransactionOutlined,
+  LoadingOutlined,
 } from '@ant-design/icons';
 import { Transaction, BankAccount, TransactionPurpose, TransactionSplit } from '@/types/finance';
 import { useAuthStore } from '@/store/authStore';
@@ -51,8 +52,17 @@ interface TransactionManagementProps {
   onCreateTransaction: (transaction: Omit<Transaction, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
   onUpdateTransaction: (id: string, transaction: Partial<Transaction>) => Promise<void>;
   onDeleteTransaction: (id: string) => Promise<void>;
-  onDeleteTransactions: (ids: string[]) => Promise<{ success: number; failed: number; errors: string[] }>;
-  onImportTransactions: (transactions: any[], bankAccountId: string) => Promise<{ success: number; failed: number; errors: string[] }>;
+  onDeleteTransactions: (
+    ids: string[], 
+    options?: {
+      onProgress?: (progress: { completed: number; total: number; percentage: number; currentStep: string }) => void;
+    }
+  ) => Promise<{ success: number; failed: number; errors: string[] }>;
+  onImportTransactions: (
+    transactions: any[], 
+    bankAccountId: string,
+    progressCallback?: (progress: { completed: number; total: number; percentage: number }) => void
+  ) => Promise<{ success: number; failed: number; errors: string[] }>;
   transactions: Transaction[];
   bankAccounts: BankAccount[];
   purposes: TransactionPurpose[];
@@ -80,10 +90,23 @@ const TransactionManagement: React.FC<TransactionManagementProps> = ({
   const [selectedTransactions, setSelectedTransactions] = useState<string[]>([]);
   const [isBatchSettingsVisible, setIsBatchSettingsVisible] = useState(false);
   
+  // 批量删除进度状态
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteProgress, setDeleteProgress] = useState<{
+    completed: number;
+    total: number;
+    percentage: number;
+  } | null>(null);
+  
   // 拆分相关状态
   const [isSplitModalVisible, setIsSplitModalVisible] = useState(false);
   const [splittingTransaction, setSplittingTransaction] = useState<Transaction | null>(null);
   const [transactionSplits, setTransactionSplits] = useState<TransactionSplit[]>([]);
+  
+  // 拆分记录缓存和加载状态
+  const [splitsCache, setSplitsCache] = useState<Map<string, TransactionSplit[]>>(new Map());
+  const [loadedTransactionIds, setLoadedTransactionIds] = useState<Set<string>>(new Set());
+  const [isLoadingSplits, setIsLoadingSplits] = useState(false);
 
   // 3层级交易用途相关状态
   const [purposeFilter, setPurposeFilter] = useState<string[]>([]);
@@ -132,24 +155,133 @@ const TransactionManagement: React.FC<TransactionManagementProps> = ({
     setCurrentPage(1);
   }, [activeTab]);
 
-  // 加载拆分数据
-  useEffect(() => {
-    const loadSplits = async () => {
-      try {
-        // 优化：只加载当前显示的交易的拆分记录
-        if (transactions.length > 0) {
-          const transactionIds = transactions.map(t => t.id);
-          const splits = await transactionSplitService.getSplitsByTransactions(transactionIds);
-          setTransactionSplits(splits);
-          console.log('✅ 已加载拆分记录:', splits.length, '项');
-        }
-      } catch (error) {
-        console.error('❌ 加载拆分数据失败:', error);
-      }
-    };
+  // 智能加载拆分数据 - 只在需要时加载
+  const loadSplitsOnDemand = async (transactionIds: string[]) => {
+    if (isLoadingSplits) return; // 防止重复加载
     
-    loadSplits();
+    setIsLoadingSplits(true);
+    try {
+      // 过滤出尚未加载的交易ID
+      const unloadedIds = transactionIds.filter(id => !loadedTransactionIds.has(id));
+      
+      if (unloadedIds.length === 0) {
+        console.log('📦 所有拆分记录已缓存，跳过加载');
+        return;
+      }
+      
+      // 智能预筛选：只加载可能有拆分记录的交易
+      const likelyToHaveSplits = unloadedIds.filter(id => {
+        const transaction = transactions.find(t => t.id === id);
+        if (!transaction) return false;
+        
+        // 检查是否有拆分记录的迹象
+        return transaction.transactionType && 
+               transaction.projectAccount && 
+               transaction.transactionPurpose &&
+               transaction.amount !== undefined && 
+               transaction.amount > 0;
+      });
+      
+      if (likelyToHaveSplits.length === 0) {
+        // 如果没有可能包含拆分记录的交易，直接标记为已加载
+        const newLoadedIds = new Set(loadedTransactionIds);
+        unloadedIds.forEach(id => newLoadedIds.add(id));
+        setLoadedTransactionIds(newLoadedIds);
+        
+        // 更新缓存（空数组表示已检查但无拆分记录）
+        const newCache = new Map(splitsCache);
+        unloadedIds.forEach(id => newCache.set(id, []));
+        setSplitsCache(newCache);
+        
+        console.log(`📦 跳过 ${unloadedIds.length} 个无拆分记录的交易`);
+        return;
+      }
+      
+      console.log(`🔄 加载 ${likelyToHaveSplits.length} 个可能有拆分记录的交易...`);
+      const splits = await transactionSplitService.getSplitsByTransactions(likelyToHaveSplits);
+      
+      // 更新缓存
+      const newCache = new Map(splitsCache);
+      const newLoadedIds = new Set(loadedTransactionIds);
+      
+      // 按交易ID分组拆分记录
+      const splitsByTransaction = new Map<string, TransactionSplit[]>();
+      splits.forEach(split => {
+        const existing = splitsByTransaction.get(split.transactionId) || [];
+        existing.push(split);
+        splitsByTransaction.set(split.transactionId, existing);
+      });
+      
+      // 更新缓存
+      unloadedIds.forEach(id => {
+        if (likelyToHaveSplits.includes(id)) {
+          newCache.set(id, splitsByTransaction.get(id) || []);
+        } else {
+          newCache.set(id, []); // 标记为已检查但无拆分记录
+        }
+        newLoadedIds.add(id);
+      });
+      
+      setSplitsCache(newCache);
+      setLoadedTransactionIds(newLoadedIds);
+      
+      // 更新当前显示的拆分记录
+      const allCurrentSplits = transactionIds.flatMap(id => newCache.get(id) || []);
+      setTransactionSplits(allCurrentSplits);
+      
+      console.log(`✅ 已加载拆分记录: ${splits.length} 项 (缓存: ${newCache.size} 个交易)`);
+    } catch (error) {
+      console.error('❌ 加载拆分数据失败:', error);
+    } finally {
+      setIsLoadingSplits(false);
+    }
+  };
+
+  // 检查是否需要加载拆分记录
+  useEffect(() => {
+    if (transactions.length > 0) {
+      const transactionIds = transactions.map(t => t.id);
+      const needsLoading = transactionIds.some(id => !loadedTransactionIds.has(id));
+      
+      if (needsLoading) {
+        // 使用防抖机制，避免频繁调用
+        const timeoutId = setTimeout(() => {
+          loadSplitsOnDemand(transactionIds);
+        }, 300);
+        
+        return () => clearTimeout(timeoutId);
+      } else {
+        // 如果所有记录都已缓存，直接更新显示
+        const allCurrentSplits = transactionIds.flatMap(id => splitsCache.get(id) || []);
+        setTransactionSplits(allCurrentSplits);
+        console.log('📦 使用缓存的拆分记录:', allCurrentSplits.length, '项');
+      }
+    }
   }, [transactions]); // 依赖transactions变化
+
+  // 清理拆分记录缓存
+  const clearSplitsCache = (transactionIds?: string[]) => {
+    if (transactionIds) {
+      // 清理特定交易的缓存
+      const newCache = new Map(splitsCache);
+      const newLoadedIds = new Set(loadedTransactionIds);
+      
+      transactionIds.forEach(id => {
+        newCache.delete(id);
+        newLoadedIds.delete(id);
+      });
+      
+      setSplitsCache(newCache);
+      setLoadedTransactionIds(newLoadedIds);
+      console.log(`🧹 清理了 ${transactionIds.length} 个交易的拆分缓存`);
+    } else {
+      // 清理所有缓存
+      setSplitsCache(new Map());
+      setLoadedTransactionIds(new Set());
+      setTransactionSplits([]);
+      console.log('🧹 清理了所有拆分记录缓存');
+    }
+  };
 
   // 构建3层级交易用途树形数据（用于筛选）
   const buildPurposeTreeData = () => {
@@ -297,6 +429,8 @@ const TransactionManagement: React.FC<TransactionManagementProps> = ({
   const handleDeleteTransaction = async (id: string) => {
     try {
       await onDeleteTransaction(id);
+      // 清理该交易的拆分记录缓存
+      clearSplitsCache([id]);
       message.success('交易记录删除成功');
     } catch (error) {
       message.error('删除失败');
@@ -347,100 +481,144 @@ const TransactionManagement: React.FC<TransactionManagementProps> = ({
       okType: 'danger',
       cancelText: '取消',
       width: 500,
-      onOk: async () => {
-        const loadingMessage = message.loading('正在删除交易记录...', 0);
+      onOk: () => {
+        // 立即关闭模态框
+        // 在后台执行删除操作
+        executeBatchDelete();
+        return Promise.resolve(); // 立即返回，关闭模态框
+      }
+    });
+  };
+
+  // 执行批量删除的后台操作
+  const executeBatchDelete = async () => {
+    setIsDeleting(true);
+    setDeleteProgress({
+      completed: 0,
+      total: selectedTransactions.length,
+      percentage: 0,
+    });
+    
+    try {
+      console.log(`🗑️ 开始批量删除 ${selectedTransactions.length} 条交易记录`);
+      
+      // 模拟进度更新（因为实际的deleteTransactions方法没有进度回调）
+      const progressInterval = setInterval(() => {
+        setDeleteProgress(prev => {
+          if (!prev) return null;
+          const newCompleted = Math.min(prev.completed + Math.floor(prev.total / 10), prev.total);
+          const newPercentage = Math.round((newCompleted / prev.total) * 100);
+          return {
+            ...prev,
+            completed: newCompleted,
+            percentage: newPercentage,
+          };
+        });
+      }, 200);
+      
+      const result = await onDeleteTransactions(selectedTransactions, {
+        onProgress: (progress) => {
+          setDeleteProgress({
+            completed: progress.completed,
+            total: progress.total,
+            percentage: progress.percentage,
+          });
+          console.log(`📊 删除进度: ${progress.currentStep} - ${progress.completed}/${progress.total} (${progress.percentage}%)`);
+        }
+      });
+      
+      clearInterval(progressInterval);
+      
+      // 显示详细的结果信息
+      if (result.success > 0 && result.failed === 0) {
+        message.success({
+          content: `✅ 成功删除 ${result.success} 条交易记录`,
+          duration: 3
+        });
+      } else if (result.success > 0 && result.failed > 0) {
+        message.warning({
+          content: `⚠️ 部分删除成功：${result.success} 条成功，${result.failed} 条失败`,
+          duration: 5
+        });
         
-        try {
-          console.log(`🗑️ 开始批量删除 ${selectedTransactions.length} 条交易记录`);
-          const result = await onDeleteTransactions(selectedTransactions);
-          
-          loadingMessage();
-          
-          // 显示详细的结果信息
-          if (result.success > 0 && result.failed === 0) {
-            message.success({
-              content: `✅ 成功删除 ${result.success} 条交易记录`,
-              duration: 3
-            });
-          } else if (result.success > 0 && result.failed > 0) {
-            message.warning({
-              content: `⚠️ 部分删除成功：${result.success} 条成功，${result.failed} 条失败`,
-              duration: 5
-            });
-            
-            // 显示错误详情
-            if (result.errors.length > 0) {
-              Modal.error({
-                title: '删除失败详情',
-                content: (
-                  <div>
-                    <p>以下交易记录删除失败：</p>
-                    <ul>
-                      {result.errors.slice(0, 10).map((error, index) => (
-                        <li key={index} style={{ fontSize: '12px', marginBottom: '4px' }}>
-                          {error}
-                        </li>
-                      ))}
-                      {result.errors.length > 10 && (
-                        <li style={{ fontSize: '12px', color: '#666' }}>
-                          ... 还有 {result.errors.length - 10} 个错误
-                        </li>
-                      )}
-                    </ul>
-                  </div>
-                ),
-                width: 600,
-                okText: '确定'
-              });
-            }
-          } else {
-            message.error({
-              content: `❌ 删除失败：${result.failed} 条交易记录均删除失败`,
-              duration: 5
-            });
-            
-            // 显示所有错误
-            if (result.errors.length > 0) {
-              Modal.error({
-                title: '删除失败详情',
-                content: (
-                  <div>
-                    <p>所有交易记录删除失败：</p>
-                    <ul>
-                      {result.errors.slice(0, 15).map((error, index) => (
-                        <li key={index} style={{ fontSize: '12px', marginBottom: '4px' }}>
-                          {error}
-                        </li>
-                      ))}
-                      {result.errors.length > 15 && (
-                        <li style={{ fontSize: '12px', color: '#666' }}>
-                          ... 还有 {result.errors.length - 15} 个错误
-                        </li>
-                      )}
-                    </ul>
-                  </div>
-                ),
-                width: 700,
-                okText: '确定'
-              });
-            }
-          }
-          
-          // 清空选择
-          setSelectedTransactions([]);
-          
-        } catch (error) {
-          loadingMessage();
-          console.error('批量删除失败:', error);
-          
-          const errorMessage = error instanceof Error ? error.message : '未知错误';
-          message.error({
-            content: `❌ 批量删除失败：${errorMessage}`,
-            duration: 5
+        // 显示错误详情
+        if (result.errors.length > 0) {
+          Modal.error({
+            title: '删除失败详情',
+            content: (
+              <div>
+                <p>以下交易记录删除失败：</p>
+                <ul>
+                  {result.errors.slice(0, 10).map((error, index) => (
+                    <li key={index} style={{ fontSize: '12px', marginBottom: '4px' }}>
+                      {error}
+                    </li>
+                  ))}
+                  {result.errors.length > 10 && (
+                    <li style={{ fontSize: '12px', color: '#666' }}>
+                      ... 还有 {result.errors.length - 10} 个错误
+                    </li>
+                  )}
+                </ul>
+              </div>
+            ),
+            width: 600,
+            okText: '确定'
+          });
+        }
+      } else {
+        message.error({
+          content: `❌ 删除失败：${result.failed} 条交易记录均删除失败`,
+          duration: 5
+        });
+        
+        // 显示所有错误
+        if (result.errors.length > 0) {
+          Modal.error({
+            title: '删除失败详情',
+            content: (
+              <div>
+                <p>所有交易记录删除失败：</p>
+                <ul>
+                  {result.errors.slice(0, 15).map((error, index) => (
+                    <li key={index} style={{ fontSize: '12px', marginBottom: '4px' }}>
+                      {error}
+                    </li>
+                  ))}
+                  {result.errors.length > 15 && (
+                    <li style={{ fontSize: '12px', color: '#666' }}>
+                      ... 还有 {result.errors.length - 15} 个错误
+                    </li>
+                  )}
+                </ul>
+              </div>
+            ),
+            width: 700,
+            okText: '确定'
           });
         }
       }
-    });
+      
+      // 清空选择
+      setSelectedTransactions([]);
+      
+      // 清理已删除交易的拆分记录缓存
+      if (result.success > 0) {
+        clearSplitsCache(selectedTransactions);
+      }
+      
+    } catch (error) {
+      console.error('批量删除失败:', error);
+      
+      const errorMessage = error instanceof Error ? error.message : '未知错误';
+      message.error({
+        content: `❌ 批量删除失败：${errorMessage}`,
+        duration: 5
+      });
+    } finally {
+      setIsDeleting(false);
+      setDeleteProgress(null);
+    }
   };
 
   // 拆分处理函数
@@ -473,15 +651,19 @@ const TransactionManagement: React.FC<TransactionManagementProps> = ({
         });
       }
       
-      // 更新本地拆分状态
+      // 更新缓存中的拆分记录
       const newSplits = await transactionSplitService.getSplitsByTransaction(transactionId);
-      setTransactionSplits(prev => [
-        ...prev.filter(s => s.transactionId !== transactionId),
-        ...newSplits
-      ]);
+      const newCache = new Map(splitsCache);
+      newCache.set(transactionId, newSplits);
+      setSplitsCache(newCache);
+      
+      // 更新当前显示的拆分记录
+      const currentTransactionIds = transactions.map(t => t.id);
+      const allCurrentSplits = currentTransactionIds.flatMap(id => newCache.get(id) || []);
+      setTransactionSplits(allCurrentSplits);
       
       // 刷新交易列表以显示更新后的拆分状态
-      console.log('🔄 拆分完成，刷新交易列表');
+      console.log('🔄 拆分完成，更新缓存和显示');
       
       message.success('交易拆分成功');
       setIsSplitModalVisible(false);
@@ -1405,12 +1587,17 @@ const TransactionManagement: React.FC<TransactionManagementProps> = ({
                  <Button
                    type="primary"
                    danger
-                   icon={<DeleteOutlined />}
-                    disabled={selectedTransactions.length === 0 || !user || !member || !['president', 'treasurer', 'secretary_general', 'developer'].includes(member?.accountType || '')}
+                   icon={isDeleting ? <LoadingOutlined /> : <DeleteOutlined />}
+                   loading={isDeleting}
+                   disabled={selectedTransactions.length === 0 || !user || !member || !['president', 'treasurer', 'secretary_general', 'developer'].includes(member?.accountType || '') || isDeleting}
                    onClick={handleBatchDelete}
                    title={!user ? '请先登录' : !member ? '正在加载用户信息...' : selectedTransactions.length === 0 ? '请先选择要删除的记录' : '批量删除交易记录'}
                  >
-                   批量删除 ({selectedTransactions.length})
+                   {isDeleting && deleteProgress ? (
+                     `删除中... ${deleteProgress.completed}/${deleteProgress.total} (${deleteProgress.percentage}%)`
+                   ) : (
+                     `批量删除 (${selectedTransactions.length})`
+                   )}
                  </Button>
                  <Button
                    type="primary"

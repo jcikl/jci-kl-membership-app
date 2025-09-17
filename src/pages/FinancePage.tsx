@@ -253,9 +253,14 @@ const FinancePageContent: React.FC = () => {
     }
   };
 
-  const handleDeleteTransactions = async (ids: string[]) => {
+  const handleDeleteTransactions = async (
+    ids: string[], 
+    options?: {
+      onProgress?: (progress: { completed: number; total: number; percentage: number; currentStep: string }) => void;
+    }
+  ) => {
     try {
-      const result = await transactionService.deleteTransactions(ids);
+      const result = await transactionService.deleteTransactions(ids, options);
       await loadData();
       return result;
     } catch (error) {
@@ -263,7 +268,11 @@ const FinancePageContent: React.FC = () => {
     }
   };
 
-  const handleImportTransactions = async (transactions: FinancialImportData[], _bankAccountId: string) => {
+  const handleImportTransactions = async (
+    transactions: FinancialImportData[], 
+    _bankAccountId: string,
+    progressCallback?: (progress: { completed: number; total: number; percentage: number }) => void
+  ) => {
     try {
       // 转换 FinancialImportData 为 Transaction 格式
       const transactionData = transactions.map(t => {
@@ -290,7 +299,9 @@ const FinancePageContent: React.FC = () => {
         };
       });
       
-      const result = await transactionService.createTransactions(transactionData);
+      const result = await transactionService.createTransactions(transactionData, {
+        onProgress: progressCallback
+      });
       await loadData();
       return result;
     } catch (error) {

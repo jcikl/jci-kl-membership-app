@@ -15,6 +15,8 @@ import {
   Switch,
   Select,
   InputNumber,
+  Progress,
+  Spin,
 } from 'antd';
 import { 
   CopyOutlined, 
@@ -23,7 +25,8 @@ import {
   CloseCircleOutlined,
   PlusOutlined,
   TableOutlined,
-  DollarOutlined
+  DollarOutlined,
+  LoadingOutlined
 } from '@ant-design/icons';
 import { FinancialImportData, BankAccount } from '@/types/finance';
 import dayjs from 'dayjs';
@@ -35,7 +38,11 @@ const { Option } = Select;
 interface FinancialImportModalProps {
   visible: boolean;
   onCancel: () => void;
-  onImport: (transactions: FinancialImportData[], bankAccountId: string) => Promise<{ 
+  onImport: (
+    transactions: FinancialImportData[], 
+    bankAccountId: string,
+    progressCallback?: (progress: { completed: number; total: number; percentage: number }) => void
+  ) => Promise<{ 
     success: number; 
     failed: number; 
     errors: string[] 
@@ -77,6 +84,15 @@ const FinancialImportModal: React.FC<FinancialImportModalProps> = ({
   const [activeTab, setActiveTab] = useState('manual');
   const [developerMode, setDeveloperMode] = useState(false);
   const [selectedBankAccountId, setSelectedBankAccountId] = useState<string>('');
+  
+  // 进度相关状态
+  const [importProgress, setImportProgress] = useState<{
+    completed: number;
+    total: number;
+    percentage: number;
+    currentStep: string;
+    estimatedTimeRemaining?: number;
+  } | null>(null);
 
   // 创建空行数据
   const createEmptyTransaction = (): ParsedTransaction => ({
@@ -112,6 +128,7 @@ const FinancialImportModal: React.FC<FinancialImportModalProps> = ({
       setSelectedBankAccountId('');
       setActiveTab('manual');
       setDeveloperMode(false);
+      setImportProgress(null);
     }
   }, [visible]);
 
@@ -281,7 +298,40 @@ const FinancialImportModal: React.FC<FinancialImportModalProps> = ({
     }
 
     setIsImporting(true);
+    setImportProgress({
+      completed: 0,
+      total: validTransactions.length,
+      percentage: 0,
+      currentStep: '准备导入数据...',
+    });
+
+    const startTime = Date.now();
+
     try {
+      // 创建优化的进度回调函数
+      const progressCallback = (progress: { completed: number; total: number; percentage: number }) => {
+        const elapsed = Date.now() - startTime;
+        
+        // 更精确的时间估算算法
+        let estimatedRemaining = 0;
+        if (progress.completed > 0 && progress.completed < progress.total) {
+          const avgTimePerRecord = elapsed / progress.completed;
+          const remainingRecords = progress.total - progress.completed;
+          estimatedRemaining = Math.max(0, avgTimePerRecord * remainingRecords);
+        }
+
+        // 计算处理速度
+        const speed = progress.completed > 0 ? Math.round((progress.completed / elapsed) * 1000) : 0;
+
+        setImportProgress({
+          completed: progress.completed,
+          total: progress.total,
+          percentage: progress.percentage,
+          currentStep: `正在导入交易记录... (${progress.completed}/${progress.total}) - ${speed}条/秒`,
+          estimatedTimeRemaining: Math.round(estimatedRemaining / 1000), // 转换为秒
+        });
+      };
+
       const result = await onImport(validTransactions.map(t => ({
         transactionDate: t.transactionDate,
         mainDescription: t.mainDescription,
@@ -296,7 +346,7 @@ const FinancialImportModal: React.FC<FinancialImportModalProps> = ({
         inputBy: t.inputBy || '',
         paymentDescription: t.paymentDescription || '',
         bankAccountId: selectedBankAccountId,
-      })), selectedBankAccountId);
+      })), selectedBankAccountId, progressCallback);
       
       setImportResult(result);
       
@@ -318,12 +368,14 @@ const FinancialImportModal: React.FC<FinancialImportModalProps> = ({
       message.error('导入失败');
     } finally {
       setIsImporting(false);
+      setImportProgress(null);
     }
   };
 
   const handleClear = () => {
     setTransactions([createEmptyTransaction()]);
     setImportResult(null);
+    setImportProgress(null);
   };
 
   const handleLoadExample = () => {
@@ -605,9 +657,13 @@ const FinancialImportModal: React.FC<FinancialImportModalProps> = ({
                 loading={isImporting}
                 onClick={handleImport}
                 disabled={validCount === 0 || !selectedBankAccountId}
-                icon={<DollarOutlined />}
+                icon={isImporting ? <LoadingOutlined /> : <DollarOutlined />}
               >
-                导入 {validCount} 条有效记录
+                {isImporting && importProgress ? (
+                  `导入中... ${importProgress.completed}/${importProgress.total} (${importProgress.percentage}%)`
+                ) : (
+                  `导入 ${validCount} 条有效记录`
+                )}
               </Button>
             </Space>
           </div>
@@ -724,6 +780,40 @@ const FinancialImportModal: React.FC<FinancialImportModalProps> = ({
             </Select>
           </Space>
         </Card>
+
+        {/* 导入进度显示 */}
+        {importProgress && (
+          <Card style={{ marginBottom: 16, background: '#f6ffed', border: '1px solid #b7eb8f' }}>
+            <div style={{ textAlign: 'center' }}>
+              <Space direction="vertical" style={{ width: '100%' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Spin indicator={<LoadingOutlined style={{ fontSize: 24 }} spin />} />
+                  <Text strong style={{ marginLeft: 8, fontSize: '16px' }}>
+                    {importProgress.currentStep}
+                  </Text>
+                </div>
+                
+                <Progress
+                  percent={importProgress.percentage}
+                  status="active"
+                  strokeColor={{
+                    '0%': '#108ee9',
+                    '100%': '#87d068',
+                  }}
+                  style={{ margin: '8px 0' }}
+                />
+                
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', color: '#666' }}>
+                  <span>已完成: {importProgress.completed}/{importProgress.total}</span>
+                  <span>进度: {importProgress.percentage}%</span>
+                  {importProgress.estimatedTimeRemaining && (
+                    <span>预计剩余: {importProgress.estimatedTimeRemaining}秒</span>
+                  )}
+                </div>
+              </Space>
+            </div>
+          </Card>
+        )}
 
         <Tabs 
           activeKey={activeTab} 

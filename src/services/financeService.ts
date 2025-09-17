@@ -37,82 +37,282 @@ const safeTimestampToISO = (timestamp: any): string => {
   return new Date().toISOString();
 };
 
-// 辅助函数：查询符合格式的交易记录序号
-const getTransactionNumbersByFormat = async (bankAccountId: string, year: number, lastFourDigits: string): Promise<string[]> => {
-  try {
-    // 构建序号前缀：TXN-年份-4位户口号码-
-    const prefix = `TXN-${year}-${lastFourDigits}-`;
-    
-    // 查询该银行户口的所有交易记录
-    const transactionsQuery = query(
-      collection(db, 'transactions'),
-      where('bankAccountId', '==', bankAccountId)
-    );
-    
-    const transactionsSnapshot = await getDocs(transactionsQuery);
-    
-    // 筛选出符合格式的交易记录序号
-    const validTransactionNumbers: string[] = [];
-    transactionsSnapshot.docs.forEach(doc => {
-      const transactionNumber = doc.data().transactionNumber;
-      if (transactionNumber && transactionNumber.startsWith(prefix)) {
-        // 提取序号部分（最后4位）
-        const sequencePart = transactionNumber.substring(prefix.length);
-        if (sequencePart.length === 4 && /^\d{4}$/.test(sequencePart)) {
-          validTransactionNumbers.push(transactionNumber);
+// 银行户口信息缓存
+class BankAccountCache {
+  private cache = new Map<string, BankAccount>();
+  private cacheExpiry = new Map<string, number>();
+  private readonly CACHE_DURATION = 5 * 60 * 1000; // 5分钟缓存
+
+  async getBankAccount(bankAccountId: string): Promise<BankAccount | null> {
+    // 检查缓存
+    if (this.cache.has(bankAccountId)) {
+      const expiry = this.cacheExpiry.get(bankAccountId);
+      if (expiry && Date.now() < expiry) {
+        console.log(`📋 从缓存获取银行户口: ${bankAccountId}`);
+        return this.cache.get(bankAccountId)!;
+      } else {
+        // 缓存过期，清除
+        this.cache.delete(bankAccountId);
+        this.cacheExpiry.delete(bankAccountId);
+      }
+    }
+
+    // 从数据库获取
+    try {
+      const bankAccountDoc = await getDoc(doc(db, 'bank_accounts', bankAccountId));
+      if (!bankAccountDoc.exists()) {
+        return null;
+      }
+
+      const bankAccount = {
+        id: bankAccountDoc.id,
+        ...bankAccountDoc.data(),
+        createdAt: safeTimestampToISO(bankAccountDoc.data().createdAt),
+        updatedAt: safeTimestampToISO(bankAccountDoc.data().updatedAt),
+      } as BankAccount;
+
+      // 存入缓存
+      this.cache.set(bankAccountId, bankAccount);
+      this.cacheExpiry.set(bankAccountId, Date.now() + this.CACHE_DURATION);
+      
+      console.log(`💾 银行户口已缓存: ${bankAccountId}`);
+      return bankAccount;
+    } catch (error) {
+      console.error(`获取银行户口失败: ${bankAccountId}`, error);
+      return null;
+    }
+  }
+
+  async getBankAccountsBatch(bankAccountIds: string[]): Promise<Map<string, BankAccount>> {
+    const result = new Map<string, BankAccount>();
+    const uncachedIds: string[] = [];
+
+    // 检查缓存
+    for (const id of bankAccountIds) {
+      if (this.cache.has(id)) {
+        const expiry = this.cacheExpiry.get(id);
+        if (expiry && Date.now() < expiry) {
+          result.set(id, this.cache.get(id)!);
+        } else {
+          this.cache.delete(id);
+          this.cacheExpiry.delete(id);
+          uncachedIds.push(id);
         }
+      } else {
+        uncachedIds.push(id);
+      }
+    }
+
+    // 批量获取未缓存的银行户口
+    if (uncachedIds.length > 0) {
+      console.log(`📦 批量获取 ${uncachedIds.length} 个银行户口信息`);
+      
+      const promises = uncachedIds.map(async (id) => {
+        try {
+          const bankAccountDoc = await getDoc(doc(db, 'bank_accounts', id));
+          if (bankAccountDoc.exists()) {
+            const bankAccount = {
+              id: bankAccountDoc.id,
+              ...bankAccountDoc.data(),
+              createdAt: safeTimestampToISO(bankAccountDoc.data().createdAt),
+              updatedAt: safeTimestampToISO(bankAccountDoc.data().updatedAt),
+            } as BankAccount;
+
+            // 存入缓存
+            this.cache.set(id, bankAccount);
+            this.cacheExpiry.set(id, Date.now() + this.CACHE_DURATION);
+            
+            return { id, bankAccount };
+          }
+          return { id, bankAccount: null };
+        } catch (error) {
+          console.error(`获取银行户口失败: ${id}`, error);
+          return { id, bankAccount: null };
+        }
+      });
+
+      const results = await Promise.all(promises);
+      results.forEach(({ id, bankAccount }) => {
+        if (bankAccount) {
+          result.set(id, bankAccount);
+        }
+      });
+    }
+
+    console.log(`✅ 银行户口批量获取完成: ${result.size}/${bankAccountIds.length}`);
+    return result;
+  }
+
+  clearCache(): void {
+    this.cache.clear();
+    this.cacheExpiry.clear();
+    console.log('🗑️ 银行户口缓存已清除');
+  }
+}
+
+// 创建全局缓存实例
+const bankAccountCache = new BankAccountCache();
+
+// 辅助函数：批量查询符合格式的交易记录序号
+const getTransactionNumbersByFormatBatch = async (bankAccountIds: string[], year: number): Promise<Map<string, string[]>> => {
+  try {
+    const result = new Map<string, string[]>();
+    
+    // 为每个银行户口查询交易记录序号
+    const queries = bankAccountIds.map(async (bankAccountId) => {
+      try {
+        // 获取银行户口信息
+        const bankAccountDoc = await getDoc(doc(db, 'bank_accounts', bankAccountId));
+        if (!bankAccountDoc.exists()) {
+          return { bankAccountId, numbers: [] };
+        }
+        
+        const bankAccount = bankAccountDoc.data() as BankAccount;
+        const accountNumber = bankAccount.accountNumber || '0000';
+        const lastFourDigits = accountNumber.slice(-4).padStart(4, '0');
+        
+        // 构建序号前缀：TXN-年份-4位户口号码-
+        const prefix = `TXN-${year}-${lastFourDigits}-`;
+        
+        // 查询该银行户口的所有交易记录
+        const transactionsQuery = query(
+          collection(db, 'transactions'),
+          where('bankAccountId', '==', bankAccountId)
+        );
+        
+        const transactionsSnapshot = await getDocs(transactionsQuery);
+        
+        // 筛选出符合格式的交易记录序号
+        const validTransactionNumbers: string[] = [];
+        transactionsSnapshot.docs.forEach(doc => {
+          const transactionNumber = doc.data().transactionNumber;
+          if (transactionNumber && transactionNumber.startsWith(prefix)) {
+            // 提取序号部分（最后4位）
+            const sequencePart = transactionNumber.substring(prefix.length);
+            if (sequencePart.length === 4 && /^\d{4}$/.test(sequencePart)) {
+              validTransactionNumbers.push(transactionNumber);
+            }
+          }
+        });
+        
+        return { bankAccountId, numbers: validTransactionNumbers };
+      } catch (error) {
+        console.error(`查询银行户口 ${bankAccountId} 的交易记录序号失败:`, error);
+        return { bankAccountId, numbers: [] };
       }
     });
     
-    return validTransactionNumbers;
+    const results = await Promise.all(queries);
+    results.forEach(({ bankAccountId, numbers }) => {
+      result.set(bankAccountId, numbers);
+    });
+    
+    return result;
   } catch (error) {
-    console.error('查询交易记录序号失败:', error);
-    return [];
+    console.error('批量查询交易记录序号失败:', error);
+    return new Map();
   }
 };
 
-// 辅助函数：生成交易记录序号
-const generateTransactionNumber = async (bankAccountId: string, transactionDate: string): Promise<string> => {
+// 辅助函数：批量生成交易记录序号（使用缓存优化）
+const generateTransactionNumbersBatch = async (transactions: Omit<Transaction, 'id' | 'createdAt' | 'updatedAt'>[]): Promise<string[]> => {
   try {
-    // 从交易日期获取年份
-    const year = new Date(transactionDate).getFullYear();
+    // 按银行户口和年份分组
+    const groupedTransactions = new Map<string, { bankAccountId: string; year: number; count: number; lastFourDigits: string }>();
     
-    // 获取银行户口信息
-    const bankAccountDoc = await getDoc(doc(db, 'bank_accounts', bankAccountId));
-    if (!bankAccountDoc.exists()) {
-      throw new Error('银行户口不存在');
+    // 收集所有需要的银行户口ID
+    const bankAccountIds = Array.from(new Set(transactions.map(t => t.bankAccountId)));
+    
+    // 批量获取银行户口信息（使用缓存）
+    console.log(`📋 批量获取 ${bankAccountIds.length} 个银行户口信息...`);
+    const bankAccountMap = await bankAccountCache.getBankAccountsBatch(bankAccountIds);
+    
+    for (const transaction of transactions) {
+      const year = new Date(transaction.transactionDate).getFullYear();
+      const key = `${transaction.bankAccountId}-${year}`;
+      
+      if (!groupedTransactions.has(key)) {
+        const bankAccount = bankAccountMap.get(transaction.bankAccountId);
+        if (!bankAccount) {
+          throw new Error(`银行户口 ${transaction.bankAccountId} 不存在`);
+        }
+        
+        const accountNumber = bankAccount.accountNumber || '0000';
+        const lastFourDigits = accountNumber.slice(-4).padStart(4, '0');
+        
+        groupedTransactions.set(key, {
+          bankAccountId: transaction.bankAccountId,
+          year,
+          count: 0,
+          lastFourDigits
+        });
+      }
+      
+      groupedTransactions.get(key)!.count++;
     }
     
-    const bankAccount = bankAccountDoc.data() as BankAccount;
-    const accountNumber = bankAccount.accountNumber || '0000';
+    // 批量查询现有序号
+    const years = Array.from(new Set(Array.from(groupedTransactions.values()).map(g => g.year)));
     
-    // 获取银行户口的最后4位数字
-    const lastFourDigits = accountNumber.slice(-4).padStart(4, '0');
-    
-    // 查询符合格式的交易记录序号
-    const validTransactionNumbers = await getTransactionNumbersByFormat(bankAccountId, year, lastFourDigits);
-    
-    // 找到最大的序号
-    let maxSequence = 0;
-    validTransactionNumbers.forEach(transactionNumber => {
-      const sequencePart = transactionNumber.substring(transactionNumber.lastIndexOf('-') + 1);
-      const sequenceNumber = parseInt(sequencePart, 10);
-      if (!isNaN(sequenceNumber) && sequenceNumber > maxSequence) {
-        maxSequence = sequenceNumber;
+    const existingNumbersMap = new Map<string, string[]>();
+    for (const year of years) {
+      const yearNumbers = await getTransactionNumbersByFormatBatch(bankAccountIds, year);
+      for (const [bankAccountId, numbers] of yearNumbers) {
+        const key = `${bankAccountId}-${year}`;
+        existingNumbersMap.set(key, numbers);
       }
-    });
+    }
     
-    // 生成下一个序号（从0001开始）
-    const nextSequence = (maxSequence + 1).toString().padStart(4, '0');
+    // 生成序号
+    const transactionNumbers: string[] = [];
+    const sequenceCounters = new Map<string, number>();
     
-    return `TXN-${year}-${lastFourDigits}-${nextSequence}`;
+    for (const transaction of transactions) {
+      const year = new Date(transaction.transactionDate).getFullYear();
+      const key = `${transaction.bankAccountId}-${year}`;
+      const group = groupedTransactions.get(key)!;
+      
+      // 初始化计数器
+      if (!sequenceCounters.has(key)) {
+        const existingNumbers = existingNumbersMap.get(key) || [];
+        let maxSequence = 0;
+        existingNumbers.forEach(transactionNumber => {
+          const sequencePart = transactionNumber.substring(transactionNumber.lastIndexOf('-') + 1);
+          const sequenceNumber = parseInt(sequencePart, 10);
+          if (!isNaN(sequenceNumber) && sequenceNumber > maxSequence) {
+            maxSequence = sequenceNumber;
+          }
+        });
+        sequenceCounters.set(key, maxSequence);
+      }
+      
+      // 生成下一个序号
+      const currentCounter = sequenceCounters.get(key)! + 1;
+      sequenceCounters.set(key, currentCounter);
+      
+      const nextSequence = currentCounter.toString().padStart(4, '0');
+      const transactionNumber = `TXN-${year}-${group.lastFourDigits}-${nextSequence}`;
+      
+      transactionNumbers.push(transactionNumber);
+    }
+    
+    return transactionNumbers;
   } catch (error) {
-    console.error('生成交易记录序号失败:', error);
-    // 如果生成失败，返回一个基于时间戳的备用序号
-    const year = new Date(transactionDate).getFullYear();
-    const timestamp = Date.now().toString().slice(-4);
-    return `TXN-${year}-0000-${timestamp}`;
+    console.error('批量生成交易记录序号失败:', error);
+    // 如果生成失败，返回基于时间戳的备用序号
+    return transactions.map((transaction, index) => {
+      const year = new Date(transaction.transactionDate).getFullYear();
+      const timestamp = (Date.now() + index).toString().slice(-4);
+      return `TXN-${year}-0000-${timestamp}`;
+    });
   }
+};
+
+// 辅助函数：生成单个交易记录序号（保持向后兼容）
+const generateTransactionNumber = async (bankAccountId: string, transactionDate: string): Promise<string> => {
+  const transactions = [{ bankAccountId, transactionDate } as Omit<Transaction, 'id' | 'createdAt' | 'updatedAt'>];
+  const numbers = await generateTransactionNumbersBatch(transactions);
+  return numbers[0];
 };
 
 // 银行户口服务
@@ -214,29 +414,333 @@ export const transactionService = {
     return docRef.id;
   },
 
-  // 批量创建交易记录
-  async createTransactions(transactions: Omit<Transaction, 'id' | 'createdAt' | 'updatedAt'>[]): Promise<{ success: number; failed: number; errors: string[] }> {
+  // 批量创建交易记录（优化版本）
+  async createTransactions(
+    transactions: Omit<Transaction, 'id' | 'createdAt' | 'updatedAt'>[],
+    options?: {
+      onProgress?: (progress: { completed: number; total: number; percentage: number }) => void;
+      maxRetries?: number;
+    }
+  ): Promise<{ success: number; failed: number; errors: string[] }> {
+    if (transactions.length === 0) {
+      return { success: 0, failed: 0, errors: [] };
+    }
+
+    const { onProgress, maxRetries = 3 } = options || {};
+    console.log(`📦 开始批量创建 ${transactions.length} 条交易记录`);
+
+    try {
+      // 根据数据量选择最优策略
+      if (transactions.length <= 50) {
+        // 小批量：使用串行处理
+        console.log(`🔄 小批量数据，使用串行处理`);
+        return await this.createTransactionsSerial(transactions, { onProgress, maxRetries });
+      } else if (transactions.length <= 500) {
+        // 中等批量：使用批量写入
+        console.log(`🚀 中等批量数据，使用批量写入`);
+        return await this.createTransactionsBatch(transactions, { onProgress, maxRetries });
+      } else {
+        // 大批量：使用并行处理
+        console.log(`⚡ 大批量数据，使用并行处理`);
+        return await this.createTransactionsParallel(transactions, { onProgress, maxRetries });
+      }
+    } catch (error) {
+      console.error('批量创建失败，回退到串行处理:', error);
+      // 回退到原有的串行处理方式
+      return await this.createTransactionsSerial(transactions, { onProgress, maxRetries });
+    }
+  },
+
+  // 并行创建交易记录（大批量优化）
+  async createTransactionsParallel(
+    transactions: Omit<Transaction, 'id' | 'createdAt' | 'updatedAt'>[],
+    options?: {
+      onProgress?: (progress: { completed: number; total: number; percentage: number }) => void;
+      maxRetries?: number;
+    }
+  ): Promise<{ success: number; failed: number; errors: string[] }> {
+    // 动态调整批次大小和并发数
+    const chunkSize = Math.min(100, Math.max(20, Math.floor(transactions.length / 20)));
+    const maxConcurrency = Math.min(8, Math.max(3, Math.floor(transactions.length / 200)));
+    const { onProgress, maxRetries = 3 } = options || {};
+    
+    console.log(`⚡ 并行处理模式: 批次大小 ${chunkSize}, 最大并发 ${maxConcurrency}, 总记录 ${transactions.length}`);
+
+    // 将交易记录分组
+    const chunks: Omit<Transaction, 'id' | 'createdAt' | 'updatedAt'>[][] = [];
+    for (let i = 0; i < transactions.length; i += chunkSize) {
+      chunks.push(transactions.slice(i, i + chunkSize));
+    }
+
+    let totalSuccess = 0;
+    let totalFailed = 0;
+    const allErrors: string[] = [];
+    let completedCount = 0;
+
+    // 优化的并发控制
+    const processChunk = async (chunk: Omit<Transaction, 'id' | 'createdAt' | 'updatedAt'>[], chunkIndex: number) => {
+      const startTime = Date.now();
+      try {
+        console.log(`📦 开始处理批次 ${chunkIndex + 1}/${chunks.length}: ${chunk.length} 条记录`);
+        
+        // 使用批量写入处理
+        const result = await this.createTransactionsBatch(chunk, { maxRetries });
+        
+        const duration = Date.now() - startTime;
+        const speed = Math.round((result.success / duration) * 1000); // 条/秒
+        
+        console.log(`✅ 批次 ${chunkIndex + 1} 完成: 成功 ${result.success}, 失败 ${result.failed}, 耗时 ${duration}ms, 速度 ${speed}条/秒`);
+        
+        // 原子性更新进度
+        completedCount += result.success + result.failed;
+        if (onProgress) {
+          const percentage = Math.round((completedCount / transactions.length) * 100);
+          onProgress({ completed: completedCount, total: transactions.length, percentage });
+        }
+        
+        return result;
+      } catch (error) {
+        const duration = Date.now() - startTime;
+        console.error(`❌ 批次 ${chunkIndex + 1} 处理失败 (耗时 ${duration}ms):`, error);
+        
+        // 原子性更新进度
+        completedCount += chunk.length;
+        if (onProgress) {
+          const percentage = Math.round((completedCount / transactions.length) * 100);
+          onProgress({ completed: completedCount, total: transactions.length, percentage });
+        }
+        
+        return {
+          success: 0,
+          failed: chunk.length,
+          errors: [`批次 ${chunkIndex + 1} 处理失败: ${error instanceof Error ? error.message : error}`]
+        };
+      }
+    };
+
+    // 使用 Promise.allSettled 进行更好的并发控制
+    const processChunksConcurrently = async () => {
+      const results: { success: number; failed: number; errors: string[] }[] = [];
+      
+      for (let i = 0; i < chunks.length; i += maxConcurrency) {
+        const currentBatch = chunks.slice(i, i + maxConcurrency);
+        const batchPromises = currentBatch.map((chunk, index) => 
+          processChunk(chunk, i + index)
+        );
+        
+        console.log(`🚀 启动并发批次 ${Math.floor(i / maxConcurrency) + 1}: ${currentBatch.length} 个批次`);
+        
+        const batchResults = await Promise.allSettled(batchPromises);
+        
+        batchResults.forEach((result, index) => {
+          if (result.status === 'fulfilled') {
+            results.push(result.value);
+          } else {
+            console.error(`❌ 批次 ${i + index + 1} 完全失败:`, result.reason);
+            results.push({
+              success: 0,
+              failed: currentBatch[index].length,
+              errors: [`批次 ${i + index + 1} 完全失败: ${result.reason}`]
+            });
+          }
+        });
+        
+        // 添加短暂延迟避免过载
+        if (i + maxConcurrency < chunks.length) {
+          await new Promise(resolve => setTimeout(resolve, 100));
+        }
+      }
+      
+      return results;
+    };
+
+    try {
+      const results = await processChunksConcurrently();
+
+      // 汇总结果
+      results.forEach(result => {
+        totalSuccess += result.success;
+        totalFailed += result.failed;
+        allErrors.push(...result.errors);
+      });
+
+      console.log(`🎯 并行处理完成: 成功 ${totalSuccess}, 失败 ${totalFailed}, 总耗时 ${Date.now() - Date.now()}ms`);
+      return { success: totalSuccess, failed: totalFailed, errors: allErrors };
+    } catch (error) {
+      console.error('❌ 并行处理完全失败:', error);
+      return {
+        success: 0,
+        failed: transactions.length,
+        errors: [`并行处理完全失败: ${error instanceof Error ? error.message : error}`]
+      };
+    }
+  },
+
+  // 批量创建交易记录（Firebase批量写入）
+  async createTransactionsBatch(
+    transactions: Omit<Transaction, 'id' | 'createdAt' | 'updatedAt'>[],
+    options?: {
+      onProgress?: (progress: { completed: number; total: number; percentage: number }) => void;
+      maxRetries?: number;
+    }
+  ): Promise<{ success: number; failed: number; errors: string[] }> {
+    const maxBatchSize = 500; // Firebase批量操作限制
+    const { onProgress, maxRetries = 3 } = options || {};
+    let totalSuccess = 0;
+    let totalFailed = 0;
+    const allErrors: string[] = [];
+
+    console.log(`🚀 使用批量写入模式，最大批次大小: ${maxBatchSize}`);
+
+    // 预生成所有交易序号（优化：并行生成）
+    console.log(`🔢 预生成 ${transactions.length} 个交易序号...`);
+    const startTime = Date.now();
+    const transactionNumbers = await generateTransactionNumbersBatch(transactions);
+    const numberGenTime = Date.now() - startTime;
+    console.log(`✅ 交易序号生成完成，耗时: ${numberGenTime}ms`);
+
+    // 将交易记录分组为批次
+    const batches = [];
+    for (let i = 0; i < transactions.length; i += maxBatchSize) {
+      batches.push({
+        transactions: transactions.slice(i, i + maxBatchSize),
+        numbers: transactionNumbers.slice(i, i + maxBatchSize),
+        index: Math.floor(i/maxBatchSize) + 1
+      });
+    }
+
+    // 处理每个批次
+    for (const batch of batches) {
+      let retryCount = 0;
+      let batchSuccess = false;
+
+      while (retryCount <= maxRetries && !batchSuccess) {
+        try {
+          console.log(`📦 处理批次 ${batch.index}: ${batch.transactions.length} 条记录 (尝试 ${retryCount + 1}/${maxRetries + 1})`);
+          
+          const writeBatchInstance = writeBatch(db);
+          
+          // 优化的数据准备：预清理所有数据
+          const cleanedTransactions = batch.transactions.map((transaction, index) => {
+            const transactionNumber = batch.numbers[index];
+            
+            // 使用更高效的方式清理 undefined 值
+            const cleanedTransaction: any = {};
+            for (const [key, value] of Object.entries(transaction)) {
+              if (value !== undefined) {
+                cleanedTransaction[key] = value;
+              }
+            }
+
+            return {
+              ...cleanedTransaction,
+              transactionNumber,
+              createdAt: serverTimestamp(),
+              updatedAt: serverTimestamp(),
+            };
+          });
+
+          // 批量设置文档
+          cleanedTransactions.forEach((data) => {
+            const docRef = doc(collection(db, 'transactions'));
+            writeBatchInstance.set(docRef, data);
+          });
+
+          // 执行批量写入
+          const batchStartTime = Date.now();
+          await writeBatchInstance.commit();
+          const batchDuration = Date.now() - batchStartTime;
+          const speed = Math.round((batch.transactions.length / batchDuration) * 1000);
+          
+          totalSuccess += batch.transactions.length;
+          batchSuccess = true;
+          console.log(`✅ 批次 ${batch.index} 创建成功: ${batch.transactions.length} 条记录, 耗时 ${batchDuration}ms, 速度 ${speed}条/秒`);
+          
+        } catch (error) {
+          retryCount++;
+          const errorMessage = `批次 ${batch.index} 创建失败 (尝试 ${retryCount}/${maxRetries + 1}): ${error instanceof Error ? error.message : error}`;
+          console.error(`❌ ${errorMessage}`);
+          
+          if (retryCount > maxRetries) {
+            totalFailed += batch.transactions.length;
+            allErrors.push(errorMessage);
+            console.error(`❌ 批次 ${batch.index} 重试次数用尽，标记为失败`);
+          } else {
+            // 等待一段时间后重试
+            const delay = Math.min(1000 * Math.pow(2, retryCount - 1), 5000); // 指数退避，最大5秒
+            console.log(`⏳ 等待 ${delay}ms 后重试...`);
+            await new Promise(resolve => setTimeout(resolve, delay));
+          }
+        }
+      }
+
+      // 更新进度
+      if (onProgress) {
+        const completed = totalSuccess + totalFailed;
+        const percentage = Math.round((completed / transactions.length) * 100);
+        onProgress({ completed, total: transactions.length, percentage });
+      }
+    }
+
+    const totalTime = Date.now() - startTime;
+    const avgSpeed = totalSuccess > 0 ? Math.round((totalSuccess / totalTime) * 1000) : 0;
+    console.log(`🎯 批量创建完成: 成功 ${totalSuccess}, 失败 ${totalFailed}, 总耗时 ${totalTime}ms, 平均速度 ${avgSpeed}条/秒`);
+    return { success: totalSuccess, failed: totalFailed, errors: allErrors };
+  },
+
+  // 串行创建交易记录（备用方案）
+  async createTransactionsSerial(
+    transactions: Omit<Transaction, 'id' | 'createdAt' | 'updatedAt'>[],
+    options?: {
+      onProgress?: (progress: { completed: number; total: number; percentage: number }) => void;
+      maxRetries?: number;
+    }
+  ): Promise<{ success: number; failed: number; errors: string[] }> {
+    const { onProgress, maxRetries = 3 } = options || {};
     let success = 0;
     let failed = 0;
     const errors: string[] = [];
 
-    console.log(`📦 开始批量创建 ${transactions.length} 条交易记录`);
+    console.log(`🔄 使用串行处理模式`);
 
     for (const [index, transaction] of transactions.entries()) {
-      try {
-        console.log(`📝 创建第 ${index + 1} 条交易记录...`);
-        await this.createTransaction(transaction);
-        success++;
-        console.log(`✅ 第 ${index + 1} 条交易记录创建成功`);
-      } catch (error) {
-        failed++;
-        const errorMessage = `第 ${index + 1} 条交易记录创建失败: ${error instanceof Error ? error.message : error}`;
-        errors.push(errorMessage);
-        console.error(`❌ ${errorMessage}`);
+      let retryCount = 0;
+      let transactionSuccess = false;
+
+      while (retryCount <= maxRetries && !transactionSuccess) {
+        try {
+          console.log(`📝 创建第 ${index + 1} 条交易记录... (尝试 ${retryCount + 1}/${maxRetries + 1})`);
+          await this.createTransaction(transaction);
+          success++;
+          transactionSuccess = true;
+          console.log(`✅ 第 ${index + 1} 条交易记录创建成功`);
+        } catch (error) {
+          retryCount++;
+          const errorMessage = `第 ${index + 1} 条交易记录创建失败 (尝试 ${retryCount}/${maxRetries + 1}): ${error instanceof Error ? error.message : error}`;
+          console.error(`❌ ${errorMessage}`);
+          
+          if (retryCount > maxRetries) {
+            failed++;
+            errors.push(errorMessage);
+            console.error(`❌ 第 ${index + 1} 条交易记录重试次数用尽，标记为失败`);
+          } else {
+            // 等待一段时间后重试
+            const delay = Math.min(1000 * Math.pow(2, retryCount - 1), 5000); // 指数退避，最大5秒
+            console.log(`⏳ 等待 ${delay}ms 后重试...`);
+            await new Promise(resolve => setTimeout(resolve, delay));
+          }
+        }
+      }
+
+      // 更新进度
+      if (onProgress) {
+        const completed = success + failed;
+        const percentage = Math.round((completed / transactions.length) * 100);
+        onProgress({ completed, total: transactions.length, percentage });
       }
     }
 
-    console.log(`🎯 批量创建完成: 成功 ${success}, 失败 ${failed}`);
+    console.log(`🎯 串行创建完成: 成功 ${success}, 失败 ${failed}`);
     return { success, failed, errors };
   },
 
@@ -286,7 +790,12 @@ export const transactionService = {
   },
 
   // 批量删除交易记录
-  async deleteTransactions(ids: string[]): Promise<{ success: number; failed: number; errors: string[] }> {
+  async deleteTransactions(
+    ids: string[], 
+    options?: {
+      onProgress?: (progress: { completed: number; total: number; percentage: number; currentStep: string }) => void;
+    }
+  ): Promise<{ success: number; failed: number; errors: string[] }> {
     let totalSuccess = 0;
     let totalFailed = 0;
     const allErrors: string[] = [];
@@ -300,28 +809,50 @@ export const transactionService = {
 
     // 使用 Firestore 批量操作来提高性能
     const maxBatchSize = 500; // Firestore 批量操作限制
+    let processedCount = 0;
     
     try {
       // 将 IDs 分组为批次
       for (let i = 0; i < ids.length; i += maxBatchSize) {
         const batchIds = ids.slice(i, i + maxBatchSize);
-        console.log(`📦 处理批次 ${Math.floor(i/maxBatchSize) + 1}: ${batchIds.length} 条记录`);
+        const batchNumber = Math.floor(i/maxBatchSize) + 1;
+        const totalBatches = Math.ceil(ids.length / maxBatchSize);
+        
+        console.log(`📦 处理批次 ${batchNumber}/${totalBatches}: ${batchIds.length} 条记录`);
+        
+        // 更新进度：开始处理批次
+        if (options?.onProgress) {
+          options.onProgress({
+            completed: processedCount,
+            total: ids.length,
+            percentage: Math.round((processedCount / ids.length) * 100),
+            currentStep: `处理批次 ${batchNumber}/${totalBatches}`
+          });
+        }
         
         const batch = writeBatch(db);
         let batchSuccess = 0;
         let batchFailed = 0;
         const batchErrors: string[] = [];
         
-        // 先删除所有相关的拆分记录
-        console.log(`🧹 清理拆分记录...`);
-        for (const id of batchIds) {
-          try {
-            await transactionSplitService.deleteSplitsByTransaction(id);
-            console.log(`✅ 已清理交易 ${id} 的拆分记录`);
-          } catch (error) {
-            console.warn(`⚠️ 清理交易 ${id} 拆分记录时出错:`, error);
-            // 拆分记录清理失败不影响主记录删除
-          }
+        // 批量删除所有相关的拆分记录（高性能版本）
+        console.log(`🧹 批量清理拆分记录...`);
+        
+        // 更新进度：清理拆分记录
+        if (options?.onProgress) {
+          options.onProgress({
+            completed: processedCount,
+            total: ids.length,
+            percentage: Math.round((processedCount / ids.length) * 100),
+            currentStep: `清理批次 ${batchNumber} 的拆分记录`
+          });
+        }
+        
+        const splitCleanupResult = await transactionSplitService.deleteSplitsByTransactions(batchIds);
+        if (splitCleanupResult.failed > 0) {
+          console.warn(`⚠️ 拆分记录清理部分失败: ${splitCleanupResult.failed} 个交易`);
+          // 拆分记录清理失败不影响主记录删除，但记录错误
+          batchErrors.push(...splitCleanupResult.errors);
         }
         
         // 添加到批量操作中
@@ -338,6 +869,16 @@ export const transactionService = {
         // 执行批量删除
         try {
           if (batchIds.length > batchFailed) {
+            // 更新进度：执行批量删除
+            if (options?.onProgress) {
+              options.onProgress({
+                completed: processedCount,
+                total: ids.length,
+                percentage: Math.round((processedCount / ids.length) * 100),
+                currentStep: `删除批次 ${batchNumber} 的交易记录`
+              });
+            }
+            
             await batch.commit();
             batchSuccess = batchIds.length - batchFailed;
             console.log(`✅ 批量删除成功: ${batchSuccess} 条交易记录`);
@@ -362,6 +903,19 @@ export const transactionService = {
         totalSuccess += batchSuccess;
         totalFailed += batchFailed;
         allErrors.push(...batchErrors);
+        
+        // 更新已处理计数
+        processedCount += batchIds.length;
+        
+        // 更新进度：批次完成
+        if (options?.onProgress) {
+          options.onProgress({
+            completed: processedCount,
+            total: ids.length,
+            percentage: Math.round((processedCount / ids.length) * 100),
+            currentStep: `批次 ${batchNumber} 完成`
+          });
+        }
       }
 
       console.log(`🎯 批量删除完成: 成功 ${totalSuccess}, 失败 ${totalFailed}`);
@@ -438,8 +992,9 @@ export const transactionService = {
   },
 
   // 查询符合格式的交易记录序号
-  async getTransactionNumbersByFormat(bankAccountId: string, year: number, lastFourDigits: string): Promise<string[]> {
-    return await getTransactionNumbersByFormat(bankAccountId, year, lastFourDigits);
+  async getTransactionNumbersByFormat(bankAccountId: string, year: number, _lastFourDigits: string): Promise<string[]> {
+    const result = await getTransactionNumbersByFormatBatch([bankAccountId], year);
+    return result.get(bankAccountId) || [];
   },
 
   // 查询指定银行户口和年份的所有交易记录序号
@@ -451,14 +1006,9 @@ export const transactionService = {
         throw new Error('银行户口不存在');
       }
       
-      const bankAccount = bankAccountDoc.data() as BankAccount;
-      const accountNumber = bankAccount.accountNumber || '0000';
-      
-      // 获取银行户口的最后4位数字
-      const lastFourDigits = accountNumber.slice(-4).padStart(4, '0');
-      
       // 查询符合格式的交易记录序号
-      return await getTransactionNumbersByFormat(bankAccountId, year, lastFourDigits);
+      const result = await getTransactionNumbersByFormatBatch([bankAccountId], year);
+      return result.get(bankAccountId) || [];
     } catch (error) {
       console.error('查询交易记录序号失败:', error);
       return [];
@@ -780,6 +1330,63 @@ export const transactionSplitService = {
     const querySnapshot = await getDocs(q);
     const deletePromises = querySnapshot.docs.map(doc => deleteDoc(doc.ref));
     await Promise.all(deletePromises);
+  },
+
+  // 批量删除多个交易的拆分记录（高性能版本）
+  async deleteSplitsByTransactions(transactionIds: string[]): Promise<{ success: number; failed: number; errors: string[] }> {
+    if (transactionIds.length === 0) return { success: 0, failed: 0, errors: [] };
+    
+    let totalSuccess = 0;
+    let totalFailed = 0;
+    const allErrors: string[] = [];
+    
+    console.log(`🧹 批量清理 ${transactionIds.length} 个交易的拆分记录...`);
+    
+    try {
+      // 使用 'in' 操作符批量查询拆分记录（最多10个ID）
+      const chunks = [];
+      for (let i = 0; i < transactionIds.length; i += 10) {
+        chunks.push(transactionIds.slice(i, i + 10));
+      }
+      
+      for (const chunk of chunks) {
+        try {
+          // 批量查询拆分记录
+          const q = query(
+            collection(db, 'transaction_splits'), 
+            where('transactionId', 'in', chunk)
+          );
+          const querySnapshot = await getDocs(q);
+          
+          if (querySnapshot.docs.length === 0) {
+            console.log(`📦 批次 ${chunk.length} 个交易无拆分记录`);
+            continue;
+          }
+          
+          // 使用批量删除操作
+          const batch = writeBatch(db);
+          querySnapshot.docs.forEach(doc => {
+            batch.delete(doc.ref);
+          });
+          
+          await batch.commit();
+          totalSuccess += querySnapshot.docs.length;
+          console.log(`✅ 批量清理成功: ${querySnapshot.docs.length} 条拆分记录`);
+          
+        } catch (error) {
+          console.error(`❌ 批量清理失败:`, error);
+          totalFailed += chunk.length;
+          allErrors.push(`清理交易 ${chunk.join(', ')} 的拆分记录失败: ${error instanceof Error ? error.message : '未知错误'}`);
+        }
+      }
+      
+      console.log(`🎯 拆分记录清理完成: 成功 ${totalSuccess}, 失败 ${totalFailed}`);
+      return { success: totalSuccess, failed: totalFailed, errors: allErrors };
+      
+    } catch (error) {
+      console.error('❌ 批量清理拆分记录失败:', error);
+      return { success: 0, failed: transactionIds.length, errors: [`批量清理失败: ${error instanceof Error ? error.message : '未知错误'}`] };
+    }
   },
 };
 

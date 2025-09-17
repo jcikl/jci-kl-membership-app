@@ -7,6 +7,7 @@ import {
   BarChartOutlined,
   TeamOutlined,
   FundOutlined,
+  ProjectOutlined,
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import EventList from '@/components/EventList';
@@ -16,6 +17,7 @@ import EventSettings from '@/components/EventSettings';
 import ProjectAccountManagement from '@/components/ProjectAccountManagement';
 import ProjectAccountTracker from '@/components/ProjectAccountTracker';
 import UnifiedProjectFinanceManagement from '@/components/UnifiedProjectFinanceManagement';
+import ActivityGanttChart from '@/components/ActivityGanttChart';
 
 const { Title } = Typography;
 const { Content } = Layout;
@@ -111,6 +113,12 @@ const EventManagementPage: React.FC = () => {
       label: '数据统计',
       icon: <BarChartOutlined />,
       children: <EventStatistics />,
+    },
+    {
+      key: 'gantt',
+      label: '活动甘特图',
+      icon: <ProjectOutlined />,
+      children: <ActivityGanttChart />,
     },
     {
       key: 'settings',

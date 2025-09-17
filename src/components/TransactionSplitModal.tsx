@@ -325,13 +325,13 @@ const TransactionSplitModal: React.FC<TransactionSplitModalProps> = ({
         amount: split.amount,
         transactionDate: transaction!.transactionDate, // 从主交易记录复制交易日期
         mainDescription: transaction!.mainDescription, // 从主交易记录复制主描述
-        subDescription: transaction!.subDescription, // 从主交易记录复制副描述
+        subDescription: transaction!.subDescription || '', // 从主交易记录复制副描述
         transactionPurpose: split.transactionPurpose,
         projectAccount: split.projectAccount,
-        payerPayee: transaction!.payerPayee, // 从主交易记录复制付款人/收款人
-        transactionType: transaction!.transactionType, // 从主交易记录复制主要分类
-        description: split.description,
-        notes: split.notes,
+        payerPayee: transaction!.payerPayee || '', // 从主交易记录复制付款人/收款人
+        transactionType: transaction!.transactionType || '', // 从主交易记录复制主要分类
+        description: split.description || '',
+        notes: split.notes || '',
       }));
 
       await onSplit(transaction!.id, splitData);
