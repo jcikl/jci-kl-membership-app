@@ -5,7 +5,7 @@ export interface BankAccount {
   id: string;
   accountName: string; // 户口名称
   accountType: BankAccountType; // 户口类型
-  initialAmount: number; // 初始金额
+  initialAmount: number; // 银行户口开创金额
   currentBalance: number; // 当前余额
   bankName?: string; // 银行名称
   accountNumber?: string; // 账号
@@ -14,6 +14,13 @@ export interface BankAccount {
   createdBy: string; // 创建者
   createdAt: string;
   updatedAt: string;
+  
+  // 累计余额优化字段
+  yearEndBalances?: { [year: number]: number }; // 各年份年末余额缓存
+  lastCalculatedYear?: number; // 最后计算的年份
+  lastTransactionId?: string; // 最后一笔交易的ID
+  lastTransactionDate?: string; // 最后一笔交易的日期
+  balanceCalculationVersion?: number; // 余额计算版本号（用于数据迁移）
 }
 
 export type BankAccountType = 'savings' | 'current' | 'fixed_deposit' | 'investment' | 'other';
@@ -40,7 +47,8 @@ export interface Transaction {
   income: number; // 收入金额
   payerPayee?: string; // 付款人/收款人（合并字段，用于存储会员匹配信息）
   transactionType?: string; // 交易类型
-  projectAccount?: string; // 项目户口
+  projectAccount?: string; // 业务分类ID（保持向后兼容）
+  projectAccountId?: string; // 项目户口ID
   transactionPurpose?: string; // 交易用途
   accountType?: string; // 户口类型
   inputBy: string; // 输入人

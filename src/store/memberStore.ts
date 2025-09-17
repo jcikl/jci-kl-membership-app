@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { Member, PaginationParams } from '@/types';
-import { getMembers, getMemberById, createMember, updateMember, deleteMember, createMembersBatch } from '@/services/memberService';
+import { getMembers, getMemberById, createMember, updateMember, deleteMember, createMembersBatch } from '@/modules/member/services/memberService';
 
 interface MemberState {
   members: Member[];

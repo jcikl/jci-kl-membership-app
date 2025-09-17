@@ -150,6 +150,13 @@ export interface Event {
   coverImageUrl?: string;
   coverImageTemplateUrl?: string;
   
+  // Additional properties for form compatibility
+  name: string;
+  location: string;
+  price: number;
+  paymentMethods: string[];
+  imageUrl: string;
+  
   // 系统信息
   createdBy: string;
   createdAt: Timestamp;
@@ -175,6 +182,14 @@ export interface EventProgram {
   maxSeats?: number;
   isCompetition: boolean;
   sequence: number;
+  // Additional properties for form compatibility
+  title: string;
+  description: string;
+  startTime: any;
+  endTime: any;
+  speaker: string;
+  location: string;
+  notes: string;
   createdAt: Timestamp;
   updatedAt: Timestamp;
 }
@@ -193,6 +208,9 @@ export interface CommitteeMember {
   isRegistered?: boolean;
   isCommittee?: boolean;
   isPersonInCharge?: boolean;
+  // Additional properties for form compatibility
+  canManageParticipants: boolean;
+  notes: string;
   createdAt: Timestamp;
   updatedAt: Timestamp;
 }
@@ -206,6 +224,16 @@ export interface EventTrainer {
   contact: string;
   email: string;
   sequence: number;
+  // Additional properties for form compatibility
+  company: string;
+  phone: string;
+  bio: string;
+  expertise: string;
+  fee: number;
+  currency: string;
+  photoUrl: string;
+  socialLinks: any;
+  notes: string;
   createdAt: Timestamp;
   updatedAt: Timestamp;
 }

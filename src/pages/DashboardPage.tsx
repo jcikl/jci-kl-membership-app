@@ -23,7 +23,7 @@ import { useNavigate } from 'react-router-dom';
 import { useMemberStore } from '@/store/memberStore';
 import { Member, ChapterSettings } from '@/types';
 import { HOBBY_OPTIONS, CATEGORY_OPTIONS, INTERESTED_INDUSTRY_OPTIONS } from '@/types/constants';
-import { getChapterSettings } from '@/services/chapterSettingsService';
+import { getChapterSettings } from '@/modules/system/services/chapterSettingsService';
 
 const { Title } = Typography;
 
@@ -186,6 +186,12 @@ const DashboardPage: React.FC = () => {
       try {
         // 解析生日日期 (dd-mmm-yyyy 格式)
         const birthDateStr = member.profile.birthDate;
+        
+        // 检查 birthDateStr 是否为字符串
+        if (typeof birthDateStr !== 'string') {
+          return false;
+        }
+        
         let birthDate: Date;
         
         // 尝试不同的日期格式解析

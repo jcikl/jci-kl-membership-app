@@ -3,8 +3,8 @@
  * 测试世界区域管理卡片中覆盖国家栏的显示逻辑
  */
 
-import { getWorldRegions } from '@/services/worldRegionService';
-import { getCountries } from '@/services/countryService';
+import { getWorldRegions } from '@/modules/system/services/worldRegionService';
+import { getCountries } from '@/modules/system/services/countryService';
 
 /**
  * 测试世界区域管理覆盖国家显示

@@ -3,8 +3,8 @@
  * 测试国家基本信息设置中世界区域显示功能
  */
 
-import { getCountries } from '@/services/countryService';
-import { getWorldRegions } from '@/services/worldRegionService';
+import { getCountries } from '@/modules/system/services/countryService';
+import { getWorldRegions } from '@/modules/system/services/worldRegionService';
 
 /**
  * 测试国家设置世界区域显示功能

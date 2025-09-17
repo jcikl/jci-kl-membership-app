@@ -3,7 +3,7 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import { Layout } from 'antd';
 import { useAuthStore } from '@/store/authStore';
 import { onAuthStateChanged } from '@/services/authService';
-import { getMemberByEmail } from '@/services/memberService';
+import { getMemberByEmail } from '@/modules/member/services/memberService';
 import { User } from 'firebase/auth';
 import { initChapterSettings } from '@/scripts/initChapterSettings';
 import { SidebarProvider, useSidebar } from '@/contexts/SidebarContext';
@@ -12,23 +12,25 @@ import { SidebarProvider, useSidebar } from '@/contexts/SidebarContext';
 import LoginPage from '@/pages/LoginPage';
 import RegisterPage from '@/pages/RegisterPage';
 import DashboardPage from '@/pages/DashboardPage';
-import MemberListPage from '@/pages/MemberListPage';
-import MemberDetailPage from '@/pages/MemberDetailPage';
-import ProfilePage from '@/pages/ProfilePage';
-import SystemSettingsPage from '@/pages/SystemSettingsPage';
-import SurveyListPage from '@/pages/SurveyListPage';
-import SurveyCreatePage from '@/pages/SurveyCreatePage';
-import SurveyEditPage from '@/pages/SurveyEditPage';
-import SurveyDetailPage from '@/pages/SurveyDetailPage';
-import SurveyResponsePage from '@/pages/SurveyResponsePage';
-import FinancePage from '@/pages/FinancePage';
-import EventManagementPage from '@/pages/EventManagementPage';
-import EventCreatePage from '@/pages/EventCreatePage';
-import EventDetailPage from '@/pages/EventDetailPage';
-import EventRegistrationPage from '@/pages/EventRegistrationPage';
-import EventRegistrationSuccessPage from '@/pages/EventRegistrationSuccessPage';
-import AwardsManagementWrapper from '@/components/AwardsManagementWrapper';
+import MemberListPage from '@/modules/member/pages/MemberListPage';
+import MemberDetailPage from '@/modules/member/pages/MemberDetailPage';
+import ProfilePage from '@/modules/member/pages/ProfilePage';
+import SystemSettingsPage from '@/modules/system/pages/SystemSettingsPage';
+import SurveyListPage from '@/modules/survey/pages/SurveyListPage';
+import SurveyCreatePage from '@/modules/survey/pages/SurveyCreatePage';
+import SurveyEditPage from '@/modules/survey/pages/SurveyEditPage';
+import SurveyDetailPage from '@/modules/survey/pages/SurveyDetailPage';
+import SurveyResponsePage from '@/modules/survey/pages/SurveyResponsePage';
+import FinancePage from '@/modules/finance/pages/FinancePage';
+import EventManagementPage from '@/modules/event/pages/EventManagementPage';
+import EventCreatePage from '@/modules/event/pages/EventCreatePage';
+import EventDetailPage from '@/modules/event/pages/EventDetailPage';
+import EventRegistrationPage from '@/modules/event/pages/EventRegistrationPage';
+import EventRegistrationSuccessPage from '@/modules/event/pages/EventRegistrationSuccessPage';
+import AwardsManagementWrapper from '@/modules/award/components/AwardsManagementWrapper';
 import PDFInterpretationPage from '@/pages/PDFInterpretationPage';
+import ImageManagementPage from '@/modules/image/pages/ImageManagementPage';
+import FolderManagementPage from '@/pages/FolderManagementPage';
 
 // 布局组件
 import AppHeader from '@/components/AppHeader';
@@ -79,6 +81,8 @@ const MainContent: React.FC = () => {
         <Route path="/awards/tracker" element={<AwardsManagementWrapper />} />
         <Route path="/awards/competitors" element={<AwardsManagementWrapper />} />
         <Route path="/pdf-interpretation" element={<PDFInterpretationPage />} />
+        <Route path="/image-management" element={<ImageManagementPage />} />
+        <Route path="/folder-management" element={<FolderManagementPage />} />
         <Route path="/system-settings" element={<SystemSettingsPage />} />
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>

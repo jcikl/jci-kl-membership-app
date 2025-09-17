@@ -64,7 +64,14 @@ export const GLOBAL_COLLECTIONS = {
   
   // 审计日志集合
   AUDIT_LOGS: 'auditLogs',
-  SYSTEM_LOGS: 'systemLogs'
+  SYSTEM_LOGS: 'systemLogs',
+  
+  // 文件夹管理集合
+  FOLDERS: 'folders',
+  FILES: 'files',
+  
+  // 图片管理集合
+  IMAGES: 'images'
 } as const;
 
 /**

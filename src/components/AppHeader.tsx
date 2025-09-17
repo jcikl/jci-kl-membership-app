@@ -5,7 +5,7 @@ import type { MenuProps } from 'antd';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/store/authStore';
 import { logoutUser } from '@/services/authService';
-import { getChapterSettings, getDefaultChapterSettings } from '@/services/chapterSettingsService';
+import { getChapterSettings, getDefaultChapterSettings } from '@/modules/system/services/chapterSettingsService';
 import type { ChapterSettings } from '@/types';
 import { useSidebar } from '@/contexts/SidebarContext';
 

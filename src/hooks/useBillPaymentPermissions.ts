@@ -1,7 +1,7 @@
 // 账单付款申请权限检查 Hook
 import { useEffect, useState } from 'react';
 import { useAuthStore } from '@/store/authStore';
-import { permissionService } from '@/services/permissionService';
+import { permissionService } from '@/modules/permission/services/permissionService';
 
 export interface BillPaymentPermissions {
   canCreate: boolean;

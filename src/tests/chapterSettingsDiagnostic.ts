@@ -3,10 +3,10 @@
  * 用于诊断为什么所属国家和国家区域显示文件ID而不是名称
  */
 
-import { getChapterSettings } from '../services/chapterSettingsService';
-import { getWorldRegions } from '../services/worldRegionService';
-import { getCountries } from '../services/countryService';
-import { getNationalRegions } from '../services/nationalRegionService';
+import { getChapterSettings } from '@/modules/system/services/chapterSettingsService';
+import { getWorldRegions } from '@/modules/system/services/worldRegionService';
+import { getCountries } from '@/modules/system/services/countryService';
+import { getNationalRegions } from '@/modules/system/services/nationalRegionService';
 import { WorldRegion, Country, NationalRegion } from '../types';
 
 /**

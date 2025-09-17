@@ -7,7 +7,7 @@ import {
   UserCredential,
 } from 'firebase/auth';
 import { auth } from './firebase';
-import { createMember } from './memberService';
+import { createMember } from '@/modules/member/services/memberService';
 import { Member, RegisterForm } from '@/types';
 
 // 用户注册

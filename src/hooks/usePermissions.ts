@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useAuthStore } from '@/store/authStore';
-import { permissionService } from '@/services/permissionService';
+import { permissionService } from '@/modules/permission/services/permissionService';
 
 export const useIsAdmin = () => {
   const { member } = useAuthStore();

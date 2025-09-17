@@ -3,9 +3,9 @@
  * 展示分会设置中的世界区域 -> 国家 -> 国家区域级联筛选
  */
 
-import { getWorldRegions } from '@/services/worldRegionService';
-import { getCountries } from '@/services/countryService';
-import { getNationalRegions } from '@/services/nationalRegionService';
+import { getWorldRegions } from '@/modules/system/services/worldRegionService';
+import { getCountries } from '@/modules/system/services/countryService';
+import { getNationalRegions } from '@/modules/system/services/nationalRegionService';
 import { WorldRegion, Country, NationalRegion } from '@/types';
 
 /**

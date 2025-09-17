@@ -3,9 +3,9 @@
  * 测试总部设置中集成的世界区域管理和国家管理功能
  */
 
-import { getHeadquartersSettings } from '@/services/headquartersSettingsService';
-import { getWorldRegions } from '@/services/worldRegionService';
-import { getCountries } from '@/services/countryService';
+import { getHeadquartersSettings } from '@/modules/system/services/headquartersSettingsService';
+import { getWorldRegions } from '@/modules/system/services/worldRegionService';
+import { getCountries } from '@/modules/system/services/countryService';
 
 /**
  * 测试总部设置整合功能

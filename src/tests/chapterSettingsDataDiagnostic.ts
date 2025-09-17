@@ -4,9 +4,9 @@
  * 诊断分会设置中所属国家和国家区域显示document ID的问题
  */
 
-import { getWorldRegions } from '@/services/worldRegionService';
-import { getCountries } from '@/services/countryService';
-import { getNationalRegions } from '@/services/nationalRegionService';
+import { getWorldRegions } from '@/modules/system/services/worldRegionService';
+import { getCountries } from '@/modules/system/services/countryService';
+import { getNationalRegions } from '@/modules/system/services/nationalRegionService';
 
 // 诊断数据结构
 const diagnoseDataStructure = async () => {

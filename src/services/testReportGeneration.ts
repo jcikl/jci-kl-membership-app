@@ -1,5 +1,5 @@
 // 测试财务报告生成功能
-import { simpleFinancialReportGenerator } from './simpleFinancialReportGenerator';
+import { simpleFinancialReportGenerator } from '@/modules/finance/services/simpleFinancialReportGenerator';
 
 export const testReportGeneration = async () => {
   try {

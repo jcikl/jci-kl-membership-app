@@ -4,8 +4,8 @@
  * 测试初始化马来西亚分会功能，确保数据能正确存储到Firebase
  */
 
-import { initializeDefaultMalaysianChapters, getLocalChapters } from '../services/localChapterService';
-import { getNationalRegions } from '../services/nationalRegionService';
+import { initializeDefaultMalaysianChapters, getLocalChapters } from '@/modules/system/services/localChapterService';
+import { getNationalRegions } from '@/modules/system/services/nationalRegionService';
 
 // 测试初始化功能
 const testInitialization = async () => {

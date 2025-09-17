@@ -1,0 +1,7 @@
+<svg width="40" height="40" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background square -->
+  <rect x="2" y="2" width="36" height="36" fill="#1890ff" stroke="#fff" stroke-width="2" rx="4"/>
+  
+  <!-- JCI text -->
+  <text x="20" y="26" text-anchor="middle" fill="white" font-family="Arial, sans-serif" font-size="12" font-weight="bold">JCI</text>
+</svg>

@@ -2,7 +2,7 @@ import React from 'react';
 import { Card, List, Tag, Space, Typography, Alert, Spin } from 'antd';
 import { CheckCircleOutlined } from '@ant-design/icons';
 import { useAccountType } from '@/hooks/useMemberCategory';
-import { getAllMembershipTaskPolicies, MembershipTaskPolicy, TaskRequirement } from '@/services/membershipTaskPolicyService';
+import { getAllMembershipTaskPolicies, MembershipTaskPolicy, TaskRequirement } from '@/modules/member/services/membershipTaskPolicyService';
 import { useAuthStore } from '@/store/authStore';
 
 const { Title, Text } = Typography;

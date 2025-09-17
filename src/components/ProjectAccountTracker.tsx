@@ -26,8 +26,8 @@ import {
   ProjectAccount,
   Event,
 } from '@/types/event';
-import { projectAccountService } from '@/services/projectAccountService';
-import { eventService } from '@/services/eventService';
+import { projectAccountService } from '@/modules/finance/services/projectAccountService';
+import { eventService } from '@/modules/event/services/eventService';
 
 const { Title, Text } = Typography;
 const { Option } = Select;

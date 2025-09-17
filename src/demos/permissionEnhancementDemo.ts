@@ -1,5 +1,5 @@
 // 权限增强功能演示
-import { permissionService } from '../services/permissionService';
+import { permissionService } from '@/modules/permission/services/permissionService';
 import { JCIPosition, MembershipCategory } from '../types/rbac';
 
 // 模拟数据 - 已清空

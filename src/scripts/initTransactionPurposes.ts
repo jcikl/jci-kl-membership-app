@@ -3,7 +3,7 @@
  * 此脚本用于自动创建完整的3层级交易用途管理体系
  */
 
-import { transactionPurposeInitService } from '@/services/transactionPurposeInitService';
+import { transactionPurposeInitService } from '@/modules/finance/services/transactionPurposeInitService';
 
 // 初始化函数
 export async function initializeTransactionPurposes(userId: string): Promise<{

@@ -4,16 +4,16 @@
   "description": "超级国际青年商会管理系统",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "tsc && vite build",
+    "dev": "vite --config config/vite.config.ts",
+    "build": "tsc --project config/tsconfig.json && vite build --config config/vite.config.ts",
     "preview": "vite preview",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
-    "type-check": "tsc --noEmit",
-    "setup:firebase": "node scripts/setup-firebase.js",
-    "deploy:netlify": "node scripts/deploy-netlify.js",
-    "init:events": "node scripts/initEventData.js",
-    "firebase:emulators": "firebase emulators:start",
-    "firebase:deploy": "firebase deploy"
+    "type-check": "tsc --noEmit --project config/tsconfig.json",
+    "setup:firebase": "node scripts/deployment/setup-firebase.js",
+    "deploy:netlify": "node scripts/deployment/deploy-netlify.js",
+    "init:events": "node scripts/setup/initEventData.js",
+    "firebase:emulators": "firebase emulators:start --config config/firebase.json",
+    "firebase:deploy": "firebase deploy --config config/firebase.json"
   },
   "dependencies": {
     "@ant-design/charts": "^2.6.4",

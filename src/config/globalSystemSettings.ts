@@ -51,13 +51,24 @@ export const GLOBAL_SYSTEM_CONFIG = {
       'application/vnd.ms-excel',
       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     ],
-    storagePath: 'uploads/',
     maxFilesPerUpload: 10,
     compression: {
       enabled: true,
       quality: 0.8,
       maxWidth: 1920,
       maxHeight: 1080
+    },
+    // Cloudinary配置
+    cloudinary: {
+      cloudName: 'drpa1zcmp',
+      uploadPreset: 'jci-kl-upload',
+      apiKey: '659937865548447',
+      folder: 'jci-kl-membership',
+      defaultTransformations: {
+        quality: 'auto',
+        format: 'auto',
+        fetch_format: 'auto'
+      }
     }
   },
   

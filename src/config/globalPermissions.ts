@@ -3,8 +3,8 @@
  * 统一管理RBAC权限系统，确保权限检查的一致性和可扩展性
  */
 
-import { getMemberById } from '@/services/memberService';
-import { permissionService } from '@/services/permissionService';
+import { getMemberById } from '@/modules/member/services/memberService';
+import { permissionService } from '@/modules/permission/services/permissionService';
 
 /**
  * 全局权限配置

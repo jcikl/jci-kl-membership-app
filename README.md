@@ -1,185 +1,124 @@
-# 超级国际青年商会管理系统
+# JCI KL 会员管理系统
 
-一个基于 React + TypeScript + Firebase + Netlify 的现代化会员管理系统。
+> 一个基于 React + TypeScript + Firebase + Netlify 的现代化会员管理系统
 
-## 🚀 功能特性
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![React](https://img.shields.io/badge/React-18.2.0-blue.svg)](https://reactjs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.2.2-blue.svg)](https://www.typescriptlang.org/)
+[![Firebase](https://img.shields.io/badge/Firebase-10.7.1-orange.svg)](https://firebase.google.com/)
 
-### 核心功能
-- **会员管理**: 完整的会员注册、登录、信息管理
-- **权限控制**: 基于角色的访问控制
-- **数据统计**: 实时仪表板和数据可视化
-- **响应式设计**: 支持桌面和移动设备
+## 🚀 快速开始
 
-### 技术特性
-- ⚡ **Vite** - 极速的开发构建工具
-- ⚛️ **React 18** - 现代化的用户界面库
-- 🔷 **TypeScript** - 类型安全的JavaScript
-- 🎨 **Ant Design** - 企业级UI组件库
-- 🔥 **Firebase** - 后端即服务(BaaS)
-- 🌐 **Netlify** - 静态网站托管和部署
+### 安装和运行
 
-## 📋 系统要求
-
-- Node.js 16+ 
-- npm 8+
-- Firebase 项目
-- Netlify 账户
-
-## 🛠️ 安装和运行
-
-### 1. 克隆项目
 ```bash
+# 克隆项目
 git clone <repository-url>
 cd jci-kl-membership-app
-```
 
-### 2. 安装依赖
-```bash
+# 安装依赖
 npm install
-```
 
-### 3. 配置环境变量
-复制 `env.example` 文件为 `.env` 并填入你的 Firebase 配置：
-
-```bash
-cp env.example .env
-```
-
-编辑 `.env` 文件：
-```env
-VITE_FIREBASE_API_KEY=your_api_key_here
-VITE_FIREBASE_AUTH_DOMAIN=your_project.firebaseapp.com
-VITE_FIREBASE_PROJECT_ID=your_project_id
-VITE_FIREBASE_STORAGE_BUCKET=your_project.appspot.com
-VITE_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
-VITE_FIREBASE_APP_ID=your_app_id
-```
-
-### 4. 启动开发服务器
-```bash
+# 启动开发服务器
 npm run dev
 ```
 
 访问 http://localhost:3000 查看应用。
 
-## 🔧 Firebase 配置
+### 配置要求
 
-### 1. 创建 Firebase 项目
-1. 访问 [Firebase Console](https://console.firebase.google.com/)
-2. 创建新项目
-3. 启用 Authentication 和 Firestore Database
+1. **Node.js 16+** 和 **npm 8+**
+2. **Firebase 项目** - 用于后端服务
+3. **Netlify 账户** - 用于部署
 
-### 2. 配置 Authentication
-- 启用邮箱/密码登录
-- 配置用户注册流程
+## 📚 文档导航
 
-### 3. 配置 Firestore
-创建以下集合和文档结构：
+### 🎯 新用户必读
+- **[快速开始指南](docs/getting-started/README.md)** - 项目概述和基本使用
+- **[安装指南](docs/getting-started/INSTALLATION.md)** - 详细安装步骤
+- **[部署指南](docs/getting-started/DEPLOYMENT.md)** - 部署配置说明
+- **[项目总结](docs/getting-started/PROJECT_SUMMARY.md)** - 项目完成状态
 
-```
-members/
-  {memberId}/
-    - email: string
-    - name: string
-    - phone: string
-    - memberId: string
-    - joinDate: timestamp
-    - status: string (active, inactive, pending, suspended)
-    - level: string (bronze, silver, gold, platinum, diamond)
-    - profile: object
-    - createdAt: timestamp
-    - updatedAt: timestamp
-```
+### 🏗️ 功能模块
+- **[会员管理](docs/features/member-management/)** - 会员注册、管理、权限控制
+- **[财务系统](docs/features/finance-system/)** - 交易管理、财务报表、预算管理
+- **[活动管理](docs/features/event-management/)** - 活动创建、报名、统计
+- **[权限系统](docs/features/permission-system/)** - 基于角色的访问控制
+- **[奖项系统](docs/features/awards-system/)** - 奖项管理、评分系统
 
-### 4. 安全规则
-配置 Firestore 安全规则：
+### 🔧 技术文档
+- **[架构设计](docs/technical/architecture/)** - 系统架构和技术选型
+- **[API参考](docs/technical/api-reference/)** - 接口文档和数据结构
+- **[故障排除](docs/technical/troubleshooting/)** - 常见问题和解决方案
+- **[开发指南](docs/technical/development/)** - 开发规范和最佳实践
 
-```javascript
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    match /members/{document} {
-      allow read, write: if request.auth != null;
-    }
-  }
-}
-```
+## 🛠️ 技术栈
 
-## 🚀 Netlify 部署
-
-### 1. 构建项目
-```bash
-npm run build
-```
-
-### 2. 部署到 Netlify
-1. 将代码推送到 Git 仓库
-2. 在 Netlify 中连接 Git 仓库
-3. 配置构建设置：
-   - 构建命令: `npm run build`
-   - 发布目录: `dist`
-4. 添加环境变量（与本地 `.env` 相同）
-5. 部署
-
-### 3. 自动部署
-每次推送到主分支都会自动触发部署。
+- **前端框架**: React 18 + TypeScript
+- **构建工具**: Vite
+- **UI 组件库**: Ant Design
+- **状态管理**: Redux Toolkit + Zustand
+- **后端服务**: Firebase (Auth + Firestore)
+- **部署平台**: Netlify
+- **包管理**: npm
 
 ## 📁 项目结构
 
 ```
-src/
-├── components/          # 可复用组件
-│   ├── AppHeader.tsx
-│   ├── AppSider.tsx
-│   └── LoadingSpinner.tsx
-├── pages/              # 页面组件
-│   ├── LoginPage.tsx
-│   ├── RegisterPage.tsx
-│   ├── DashboardPage.tsx
-│   ├── MemberListPage.tsx
-│   ├── MemberDetailPage.tsx
-│   └── ProfilePage.tsx
-├── services/           # API 服务
-│   ├── firebase.ts
-│   ├── authService.ts
-│   └── memberService.ts
-├── store/              # 状态管理
-│   ├── authStore.ts
-│   └── memberStore.ts
-├── types/              # TypeScript 类型定义
-│   └── index.ts
-├── styles/             # 样式文件
-│   └── index.css
-├── App.tsx
-└── main.tsx
+📁 项目根目录/
+├── 📁 src/                    # 源代码目录
+│   ├── components/            # 可复用组件
+│   ├── pages/                # 页面组件
+│   ├── services/             # API 服务
+│   ├── store/                # 状态管理
+│   ├── types/                # TypeScript 类型
+│   └── utils/                # 工具函数
+├── 📁 docs/                   # 统一文档目录
+│   ├── getting-started/       # 快速开始指南
+│   ├── features/             # 功能文档
+│   ├── technical/            # 技术文档
+│   └── changelog/            # 更新日志
+├── 📁 config/                 # 配置文件目录
+├── 📁 scripts/                # 脚本目录
+├── 📁 assets/                 # 静态资源
+└── 📁 archive/                # 归档目录
 ```
 
-## 🎯 开发计划
+## 🚀 部署
 
-### 第一阶段 - 会员管理 ✅
-- [x] 用户认证系统
-- [x] 会员注册和登录
-- [x] 会员信息管理
-- [x] 会员列表和详情
-- [x] 基础仪表板
+### Netlify 部署
+1. 将代码推送到 Git 仓库
+2. 在 Netlify 中连接仓库
+3. 配置构建设置：
+   - 构建命令: `npm run build`
+   - 发布目录: `dist`
+4. 添加环境变量
+5. 部署
 
-### 第二阶段 - 活动管理 🚧
-- [ ] 活动创建和管理
-- [ ] 活动报名系统
-- [ ] 活动签到功能
-- [ ] 活动统计和报告
+### 自动部署脚本
+```bash
+# 部署到 Netlify
+npm run deploy:netlify
 
-### 第三阶段 - 财务管理 🚧
-- [ ] 会费缴纳记录
-- [ ] 活动费用管理
-- [ ] 财务报表生成
-- [ ] 支付集成
+# 部署 Firebase 规则
+npm run firebase:deploy
+```
 
-### 第四阶段 - 通知系统 🚧
-- [ ] 邮件通知
-- [ ] 系统内消息
-- [ ] 公告发布
-- [ ] 推送通知
+## 🎯 核心功能
+
+### ✅ 已完成功能
+- 🔐 **用户认证系统** - 安全的登录注册
+- 👥 **会员管理** - 完整的会员生命周期管理
+- 📊 **数据统计** - 实时仪表板和数据可视化
+- 🔍 **搜索筛选** - 强大的会员搜索功能
+- 📱 **响应式设计** - 支持桌面和移动设备
+- 🎨 **现代化UI** - 基于 Ant Design 的企业级界面
+
+### 🚧 开发中功能
+- 📅 **活动管理** - 活动创建、报名、签到
+- 💰 **财务管理** - 会费缴纳、财务报表
+- 🔔 **通知系统** - 邮件通知、系统消息
+- 📈 **高级分析** - 数据分析和报告生成
 
 ## 🤝 贡献指南
 
@@ -197,10 +136,10 @@ src/
 
 如有问题或建议，请通过以下方式联系：
 
-- 创建 Issue
-- 发送邮件至 [your-email@example.com]
-- 微信: [your-wechat-id]
+- 📧 创建 [Issue](../../issues)
+- 📖 查看 [文档](docs/)
+- 💬 参与讨论
 
 ---
 
-**超级国际青年商会管理系统** - 让会员管理更简单、更高效！
+**JCI KL 会员管理系统** - 让会员管理更简单、更高效！ 🎉

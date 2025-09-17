@@ -1,5 +1,5 @@
-import React from 'react';
-import { Layout, Menu, Typography } from 'antd';
+import React, { useState, useEffect } from 'react';
+import { Layout, Menu, Image } from 'antd';
 import {
   DashboardOutlined, 
   TeamOutlined, 
@@ -10,19 +10,72 @@ import {
   SettingOutlined,
   FileTextOutlined,
   TrophyOutlined,
-  FilePdfOutlined
+  FilePdfOutlined,
+  PictureOutlined,
+  FolderOutlined
 } from '@ant-design/icons';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useSidebar } from '@/contexts/SidebarContext';
+import { ChapterSettings } from '@/types';
+import { doc, onSnapshot } from 'firebase/firestore';
+import { db } from '@/services/firebase';
 // import { globalComponentService } from '@/config/globalComponentSettings';
 
 const { Sider } = Layout;
-const { Title } = Typography;
 
 const AppSider: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { collapsed, setCollapsed, isMobile } = useSidebar();
+  
+  // 分会Logo状态管理
+  const [chapterLogo, setChapterLogo] = useState<string>('/jci-logo.svg'); // 默认Logo
+  const [chapterName, setChapterName] = useState<string>('JCI KL');
+
+  // 加载分会设置并监听实时更新
+  useEffect(() => {
+    const CHAPTER_SETTINGS_COLLECTION = 'localChapter_Setting';
+    const CHAPTER_SETTINGS_DOC_ID = 'main';
+    
+    // 设置实时监听
+    const unsubscribe = onSnapshot(
+      doc(db, CHAPTER_SETTINGS_COLLECTION, CHAPTER_SETTINGS_DOC_ID),
+      (docSnapshot) => {
+        if (docSnapshot.exists()) {
+          const settings = docSnapshot.data() as ChapterSettings;
+          
+          // 如果有自定义Logo，使用自定义Logo，否则使用默认Logo
+          if (settings.logoUrl && settings.logoUrl.trim() !== '') {
+            setChapterLogo(settings.logoUrl);
+          } else {
+            setChapterLogo('/jci-logo.svg');
+          }
+          
+          // 设置分会名称
+          if (settings.chapterName && settings.chapterName.trim() !== '') {
+            setChapterName(settings.chapterName);
+          } else {
+            setChapterName('JCI KL');
+          }
+        } else {
+          // 如果没有设置文档，使用默认值
+          setChapterLogo('/jci-logo.svg');
+          setChapterName('JCI KL');
+        }
+      },
+      (error) => {
+        console.error('监听分会设置失败:', error);
+        // 出错时使用默认值
+        setChapterLogo('/jci-logo.svg');
+        setChapterName('JCI KL');
+      }
+    );
+
+    // 清理监听器
+    return () => {
+      unsubscribe();
+    };
+  }, []);
 
   const menuItems = [
     {
@@ -59,6 +112,16 @@ const AppSider: React.FC = () => {
       key: '/pdf-interpretation',
       icon: <FilePdfOutlined />,
       label: 'PDF解读',
+    },
+    {
+      key: '/image-management',
+      icon: <PictureOutlined />,
+      label: '图片管理',
+    },
+    {
+      key: '/folder-management',
+      icon: <FolderOutlined />,
+      label: '文件夹管理',
     },
     {
       key: '/messages',
@@ -106,19 +169,41 @@ const AppSider: React.FC = () => {
       <div style={{ 
         padding: isMobile ? '12px' : '16px', 
         textAlign: 'center',
-        borderBottom: '1px solid #f0f0f0'
+        borderBottom: '1px solid #f0f0f0',
+        display: 'flex',
+        flexDirection: collapsed || isMobile ? 'column' : 'row',
+        justifyContent: 'center',
+        alignItems: 'center',
+        gap: collapsed || isMobile ? '4px' : '8px'
       }}>
-        <Title 
-          level={4} 
-          style={{ 
-            margin: 0, 
-            color: '#1890ff',
-            fontSize: collapsed || isMobile ? '14px' : '16px',
-            transition: 'font-size 0.2s ease-in-out'
+        <Image
+          src={chapterLogo}
+          alt={`${chapterName} Logo`}
+          preview={false}
+          style={{
+            height: collapsed || isMobile ? '32px' : '40px',
+            width: collapsed || isMobile ? '32px' : '40px',
+            transition: 'all 0.2s ease-in-out',
+            objectFit: 'contain'
           }}
-        >
-          {collapsed || isMobile ? 'JCI' : 'JCI KL'}
-        </Title>
+          onError={() => {
+            // 如果自定义Logo加载失败，回退到默认Logo
+            setChapterLogo('/jci-logo.svg');
+          }}
+        />
+        {!collapsed && !isMobile && (
+          <div style={{
+            fontSize: '14px',
+            fontWeight: 'bold',
+            color: '#1890ff',
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            maxWidth: '120px'
+          }}>
+            {chapterName}
+          </div>
+        )}
       </div>
       
       <Menu

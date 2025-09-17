@@ -3,9 +3,9 @@
  * 测试世界区域 -> 国家 -> 国家区域的级联筛选逻辑
  */
 
-import { getWorldRegions } from '@/services/worldRegionService';
-import { getCountries } from '@/services/countryService';
-import { getNationalRegions } from '@/services/nationalRegionService';
+import { getWorldRegions } from '@/modules/system/services/worldRegionService';
+import { getCountries } from '@/modules/system/services/countryService';
+import { getNationalRegions } from '@/modules/system/services/nationalRegionService';
 import { Country, NationalRegion } from '@/types';
 
 // 模拟筛选函数

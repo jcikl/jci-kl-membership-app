@@ -28,7 +28,7 @@ import {
   EAwardCategory,
   CreateAwardIndicatorInput
 } from '@/types/awardIndicators';
-import { awardIndicatorService } from '@/services/awardIndicatorService';
+import { awardIndicatorService } from '@/modules/award/services/awardIndicatorService';
 
 const { TextArea } = Input;
 const { Text } = Typography;

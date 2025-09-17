@@ -21,7 +21,7 @@ import {
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { TeamManagement, TeamPosition, TeamMember } from '../../types/awards';
-import { awardService } from '../../services/awardService';
+import { awardService } from '@/modules/award/services/awardService';
 
 const { TextArea } = Input;
 const { Option } = Select;

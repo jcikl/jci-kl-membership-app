@@ -1,4 +1,4 @@
-import { getChapterSettings, saveChapterSettings, getDefaultChapterSettings } from '@/services/chapterSettingsService';
+import { getChapterSettings, saveChapterSettings, getDefaultChapterSettings } from '@/modules/system/services/chapterSettingsService';
 
 /**
  * 初始化分会设置

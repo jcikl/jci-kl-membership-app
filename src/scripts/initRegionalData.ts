@@ -2,16 +2,16 @@ import {
   initializeDefaultWorldRegions,
   getWorldRegions,
   updateWorldRegion 
-} from '@/services/worldRegionService';
+} from '@/modules/system/services/worldRegionService';
 import { 
   initializeDefaultCountries,
   getCountries,
   updateCountry 
-} from '@/services/countryService';
+} from '@/modules/system/services/countryService';
 import { 
   initializeDefaultMalaysianRegions,
   getNationalRegions
-} from '@/services/nationalRegionService';
+} from '@/modules/system/services/nationalRegionService';
 
 /**
  * 初始化区域数据

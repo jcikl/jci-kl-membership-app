@@ -38,10 +38,10 @@ import {
   Event,
 } from '@/types/event';
 import { Transaction } from '@/types/finance';
-import { projectAccountService } from '@/services/projectAccountService';
-import { eventService } from '@/services/eventService';
-import UnifiedProjectFinanceManagement from './UnifiedProjectFinanceManagement';
-import GlobalYearFilterModal from './GlobalYearFilterModal';
+import { projectAccountService } from '@/modules/finance/services/projectAccountService';
+import { eventService } from '@/modules/event/services/eventService';
+import UnifiedProjectFinanceManagement from '@/modules/finance/components/UnifiedProjectFinanceManagement';
+import GlobalYearFilterModal from '@/modules/finance/components/GlobalYearFilterModal';
 import { useFinanceYear } from '@/contexts/FinanceYearContext';
 
 const { Title, Text } = Typography;
@@ -57,7 +57,7 @@ const ProjectAccountManagement: React.FC<ProjectAccountManagementProps> = () => 
   const [searchText, setSearchText] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('');
   // 使用全局年份状态
-  const { selectedYear: yearFilter, setSelectedYear: setYearFilter, availableYears, setAvailableYears } = useFinanceYear();
+  const { selectedYear: yearFilter, setSelectedYear: setYearFilter, availableYears, refreshAvailableYears } = useFinanceYear();
   const [selectedAccount, setSelectedAccount] = useState<ProjectAccount | null>(null);
   const [accountEvents, setAccountEvents] = useState<Event[]>([]);
   const [accountStatistics, setAccountStatistics] = useState<any>(null);
@@ -71,25 +71,13 @@ const ProjectAccountManagement: React.FC<ProjectAccountManagementProps> = () => 
     loadAccounts();
   }, []);
 
-  // 更新全局可用年份
+  // 更新全局可用年份 - 现在由 FinanceYearContext 统一管理
   useEffect(() => {
     if (accounts.length > 0) {
-      const years = new Set<number>();
-      accounts.forEach(account => {
-        if (account.createdAt) {
-          // 处理Firebase Timestamp类型
-          const timestamp = account.createdAt as any;
-          const createdDate = dayjs(timestamp.seconds ? timestamp.seconds * 1000 : timestamp);
-          if (createdDate.isValid()) {
-            years.add(createdDate.year());
-          }
-        }
-      });
-      if (years.size > 0) {
-        setAvailableYears(Array.from(years));
-      }
+      // 触发年份范围刷新
+      refreshAvailableYears();
     }
-  }, [accounts, setAvailableYears]);
+  }, [accounts, refreshAvailableYears]);
 
 
   const loadAccounts = async () => {

@@ -1,5 +1,5 @@
 // 权限增强功能测试
-import { permissionService } from '../services/permissionService';
+import { permissionService } from '@/modules/permission/services/permissionService';
 import { JCIPosition, MembershipCategory } from '../types/rbac';
 
 // 模拟数据
