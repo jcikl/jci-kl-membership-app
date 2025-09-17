@@ -11,7 +11,6 @@ interface FinanceDateFilterProps {
   onYearChange: (year: number) => void;
   onMonthChange: (month: number | null) => void;
   onReset: () => void;
-  fiscalYear: number;
 }
 
 const FinanceDateFilter: React.FC<FinanceDateFilterProps> = ({
@@ -19,7 +18,6 @@ const FinanceDateFilter: React.FC<FinanceDateFilterProps> = ({
   onYearChange,
   onMonthChange,
   onReset,
-  // fiscalYear, // Unused for now
 }) => {
   // 生成年份选项（当前年份前后5年）
   const currentYear = new Date().getFullYear();
@@ -53,7 +51,7 @@ const FinanceDateFilter: React.FC<FinanceDateFilterProps> = ({
         </Col>
         <Col>
           <Space>
-            <Text>财政年度：</Text>
+            <Text>年份：</Text>
             <Select
               value={dateFilter.year}
               onChange={onYearChange}

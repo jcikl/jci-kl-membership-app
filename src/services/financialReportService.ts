@@ -3,7 +3,6 @@ import {
   addDoc, 
   getDocs, 
   query, 
-  where, 
   orderBy,
   Timestamp 
 } from 'firebase/firestore';
@@ -117,7 +116,6 @@ export class FinancialReportGenerator {
       period: {
         startDate: startDate.toISOString(),
         endDate: endDate.toISOString(),
-        fiscalYear
       },
       totalIncome: totalIncome || 0,
       totalExpense: totalExpense || 0,
@@ -126,6 +124,7 @@ export class FinancialReportGenerator {
       budgetComparison: [],
       transactions: transactions.map(t => ({
         id: t.id,
+        transactionNumber: t.transactionNumber || `TXN-${new Date().getFullYear()}-${Math.random().toString(36).substr(2, 4).toUpperCase()}-${Math.random().toString(36).substr(2, 4).toUpperCase()}`,
         bankAccountId: t.bankAccountId,
         transactionDate: t.transactionDate,
         mainDescription: t.mainDescription || t.description || '',
@@ -141,7 +140,6 @@ export class FinancialReportGenerator {
         paymentDescription: t.paymentDescription,
         notes: t.notes,
         attachments: t.attachments,
-        auditYear: t.auditYear,
         membershipFeeData: t.membershipFeeData,
         createdAt: t.createdAt,
         updatedAt: t.updatedAt,
@@ -175,7 +173,7 @@ export class FinancialReportGenerator {
     const endDate = this.fiscalCalculator.getFiscalYearEndDate(fiscalYear);
     
     // 获取所有银行户口
-    const bankAccounts = await bankAccountService.getAccounts(fiscalYear);
+    const bankAccounts = await bankAccountService.getAccounts();
     
     // 计算总资产（银行户口余额）
     const totalAssets = bankAccounts.reduce((sum, account) => sum + account.currentBalance, 0);
@@ -200,7 +198,6 @@ export class FinancialReportGenerator {
       period: {
         startDate: startDate.toISOString(),
         endDate: endDate.toISOString(),
-        fiscalYear
       },
       totalIncome: 0,
       totalExpense: 0,
@@ -244,7 +241,6 @@ export class FinancialReportGenerator {
       period: {
         startDate: startDate.toISOString(),
         endDate: endDate.toISOString(),
-        fiscalYear
       },
       totalIncome: transactions.reduce((sum, t) => sum + (t.income || 0), 0),
       totalExpense: transactions.reduce((sum, t) => sum + (t.expense || 0), 0),
@@ -260,6 +256,7 @@ export class FinancialReportGenerator {
       },
       transactions: transactions.map(t => ({
         id: t.id,
+        transactionNumber: t.transactionNumber || `TXN-${new Date().getFullYear()}-${Math.random().toString(36).substr(2, 4).toUpperCase()}-${Math.random().toString(36).substr(2, 4).toUpperCase()}`,
         bankAccountId: t.bankAccountId,
         transactionDate: t.transactionDate,
         mainDescription: t.mainDescription || '',
@@ -275,7 +272,6 @@ export class FinancialReportGenerator {
         paymentDescription: t.paymentDescription,
         notes: t.notes,
         attachments: t.attachments,
-        auditYear: t.auditYear,
         membershipFeeData: t.membershipFeeData,
         createdAt: t.createdAt,
         updatedAt: t.updatedAt,
@@ -330,7 +326,6 @@ export class FinancialReportGenerator {
       period: {
         startDate: this.fiscalCalculator.getFiscalYearStartDate(fiscalYear).toISOString(),
         endDate: this.fiscalCalculator.getFiscalYearEndDate(fiscalYear).toISOString(),
-        fiscalYear
       },
       totalIncome: totalIncome || 0,
       totalExpense: totalExpense || 0,
@@ -385,7 +380,6 @@ export class FinancialReportGenerator {
       period: {
         startDate: startDate.toISOString(),
         endDate: endDate.toISOString(),
-        fiscalYear
       },
       totalIncome,
       totalExpense,
@@ -401,6 +395,7 @@ export class FinancialReportGenerator {
       },
       transactions: transactions.map(t => ({
         id: t.id,
+        transactionNumber: t.transactionNumber || `TXN-${new Date().getFullYear()}-${Math.random().toString(36).substr(2, 4).toUpperCase()}-${Math.random().toString(36).substr(2, 4).toUpperCase()}`,
         bankAccountId: t.bankAccountId,
         transactionDate: t.transactionDate,
         mainDescription: t.mainDescription || '',
@@ -416,7 +411,6 @@ export class FinancialReportGenerator {
         paymentDescription: t.paymentDescription,
         notes: t.notes,
         attachments: t.attachments,
-        auditYear: t.auditYear,
         membershipFeeData: t.membershipFeeData,
         createdAt: t.createdAt,
         updatedAt: t.updatedAt,
@@ -443,7 +437,7 @@ export class FinancialReportGenerator {
     const startDate = this.fiscalCalculator.getFiscalYearStartDate(fiscalYear);
     const endDate = this.fiscalCalculator.getFiscalYearEndDate(fiscalYear);
 
-    const bankAccounts = await bankAccountService.getAccounts(fiscalYear);
+    const bankAccounts = await bankAccountService.getAccounts();
     const reconciliationData = [];
 
     for (const account of bankAccounts) {
@@ -482,7 +476,6 @@ export class FinancialReportGenerator {
       period: {
         startDate: startDate.toISOString(),
         endDate: endDate.toISOString(),
-        fiscalYear
       },
       totalIncome: 0,
       totalExpense: 0,
@@ -701,7 +694,6 @@ export const financialReportService = {
       reportType,
       reportName: this.getReportName(reportType, fiscalYear),
       reportPeriod: `${fiscalYear}财政年度`,
-      auditYear: fiscalYear,
       generatedBy,
       generatedAt: new Date().toISOString(),
       data: reportData,
@@ -756,17 +748,22 @@ export const financialReportService = {
     const querySnapshot = await getDocs(
       query(
         collection(db, 'financial_reports'),
-        where('auditYear', '==', fiscalYear),
         orderBy('generatedAt', 'desc')
       )
     );
 
-    return querySnapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data(),
-      createdAt: doc.data().createdAt?.toDate().toISOString(),
-      updatedAt: doc.data().updatedAt?.toDate().toISOString()
-    })) as FinancialReport[];
+    return querySnapshot.docs
+      .map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+        createdAt: doc.data().createdAt?.toDate().toISOString(),
+        updatedAt: doc.data().updatedAt?.toDate().toISOString()
+      }))
+      .filter(report => {
+        // 从报告期间中提取财政年度信息
+        const reportPeriod = (report as any).reportPeriod || '';
+        return reportPeriod.includes(fiscalYear.toString());
+      }) as FinancialReport[];
   },
 
   // 导出报表为CSV

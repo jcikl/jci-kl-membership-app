@@ -25,11 +25,9 @@ import {
   DeleteOutlined,
   BankOutlined,
   DollarOutlined,
-  CalendarOutlined,
   CheckCircleOutlined,
   CloseCircleOutlined,
 } from '@ant-design/icons';
-import { useFiscalYear } from '@/contexts/FiscalYearContext';
 import { useAuthStore } from '@/store/authStore';
 import { BankAccount, BankAccountType } from '@/types/finance';
 import dayjs from 'dayjs';
@@ -52,7 +50,6 @@ const BankAccountManagement: React.FC<BankAccountManagementProps> = ({
   bankAccounts,
   loading = false,
 }) => {
-  const { fiscalYear } = useFiscalYear();
   const { user } = useAuthStore();
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [editingAccount, setEditingAccount] = useState<BankAccount | null>(null);
@@ -121,7 +118,6 @@ const BankAccountManagement: React.FC<BankAccountManagementProps> = ({
         accountType: values.accountType,
         initialAmount: values.initialAmount,
         currentBalance: editingAccount ? editingAccount.currentBalance : values.initialAmount,
-        auditYear: fiscalYear,
         bankName: values.bankName || '',
         accountNumber: values.accountNumber || '',
         description: values.description || '',
@@ -224,18 +220,6 @@ const BankAccountManagement: React.FC<BankAccountManagementProps> = ({
       ),
     },
     {
-      title: '财政年度',
-      dataIndex: 'auditYear',
-      key: 'auditYear',
-      width: 100,
-      render: (year: number) => (
-        <Space>
-          <CalendarOutlined />
-          <Text>{year}</Text>
-        </Space>
-      ),
-    },
-    {
       title: '状态',
       dataIndex: 'isActive',
       key: 'isActive',
@@ -302,7 +286,6 @@ const BankAccountManagement: React.FC<BankAccountManagementProps> = ({
               <Title level={4} style={{ margin: 0 }}>
                 <BankOutlined /> 银行户口管理
               </Title>
-              <Text type="secondary">财政年度：{fiscalYear}</Text>
             </Col>
             <Col>
               <Button
@@ -391,7 +374,6 @@ const BankAccountManagement: React.FC<BankAccountManagementProps> = ({
           layout="vertical"
           initialValues={{
             isActive: true,
-                auditYear: fiscalYear,
           }}
         >
           <Row gutter={16}>
@@ -454,20 +436,6 @@ const BankAccountManagement: React.FC<BankAccountManagementProps> = ({
                   precision={2}
                   formatter={(value) => `RM ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
                   parser={(value) => (parseFloat(value!.replace(/RM\s?|(,*)/g, '')) || 0) as any}
-                />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
-                name="auditYear"
-                label="财政年度"
-                rules={[{ required: true, message: '请输入财政年度' }]}
-              >
-                <InputNumber
-                  placeholder="请输入财政年度"
-                  style={{ width: '100%' }}
-                  min={2020}
-                  max={2030}
                 />
               </Form.Item>
             </Col>

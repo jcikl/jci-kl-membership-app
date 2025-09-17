@@ -25,7 +25,6 @@ import {
   TableOutlined,
   DollarOutlined
 } from '@ant-design/icons';
-import { useFiscalYear } from '@/contexts/FiscalYearContext';
 import { FinancialImportData, BankAccount } from '@/types/finance';
 import dayjs from 'dayjs';
 import { parseDateToDDMMMYYYY } from '@/utils/dateParser';
@@ -68,7 +67,6 @@ const FinancialImportModal: React.FC<FinancialImportModalProps> = ({
   onImport,
   bankAccounts,
 }) => {
-  const { fiscalYear } = useFiscalYear();
   const [transactions, setTransactions] = useState<ParsedTransaction[]>([]);
   const [isImporting, setIsImporting] = useState(false);
   const [importResult, setImportResult] = useState<{ 
@@ -103,6 +101,17 @@ const FinancialImportModal: React.FC<FinancialImportModalProps> = ({
   useEffect(() => {
     if (visible && transactions.length === 0) {
       setTransactions([createEmptyTransaction()]);
+    }
+  }, [visible]);
+
+  // 当模态框关闭时，清理所有数据
+  useEffect(() => {
+    if (!visible) {
+      setTransactions([]);
+      setImportResult(null);
+      setSelectedBankAccountId('');
+      setActiveTab('manual');
+      setDeveloperMode(false);
     }
   }, [visible]);
 
@@ -276,20 +285,28 @@ const FinancialImportModal: React.FC<FinancialImportModalProps> = ({
       const result = await onImport(validTransactions.map(t => ({
         transactionDate: t.transactionDate,
         mainDescription: t.mainDescription,
-        subDescription: t.subDescription,
+        subDescription: t.subDescription || '',
         expense: t.expense,
         income: t.income,
-        payerPayee: t.payerPayee,
-        transactionPurpose: t.transactionPurpose,
-        projectAccount: t.projectAccount,
-        accountType: t.accountType,
-        inputBy: t.inputBy,
-        paymentDescription: t.paymentDescription,
+        payer: t.payerPayee || '', // 将 payerPayee 映射到 payer
+        payee: '', // payee 字段留空
+        transactionPurpose: t.transactionPurpose || '',
+        projectAccount: t.projectAccount || '',
+        accountType: t.accountType || '',
+        inputBy: t.inputBy || '',
+        paymentDescription: t.paymentDescription || '',
         bankAccountId: selectedBankAccountId,
-        auditYear: fiscalYear,
       })), selectedBankAccountId);
       
       setImportResult(result);
+      
+      // 如果导入成功，清理已导入的记录
+      if (result.success > 0) {
+        const successIds = validTransactions.slice(0, result.success).map(t => t.id);
+        setTransactions(prevTransactions => 
+          prevTransactions.filter(t => !successIds.includes(t.id))
+        );
+      }
       
       let messageText = `导入完成！成功: ${result.success} 条`;
       if (result.failed > 0) {
@@ -551,7 +568,7 @@ const FinancialImportModal: React.FC<FinancialImportModalProps> = ({
       ),
       children: (
         <div>
-          <div style={{ marginBottom: 16 }}>
+          <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <Space>
               <Button 
                 type="primary" 
@@ -577,6 +594,20 @@ const FinancialImportModal: React.FC<FinancialImportModalProps> = ({
                 danger
               >
                 清空数据
+              </Button>
+            </Space>
+            
+            {/* 取消和导入按钮 */}
+            <Space>
+              <Button onClick={onCancel}>取消</Button>
+              <Button 
+                type="primary" 
+                loading={isImporting}
+                onClick={handleImport}
+                disabled={validCount === 0 || !selectedBankAccountId}
+                icon={<DollarOutlined />}
+              >
+                导入 {validCount} 条有效记录
               </Button>
             </Space>
           </div>
@@ -613,6 +644,7 @@ const FinancialImportModal: React.FC<FinancialImportModalProps> = ({
           <div style={{ marginBottom: 16, fontSize: '12px', color: '#666' }}>
             可以直接在表格中编辑，或从Excel复制数据粘贴到此处
           </div>
+
           <div onPaste={handlePaste}>
             <Table
               columns={columns}
@@ -690,7 +722,6 @@ const FinancialImportModal: React.FC<FinancialImportModalProps> = ({
                 </Option>
               ))}
             </Select>
-            <Text type="secondary">财政年度：{fiscalYear}</Text>
           </Space>
         </Card>
 
@@ -729,20 +760,6 @@ const FinancialImportModal: React.FC<FinancialImportModalProps> = ({
           </Card>
         )}
 
-        <div style={{ marginTop: 16, textAlign: 'right' }}>
-          <Space>
-            <Button onClick={onCancel}>取消</Button>
-            <Button 
-              type="primary" 
-              loading={isImporting}
-              onClick={handleImport}
-              disabled={validCount === 0 || !selectedBankAccountId}
-              icon={<DollarOutlined />}
-            >
-              导入 {validCount} 条有效记录
-            </Button>
-          </Space>
-        </div>
       </div>
     </Modal>
   );

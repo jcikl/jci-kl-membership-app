@@ -32,9 +32,16 @@ export const GLOBAL_COLLECTIONS = {
   PROFILE_DOCUMENTS: 'profileDocuments',
   
   // 系统配置集合
-  CHAPTER_SETTINGS: 'chapterSettings',
+  CHAPTER_SETTINGS: 'localChapter_Setting',
   SYSTEM_CONFIG: 'systemConfig',
   APP_SETTINGS: 'appSettings',
+  
+  // 总部和区域设置集合
+  HEADQUARTERS_SETTINGS: 'headquartersSettings',
+  WORLD_REGIONS: 'worldRegions',
+  COUNTRIES: 'countries',
+  NATIONAL_REGIONS: 'nationalRegions',
+  LOCAL_CHAPTERS: 'localChapters',
   
   // 权限管理集合
   RBAC_PERMISSIONS: 'rbac_permissions',
@@ -144,6 +151,11 @@ export const SYSTEM_COLLECTIONS: CollectionType[] = [
   'CHAPTER_SETTINGS',
   'SYSTEM_CONFIG',
   'APP_SETTINGS',
+  'HEADQUARTERS_SETTINGS',
+  'WORLD_REGIONS',
+  'COUNTRIES',
+  'NATIONAL_REGIONS',
+  'LOCAL_CHAPTERS',
   'RBAC_PERMISSIONS',
   'RBAC_ROLES',
   'RBAC_ROLE_BINDINGS',

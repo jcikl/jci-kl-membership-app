@@ -7,7 +7,7 @@ import {
 import { db } from './firebase';
 import { ChapterSettings } from '@/types';
 
-const CHAPTER_SETTINGS_COLLECTION = 'chapter_settings';
+const CHAPTER_SETTINGS_COLLECTION = 'localChapter_Setting';
 const CHAPTER_SETTINGS_DOC_ID = 'main';
 
 // 获取分会设置
@@ -69,19 +69,11 @@ export const getDefaultChapterSettings = (): Omit<ChapterSettings, 'id' | 'creat
   return {
     chapterName: 'JCI Kuala Lumpur',
     establishmentYear: new Date().getFullYear(),
-    fiscalYear: new Date().getFullYear(), // 默认财政年度为当前年份
-    fiscalYearStartMonth: 1, // 默认财政年度从1月开始
     description: '',
     address: '',
     contactEmail: '',
     contactPhone: '',
     website: '',
     logoUrl: '',
-    promotionRules: {
-      minAgeForActive: 21,
-      nationalityWhitelist: [],
-      requirePaymentVerified: true,
-      requireSenatorIdForHonorary: true,
-    },
   };
 };

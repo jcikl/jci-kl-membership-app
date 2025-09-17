@@ -70,7 +70,6 @@ export interface ProjectAccount {
   id: string;
   name: string;
   description: string;
-  fiscalYear: string;
   budget: number;
   currency: string;
   responsiblePerson: string;
@@ -358,7 +357,6 @@ export interface EventFilter {
 export interface ProjectAccountCreateData {
   name: string;
   description: string;
-  fiscalYear: string;
   budget: number;
   currency: string;
   responsiblePerson: string;

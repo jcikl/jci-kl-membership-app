@@ -27,7 +27,6 @@ import {
   DeleteOutlined,
   DollarOutlined,
   CalendarOutlined,
-  TagOutlined,
   UploadOutlined,
   BankOutlined,
   FilterOutlined,
@@ -35,14 +34,15 @@ import {
   SplitCellsOutlined,
   TransactionOutlined,
 } from '@ant-design/icons';
-import { useFiscalYear } from '@/contexts/FiscalYearContext';
 import { Transaction, BankAccount, TransactionPurpose, TransactionSplit } from '@/types/finance';
 import { useAuthStore } from '@/store/authStore';
 import { transactionSplitService } from '@/services/financeService';
 import dayjs from 'dayjs';
+import GlobalYearFilterModal from './GlobalYearFilterModal';
 import FinancialImportModal from './FinancialImportModal';
 import TransactionBatchSettingsModal from './TransactionBatchSettingsModal';
 import TransactionSplitModal from './TransactionSplitModal';
+import { useFinanceYear } from '@/contexts/FinanceYearContext';
 
 const { Title, Text } = Typography;
 const { Option } = Select;
@@ -51,6 +51,7 @@ interface TransactionManagementProps {
   onCreateTransaction: (transaction: Omit<Transaction, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
   onUpdateTransaction: (id: string, transaction: Partial<Transaction>) => Promise<void>;
   onDeleteTransaction: (id: string) => Promise<void>;
+  onDeleteTransactions: (ids: string[]) => Promise<{ success: number; failed: number; errors: string[] }>;
   onImportTransactions: (transactions: any[], bankAccountId: string) => Promise<{ success: number; failed: number; errors: string[] }>;
   transactions: Transaction[];
   bankAccounts: BankAccount[];
@@ -62,14 +63,14 @@ const TransactionManagement: React.FC<TransactionManagementProps> = ({
   onCreateTransaction,
   onUpdateTransaction,
   onDeleteTransaction,
+  onDeleteTransactions,
   onImportTransactions,
   transactions,
   bankAccounts,
   purposes,
   loading = false,
 }) => {
-  const { fiscalYear } = useFiscalYear();
-  const { user } = useAuthStore();
+  const { user, member } = useAuthStore();
   const [isModalVisible, setIsModalVisible] = useState(false);
 
   const [isImportModalVisible, setIsImportModalVisible] = useState(false);
@@ -88,10 +89,16 @@ const TransactionManagement: React.FC<TransactionManagementProps> = ({
   const [purposeFilter, setPurposeFilter] = useState<string[]>([]);
   const [searchText, setSearchText] = useState('');
   const [dateRange, setDateRange] = useState<[dayjs.Dayjs | null, dayjs.Dayjs | null]>([null, null]);
+  // 使用全局年份状态
+  const { selectedYear: yearFilter, setSelectedYear: setYearFilter, availableYears, setAvailableYears } = useFinanceYear();
   
   // 级联选择器状态
   const [selectedMainCategory, setSelectedMainCategory] = useState<string>('');
   const [selectedBusinessCategory, setSelectedBusinessCategory] = useState<string>('');
+  
+  // 分页状态
+  const [pageSize, setPageSize] = useState<number>(20);
+  const [currentPage, setCurrentPage] = useState<number>(1);
 
   // 设置默认标签页为第一个银行户口
   useEffect(() => {
@@ -100,19 +107,49 @@ const TransactionManagement: React.FC<TransactionManagementProps> = ({
     }
   }, [bankAccounts, activeTab]);
 
+  // 更新全局可用年份
+  useEffect(() => {
+    if (transactions.length > 0) {
+      const years = new Set<number>();
+      transactions.forEach(transaction => {
+        try {
+          const transactionDate = dayjs(transaction.transactionDate, 'DD-MMM-YYYY');
+          if (transactionDate.isValid()) {
+            years.add(transactionDate.year());
+          }
+        } catch (error) {
+          console.warn('Invalid date format:', transaction.transactionDate);
+        }
+      });
+      if (years.size > 0) {
+        setAvailableYears(Array.from(years));
+      }
+    }
+  }, [transactions, setAvailableYears]);
+
+  // 切换银行户口时重置分页状态
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [activeTab]);
+
   // 加载拆分数据
   useEffect(() => {
     const loadSplits = async () => {
       try {
-        const splits = await transactionSplitService.getAllSplits();
-        setTransactionSplits(splits);
+        // 优化：只加载当前显示的交易的拆分记录
+        if (transactions.length > 0) {
+          const transactionIds = transactions.map(t => t.id);
+          const splits = await transactionSplitService.getSplitsByTransactions(transactionIds);
+          setTransactionSplits(splits);
+          console.log('✅ 已加载拆分记录:', splits.length, '项');
+        }
       } catch (error) {
-        console.error('加载拆分数据失败:', error);
+        console.error('❌ 加载拆分数据失败:', error);
       }
     };
     
     loadSplits();
-  }, []);
+  }, [transactions]); // 依赖transactions变化
 
   // 构建3层级交易用途树形数据（用于筛选）
   const buildPurposeTreeData = () => {
@@ -150,27 +187,7 @@ const TransactionManagement: React.FC<TransactionManagementProps> = ({
     return treeData;
   };
 
-  // 获取交易用途的完整路径
-  const getPurposePath = (purposeId: string): string[] => {
-    const purpose = purposes.find(p => p.id === purposeId);
-    if (!purpose) return [];
-    
-    const path: string[] = [];
-    let currentPurpose: TransactionPurpose | undefined = purpose;
-    
-    // 从当前用途向上查找路径
-    while (currentPurpose) {
-      path.unshift(currentPurpose.name);
-      if (currentPurpose.parentId) {
-        const parentPurpose = purposes.find(p => p.id === currentPurpose!.parentId);
-        currentPurpose = parentPurpose;
-      } else {
-        currentPurpose = undefined;
-      }
-    }
-    
-    return path;
-  };
+
 
   // 根据3层级筛选交易记录
   const filteredTransactions = useMemo(() => {
@@ -207,8 +224,16 @@ const TransactionManagement: React.FC<TransactionManagementProps> = ({
       });
     }
     
+    // 按年份筛选
+    if (yearFilter) {
+      filtered = filtered.filter(t => {
+        const transactionDate = dayjs(t.transactionDate, 'DD-MMM-YYYY');
+        return transactionDate.year() === yearFilter;
+      });
+    }
+    
     return filtered;
-  }, [transactions, activeTab, purposeFilter, searchText, dateRange]);
+  }, [transactions, activeTab, purposeFilter, searchText, dateRange, yearFilter]);
 
   const handleCreateTransaction = () => {
     setEditingTransaction(null);
@@ -278,6 +303,146 @@ const TransactionManagement: React.FC<TransactionManagementProps> = ({
     }
   };
 
+  // 批量删除处理函数
+  const handleBatchDelete = async () => {
+    if (selectedTransactions.length === 0) {
+      message.warning('请先选择要删除的交易记录');
+      return;
+    }
+
+    // 权限检查 - 只有管理员、财务长和开发员可以批量删除交易记录
+    const allowedRoles = ['president', 'treasurer', 'secretary_general', 'developer'];
+    const userRole = member?.accountType || '';
+    
+    // 调试信息
+    console.log('🔍 权限检查:', {
+      user: !!user,
+      member: !!member,
+      userRole,
+      allowedRoles,
+      hasPermission: allowedRoles.includes(userRole)
+    });
+    
+    if (!user || !member || !allowedRoles.includes(userRole)) {
+      message.error('您没有权限执行批量删除操作');
+      return;
+    }
+
+    // 检查是否有拆分记录的交易
+    const transactionsWithSplits = transactions.filter(t => 
+      selectedTransactions.includes(t.id) && 
+      transactionSplits.some(split => split.transactionId === t.id)
+    );
+
+    let confirmContent = `确定要删除选中的 ${selectedTransactions.length} 条交易记录吗？此操作不可撤销。`;
+    
+    if (transactionsWithSplits.length > 0) {
+      confirmContent += `\n\n⚠️ 注意：其中 ${transactionsWithSplits.length} 条交易记录包含拆分记录，删除时将一并清理。`;
+    }
+
+    Modal.confirm({
+      title: '确认批量删除',
+      content: confirmContent,
+      okText: '确认删除',
+      okType: 'danger',
+      cancelText: '取消',
+      width: 500,
+      onOk: async () => {
+        const loadingMessage = message.loading('正在删除交易记录...', 0);
+        
+        try {
+          console.log(`🗑️ 开始批量删除 ${selectedTransactions.length} 条交易记录`);
+          const result = await onDeleteTransactions(selectedTransactions);
+          
+          loadingMessage();
+          
+          // 显示详细的结果信息
+          if (result.success > 0 && result.failed === 0) {
+            message.success({
+              content: `✅ 成功删除 ${result.success} 条交易记录`,
+              duration: 3
+            });
+          } else if (result.success > 0 && result.failed > 0) {
+            message.warning({
+              content: `⚠️ 部分删除成功：${result.success} 条成功，${result.failed} 条失败`,
+              duration: 5
+            });
+            
+            // 显示错误详情
+            if (result.errors.length > 0) {
+              Modal.error({
+                title: '删除失败详情',
+                content: (
+                  <div>
+                    <p>以下交易记录删除失败：</p>
+                    <ul>
+                      {result.errors.slice(0, 10).map((error, index) => (
+                        <li key={index} style={{ fontSize: '12px', marginBottom: '4px' }}>
+                          {error}
+                        </li>
+                      ))}
+                      {result.errors.length > 10 && (
+                        <li style={{ fontSize: '12px', color: '#666' }}>
+                          ... 还有 {result.errors.length - 10} 个错误
+                        </li>
+                      )}
+                    </ul>
+                  </div>
+                ),
+                width: 600,
+                okText: '确定'
+              });
+            }
+          } else {
+            message.error({
+              content: `❌ 删除失败：${result.failed} 条交易记录均删除失败`,
+              duration: 5
+            });
+            
+            // 显示所有错误
+            if (result.errors.length > 0) {
+              Modal.error({
+                title: '删除失败详情',
+                content: (
+                  <div>
+                    <p>所有交易记录删除失败：</p>
+                    <ul>
+                      {result.errors.slice(0, 15).map((error, index) => (
+                        <li key={index} style={{ fontSize: '12px', marginBottom: '4px' }}>
+                          {error}
+                        </li>
+                      ))}
+                      {result.errors.length > 15 && (
+                        <li style={{ fontSize: '12px', color: '#666' }}>
+                          ... 还有 {result.errors.length - 15} 个错误
+                        </li>
+                      )}
+                    </ul>
+                  </div>
+                ),
+                width: 700,
+                okText: '确定'
+              });
+            }
+          }
+          
+          // 清空选择
+          setSelectedTransactions([]);
+          
+        } catch (error) {
+          loadingMessage();
+          console.error('批量删除失败:', error);
+          
+          const errorMessage = error instanceof Error ? error.message : '未知错误';
+          message.error({
+            content: `❌ 批量删除失败：${errorMessage}`,
+            duration: 5
+          });
+        }
+      }
+    });
+  };
+
   // 拆分处理函数
   const handleSplitTransaction = (transaction: Transaction) => {
     setSplittingTransaction(transaction);
@@ -315,6 +480,9 @@ const TransactionManagement: React.FC<TransactionManagementProps> = ({
         ...newSplits
       ]);
       
+      // 刷新交易列表以显示更新后的拆分状态
+      console.log('🔄 拆分完成，刷新交易列表');
+      
       message.success('交易拆分成功');
       setIsSplitModalVisible(false);
       setSplittingTransaction(null);
@@ -329,23 +497,55 @@ const TransactionManagement: React.FC<TransactionManagementProps> = ({
     try {
       const values = await form.validateFields();
       
+      // 验证收入和支出不能同时有数额
+      const expense = values.expense || 0;
+      const income = values.income || 0;
+      
+      if (expense > 0 && income > 0) {
+        message.error('收入和支出不能同时有数额，请选择其中一项');
+        return;
+      }
+      
+      if (expense === 0 && income === 0) {
+        message.error('请输入收入或支出金额');
+        return;
+      }
+      
       const transactionData = {
         bankAccountId: values.bankAccountId,
         transactionDate: dayjs(values.transactionDate).format('DD-MMM-YYYY'),
         mainDescription: values.mainDescription,
         subDescription: values.subDescription || '',
-        expense: values.expense || 0,
-        income: values.income || 0,
+        expense: expense,
+        income: income,
         payerPayee: values.payerPayee || '', // 付款人/收款人合并字段
         transactionType: values.transactionType || '', // 主要分类ID
         projectAccount: values.projectAccount || '', // 业务分类ID
         transactionPurpose: values.transactionPurpose || '', // 具体用途ID
         inputBy: user?.uid || 'unknown-user', // 设置为当前用户
         notes: values.notes || '',
-        auditYear: fiscalYear,
+        // 编辑时保持原有交易序号，新建时由服务层自动生成
+        ...(editingTransaction ? { transactionNumber: editingTransaction.transactionNumber } : { transactionNumber: '' }),
       };
 
       if (editingTransaction) {
+        // 检查是否设置了主要分类
+        const hasMainCategory = values.transactionType && values.transactionType.trim() !== '';
+        
+        if (hasMainCategory) {
+          // 如果设置了主要分类，删除相关的拆分记录
+          try {
+            await transactionSplitService.deleteSplitsByTransaction(editingTransaction.id);
+            console.log(`🗑️ 已删除交易 ${editingTransaction.id} 的拆分记录，因为设置了主要分类`);
+            
+            // 更新本地拆分状态
+            setTransactionSplits(prev => prev.filter(s => s.transactionId !== editingTransaction.id));
+          } catch (error) {
+            console.warn('删除拆分记录时出错:', error);
+            // 拆分记录删除失败不影响主记录更新
+          }
+        }
+        
         await onUpdateTransaction(editingTransaction.id, transactionData);
         message.success('交易记录更新成功');
       } else {
@@ -392,11 +592,30 @@ const TransactionManagement: React.FC<TransactionManagementProps> = ({
       }
 
       // 批量更新选中的交易记录
-      const updatePromises = selectedTransactions.map(transactionId => 
-        onUpdateTransaction(transactionId, updateData)
-      );
+      const updatePromises = selectedTransactions.map(async (transactionId) => {
+        // 检查是否设置了主要分类（通过transactionPurpose推断）
+        const hasMainCategory = settings.transactionPurpose && settings.transactionPurpose.trim() !== '';
+        
+        if (hasMainCategory) {
+          // 如果设置了主要分类，删除相关的拆分记录
+          try {
+            await transactionSplitService.deleteSplitsByTransaction(transactionId);
+            console.log(`🗑️ 已删除交易 ${transactionId} 的拆分记录，因为批量设置了主要分类`);
+          } catch (error) {
+            console.warn(`删除交易 ${transactionId} 拆分记录时出错:`, error);
+            // 拆分记录删除失败不影响主记录更新
+          }
+        }
+        
+        return onUpdateTransaction(transactionId, updateData);
+      });
 
       await Promise.all(updatePromises);
+      
+      // 更新本地拆分状态
+      if (settings.transactionPurpose && settings.transactionPurpose.trim() !== '') {
+        setTransactionSplits(prev => prev.filter(s => !selectedTransactions.includes(s.transactionId)));
+      }
       
       message.success(`成功批量设置 ${selectedTransactions.length} 条交易记录`);
       setSelectedTransactions([]);
@@ -438,11 +657,15 @@ const TransactionManagement: React.FC<TransactionManagementProps> = ({
     const balances: { [transactionId: string]: number } = {};
     
     Object.entries(transactionsByAccount).forEach(([accountId, accountTransactions]) => {
-      // 按日期排序
+      // 按交易记录序号排序
       const sortedTransactions = [...accountTransactions].sort((a, b) => {
-        const dateA = dayjs(a.transactionDate, 'DD-MMM-YYYY');
-        const dateB = dayjs(b.transactionDate, 'DD-MMM-YYYY');
-        return dateA.isBefore(dateB) ? -1 : dateA.isAfter(dateB) ? 1 : 0;
+        // 如果没有交易序号，按日期排序作为备用
+        if (!a.transactionNumber || !b.transactionNumber) {
+          const dateA = dayjs(a.transactionDate, 'DD-MMM-YYYY');
+          const dateB = dayjs(b.transactionDate, 'DD-MMM-YYYY');
+          return dateA.isBefore(dateB) ? -1 : dateA.isAfter(dateB) ? 1 : 0;
+        }
+        return a.transactionNumber.localeCompare(b.transactionNumber);
       });
 
       // 获取银行户口的初始余额
@@ -462,22 +685,36 @@ const TransactionManagement: React.FC<TransactionManagementProps> = ({
 
   const columns = [
     {
-      title: '类型',
-      dataIndex: 'isSplitRecord',
-      key: 'isSplitRecord',
-      width: 80,
-      render: (isSplitRecord: boolean) => {
-        if (isSplitRecord) {
+      title: '交易序号',
+      dataIndex: 'transactionNumber',
+      key: 'transactionNumber',
+      width: 150,
+      render: (transactionNumber: string, record: any) => {
+        if (record.isSplitRecord) {
           return (
-            <Tag color="blue" icon={<SplitCellsOutlined />}>
-              拆分
-            </Tag>
+            <div>
+              <Text code style={{ fontSize: '12px', whiteSpace: 'nowrap' }}>
+                {record.transactionNumber || '-'}
+              </Text>
+              <div style={{ marginTop: '2px' }}>
+                <Tag color="blue" icon={<SplitCellsOutlined />} style={{ fontSize: '10px' }}>
+                  拆分
+                </Tag>
+              </div>
+            </div>
           );
         }
         return (
-          <Tag color="green" icon={<TransactionOutlined />}>
-            主记录
-          </Tag>
+          <div>
+            <Text code style={{ fontSize: '12px', whiteSpace: 'nowrap' }}>
+              {transactionNumber || 'N/A'}
+            </Text>
+            <div style={{ marginTop: '2px' }}>
+              <Tag color="green" icon={<TransactionOutlined />} style={{ fontSize: '10px' }}>
+                主记录
+              </Tag>
+            </div>
+          </div>
         );
       },
     },
@@ -488,10 +725,15 @@ const TransactionManagement: React.FC<TransactionManagementProps> = ({
       width: 120,
       render: (date: string, record: any) => {
         if (record.isSplitRecord) {
-          return '-';
+          return (
+            <Space style={{ whiteSpace: 'nowrap' }}>
+              <CalendarOutlined />
+              <Text>{record.transactionDate || '-'}</Text>
+            </Space>
+          );
         }
         return (
-          <Space>
+          <Space style={{ whiteSpace: 'nowrap' }}>
             <CalendarOutlined />
             <Text>{date}</Text>
           </Space>
@@ -505,37 +747,46 @@ const TransactionManagement: React.FC<TransactionManagementProps> = ({
       width: 200,
       render: (text: string, record: any) => {
         if (record.isSplitRecord) {
+          // 拆分记录显示主交易记录的主描述和副描述
+          const mainDesc = record.mainDescription || '';
+          const subDesc = record.subDescription || '';
+          const combinedDesc = subDesc ? `${mainDesc} - ${subDesc}` : mainDesc;
+          
           return (
-            <Text ellipsis={{ tooltip: record.description || '无描述' }} style={{ color: '#666' }}>
-              {record.description || '无描述'}
-            </Text>
+            <div>
+              <Text ellipsis={{ tooltip: combinedDesc }} strong>
+                {mainDesc}
+              </Text>
+              {subDesc && (
+                <div style={{ fontSize: '12px', color: '#666', marginTop: '2px' }}>
+                  <Text ellipsis={{ tooltip: subDesc }} type="secondary">
+                    {subDesc}
+                  </Text>
+                </div>
+              )}
+            </div>
           );
         }
+        
+        // 合并主描述和副描述显示
+        const mainDesc = text || '';
+        const subDesc = record.subDescription || '';
+        const combinedDesc = subDesc ? `${mainDesc} - ${subDesc}` : mainDesc;
+        
         return (
-          <Text ellipsis={{ tooltip: text }} strong>
-            {text}
-          </Text>
-        );
-      },
-    },
-    {
-      title: '副描述',
-      dataIndex: 'subDescription',
-      key: 'subDescription',
-      width: 150,
-      render: (text: string, record: any) => {
-        if (record.isSplitRecord) {
-          return (
-            <Text ellipsis={{ tooltip: record.notes || '无备注' }} type="secondary">
-              {record.notes || '无备注'}
+          <div>
+            <Text ellipsis={{ tooltip: combinedDesc }} strong>
+              {mainDesc}
             </Text>
-          );
-        }
-        return text ? (
-          <Text ellipsis={{ tooltip: text }} type="secondary">
-            {text}
-          </Text>
-        ) : '-';
+            {subDesc && (
+              <div style={{ fontSize: '12px', color: '#666', marginTop: '2px' }}>
+                <Text ellipsis={{ tooltip: subDesc }} type="secondary">
+                  {subDesc}
+                </Text>
+              </div>
+            )}
+          </div>
+        );
       },
     },
     {
@@ -546,18 +797,21 @@ const TransactionManagement: React.FC<TransactionManagementProps> = ({
       align: 'right' as const,
       render: (amount: number, record: any) => {
         if (record.isSplitRecord) {
-          return (
-            <Text style={{ color: '#ff4d4f', fontWeight: 'bold' }}>
-              RM {record.amount.toLocaleString('en-MY', { minimumFractionDigits: 2 })}
-            </Text>
-          );
+          // 拆分记录：如果是收入类型的拆分，不显示在支出列
+          const parentTransaction = transactions.find(t => t.id === record.transactionId);
+          if (parentTransaction && parentTransaction.income > 0) {
+            return '-'; // 收入类型的拆分不显示在支出列
+          }
+          // 支出类型的拆分显示在支出列
+            return (
+              <Text style={{ color: '#999999' }}>
+                {record.amount.toLocaleString('en-MY', { minimumFractionDigits: 2 })}
+              </Text>
+            );
         }
         return amount > 0 ? (
           <Text style={{ color: '#ff4d4f' }}>
-            <DollarOutlined /> {amount.toLocaleString('en-MY', { 
-              style: 'currency', 
-              currency: 'MYR' 
-            })}
+            {amount.toLocaleString('en-MY', { minimumFractionDigits: 2 })}
           </Text>
         ) : '-';
       },
@@ -570,14 +824,21 @@ const TransactionManagement: React.FC<TransactionManagementProps> = ({
       align: 'right' as const,
       render: (amount: number, record: any) => {
         if (record.isSplitRecord) {
+          // 拆分记录：如果是收入类型的拆分，显示在收入列
+          const parentTransaction = transactions.find(t => t.id === record.transactionId);
+          if (parentTransaction && parentTransaction.income > 0) {
+            return (
+              <Text style={{ color: '#999999' }}>
+                {record.amount.toLocaleString('en-MY', { minimumFractionDigits: 2 })}
+              </Text>
+            );
+          }
+          // 支出类型的拆分不显示在收入列
           return '-';
         }
         return amount > 0 ? (
           <Text style={{ color: '#52c41a' }}>
-            <DollarOutlined /> {amount.toLocaleString('en-MY', { 
-              style: 'currency', 
-              currency: 'MYR' 
-            })}
+            {amount.toLocaleString('en-MY', { minimumFractionDigits: 2 })}
           </Text>
         ) : '-';
       },
@@ -599,10 +860,7 @@ const TransactionManagement: React.FC<TransactionManagementProps> = ({
             color: isPositive ? '#52c41a' : '#ff4d4f',
             fontWeight: 'bold'
           }}>
-            <DollarOutlined /> {balance.toLocaleString('en-MY', { 
-              style: 'currency', 
-              currency: 'MYR' 
-            })}
+            {balance.toLocaleString('en-MY', { minimumFractionDigits: 2 })}
           </Text>
         );
       },
@@ -632,10 +890,34 @@ const TransactionManagement: React.FC<TransactionManagementProps> = ({
       },
     },
     {
+      title: '付款描述',
+      dataIndex: 'paymentDescription',
+      key: 'paymentDescription',
+      width: 150,
+      render: (paymentDescription: string, record: any) => {
+        if (record.isSplitRecord) {
+          return (
+            <Text ellipsis={{ tooltip: record.paymentDescription || '-' }}>
+              {record.paymentDescription || '-'}
+            </Text>
+          );
+        }
+        
+        if (paymentDescription) {
+          return (
+            <Text ellipsis={{ tooltip: paymentDescription }}>
+              {paymentDescription}
+            </Text>
+          );
+        }
+        return '-';
+      },
+    },
+    {
       title: '业务分类',
       dataIndex: 'projectAccount',
       key: 'projectAccount',
-      width: 120,
+      width: 200,
       render: (businessCategoryId: string, record: any) => {
         if (record.isSplitRecord) {
           // 优先使用存储的业务分类
@@ -668,42 +950,58 @@ const TransactionManagement: React.FC<TransactionManagementProps> = ({
           return '-';
         }
         
-        const purpose = purposes.find(p => p.id === businessCategoryId);
-        return purpose ? (
-          <Tag color="green">{purpose.name}</Tag>
-        ) : '-';
-      },
-    },
-    {
-      title: '交易用途',
-      dataIndex: 'transactionPurpose',
-      key: 'transactionPurpose',
-      width: 200,
-      render: (purposeId: string, record: any) => {
-        if (record.isSplitRecord) {
-          if (!purposeId) return <Tag color="blue">未设置</Tag>;
+        // 获取业务分类和交易用途信息
+        const getBusinessCategoryInfo = () => {
+          // 优先使用存储的业务分类
+          if (businessCategoryId) {
+            const purpose = purposes.find(p => p.id === businessCategoryId);
+            return purpose ? purpose.name : '未分类';
+          }
           
-          const purpose = purposes.find(p => p.id === purposeId);
-          return purpose ? (
-            <Tag color="blue">{purpose.name}</Tag>
-          ) : (
-            <Tag color="blue">未设置</Tag>
-          );
-        }
+          // 如果没有存储的业务分类，根据交易用途推断
+          if (record.transactionPurpose) {
+            const purpose = purposes.find(p => p.id === record.transactionPurpose);
+            if (purpose) {
+              if (purpose.level === 2 && purpose.parentId) {
+                // 具体用途，找到其父级（业务分类）
+                const businessCategory = purposes.find(p => p.id === purpose.parentId);
+                return businessCategory ? businessCategory.name : '未分类';
+              } else if (purpose.level === 1) {
+                // 业务分类
+                return purpose.name;
+              }
+            }
+          }
+          
+          return '未分类';
+        };
         
-        if (!purposeId) return '-';
+        const getTransactionPurposeInfo = () => {
+          if (!record.transactionPurpose) return null;
+          
+          const purpose = purposes.find(p => p.id === record.transactionPurpose);
+          if (purpose) {
+            return {
+              name: purpose.name
+            };
+          }
+          
+          return null;
+        };
         
-        const purposePath = getPurposePath(purposeId);
-        const purpose = purposes.find(p => p.id === purposeId);
+        const businessCategory = getBusinessCategoryInfo();
+        const transactionPurpose = getTransactionPurposeInfo();
         
         return (
           <div>
-            <Tag color="blue">
-              <TagOutlined /> {purpose?.name || purposeId}
+            <Tag color="green" style={{ fontSize: '12px' }}>
+              {businessCategory}
             </Tag>
-            {purposePath.length > 1 && (
-              <div style={{ fontSize: '12px', color: '#666', marginTop: '2px' }}>
-                {purposePath.slice(0, -1).join(' > ')}
+            {transactionPurpose && (
+              <div style={{ marginTop: '2px' }}>
+                <Tag color="blue" style={{ fontSize: '10px' }}>
+                  {transactionPurpose.name}
+                </Tag>
               </div>
             )}
           </div>
@@ -763,6 +1061,26 @@ const TransactionManagement: React.FC<TransactionManagementProps> = ({
       },
     },
     {
+      title: '备注',
+      dataIndex: 'notes',
+      key: 'notes',
+      width: 150,
+      render: (notes: string, record: any) => {
+        if (record.isSplitRecord) {
+          return (
+            <Text ellipsis={{ tooltip: record.notes || '无备注' }} type="secondary">
+              {record.notes || '无备注'}
+            </Text>
+          );
+        }
+        return notes ? (
+          <Text ellipsis={{ tooltip: notes }} type="secondary">
+            {notes}
+          </Text>
+        ) : '-';
+      },
+    },
+    {
       title: '操作',
       key: 'action',
       width: 150,
@@ -805,6 +1123,64 @@ const TransactionManagement: React.FC<TransactionManagementProps> = ({
             </Popconfirm>
           </Space>
         );
+      },
+    },
+    {
+      title: '世界区域',
+      dataIndex: 'worldRegion',
+      key: 'worldRegion',
+      width: 100,
+      render: (worldRegion: string, record: any) => {
+        if (record.isSplitRecord) {
+          return '-';
+        }
+        return worldRegion ? (
+          <Tag color="purple">{worldRegion}</Tag>
+        ) : '-';
+      },
+    },
+    {
+      title: '国家',
+      dataIndex: 'country',
+      key: 'country',
+      width: 100,
+      render: (country: string, record: any) => {
+        if (record.isSplitRecord) {
+          return '-';
+        }
+        return country ? (
+          <Tag color="green">{country}</Tag>
+        ) : '-';
+      },
+    },
+    {
+      title: '国家区域',
+      dataIndex: 'countryRegion',
+      key: 'countryRegion',
+      width: 120,
+      render: (countryRegion: string, record: any) => {
+        if (record.isSplitRecord) {
+          return '-';
+        }
+        return countryRegion ? (
+          <Tag color="orange">{countryRegion}</Tag>
+        ) : '-';
+      },
+    },
+    {
+      title: '分会',
+      dataIndex: 'chapter',
+      key: 'chapter',
+      width: 120,
+      render: (chapter: string, record: any) => {
+        if (record.isSplitRecord) {
+          return '-';
+        }
+        return chapter ? (
+          <Text ellipsis={{ tooltip: chapter }}>
+            {chapter}
+          </Text>
+        ) : '-';
       },
     },
   ];
@@ -942,6 +1318,28 @@ const TransactionManagement: React.FC<TransactionManagementProps> = ({
                 />
               </Card>
             </Col>
+            <Col span={4}>
+              <Card size="small">
+                <Statistic
+                  title="户口余额"
+                  value={account.currentBalance}
+                  prefix={<BankOutlined />}
+                  precision={2}
+                  valueStyle={{ color: account.currentBalance >= 0 ? '#52c41a' : '#ff4d4f' }}
+                />
+              </Card>
+            </Col>
+            <Col span={4}>
+              <Card size="small">
+                <Statistic
+                  title="拆分率"
+                  value={stats.splitRate}
+                  suffix="%"
+                  precision={1}
+                  valueStyle={{ color: '#1890ff' }}
+                />
+              </Card>
+            </Col>
           </Row>
           
 
@@ -953,13 +1351,26 @@ const TransactionManagement: React.FC<TransactionManagementProps> = ({
              rowKey="key"
              rowSelection={rowSelection}
              pagination={{
-               pageSize: 20,
+               current: currentPage,
+               pageSize: pageSize,
                showSizeChanger: true,
                showQuickJumper: true,
+               pageSizeOptions: ['10', '20', '50', '100'],
                showTotal: (total, range) => 
                  `第 ${range[0]}-${range[1]} 条，共 ${total} 条记录`,
+               onChange: (page, size) => {
+                 setCurrentPage(page);
+                 if (size !== pageSize) {
+                   setPageSize(size);
+                   setCurrentPage(1); // 重置到第一页
+                 }
+               },
+               onShowSizeChange: (_, size) => {
+                 setPageSize(size);
+                 setCurrentPage(1); // 重置到第一页
+               },
              }}
-             scroll={{ x: 1500 }}
+             scroll={{ x: 2000 }}
            />
         </div>
       ),
@@ -975,7 +1386,7 @@ const TransactionManagement: React.FC<TransactionManagementProps> = ({
               <Title level={4} style={{ margin: 0 }}>
                 <DollarOutlined /> 交易记录管理
               </Title>
-              <Text type="secondary">财政年度：{fiscalYear} | 3层级交易用途体系</Text>
+              <Text type="secondary">3层级交易用途体系</Text>
             </Col>
              <Col>
                <Space>
@@ -993,6 +1404,16 @@ const TransactionManagement: React.FC<TransactionManagementProps> = ({
                  </Button>
                  <Button
                    type="primary"
+                   danger
+                   icon={<DeleteOutlined />}
+                    disabled={selectedTransactions.length === 0 || !user || !member || !['president', 'treasurer', 'secretary_general', 'developer'].includes(member?.accountType || '')}
+                   onClick={handleBatchDelete}
+                   title={!user ? '请先登录' : !member ? '正在加载用户信息...' : selectedTransactions.length === 0 ? '请先选择要删除的记录' : '批量删除交易记录'}
+                 >
+                   批量删除 ({selectedTransactions.length})
+                 </Button>
+                 <Button
+                   type="primary"
                    icon={<PlusOutlined />}
                    onClick={handleCreateTransaction}
                  >
@@ -1006,7 +1427,7 @@ const TransactionManagement: React.FC<TransactionManagementProps> = ({
         {/* 筛选和搜索 */}
         <Card size="small" style={{ marginBottom: 16 }}>
           <Row gutter={16} align="middle">
-            <Col span={6}>
+            <Col span={5}>
               <Input
                 placeholder="搜索交易描述、付款人/收款人等"
                 prefix={<SearchOutlined />}
@@ -1015,7 +1436,7 @@ const TransactionManagement: React.FC<TransactionManagementProps> = ({
                 allowClear
               />
             </Col>
-            <Col span={6}>
+            <Col span={5}>
               <TreeSelect
                 placeholder="筛选交易用途"
                 allowClear
@@ -1029,6 +1450,15 @@ const TransactionManagement: React.FC<TransactionManagementProps> = ({
                 showCheckedStrategy={TreeSelect.SHOW_CHILD}
               />
             </Col>
+            <Col span={4}>
+              <GlobalYearFilterModal
+                value={yearFilter}
+                onChange={(year) => setYearFilter(year || new Date().getFullYear())}
+                availableYears={availableYears}
+                placeholder="选择年份"
+                style={{ width: '100%' }}
+              />
+            </Col>
             <Col span={6}>
               <DatePicker.RangePicker
                 placeholder={['开始日期', '结束日期']}
@@ -1038,7 +1468,7 @@ const TransactionManagement: React.FC<TransactionManagementProps> = ({
                 format="DD-MMM-YYYY"
               />
             </Col>
-            <Col span={6}>
+            <Col span={4}>
               <Space>
                 <Button 
                   icon={<FilterOutlined />}
@@ -1046,14 +1476,22 @@ const TransactionManagement: React.FC<TransactionManagementProps> = ({
                     setSearchText('');
                     setPurposeFilter([]);
                     setDateRange([null, null]);
+                    setYearFilter(new Date().getFullYear());
                   }}
                 >
                   清除筛选
                 </Button>
-                <Text type="secondary">
-                  显示 {filteredTransactions.length} / {transactions.length} 条记录
-                </Text>
               </Space>
+            </Col>
+          </Row>
+          <Row style={{ marginTop: 8 }}>
+            <Col span={24}>
+              <Text type="secondary">
+                显示 {filteredTransactions.length} / {transactions.length} 条记录
+                {yearFilter && ` | 已筛选年份: ${yearFilter}年`}
+                {purposeFilter.length > 0 && ` | 已筛选用途: ${purposeFilter.length}个`}
+                {dateRange[0] && dateRange[1] && ` | 日期范围: ${dateRange[0].format('DD-MMM-YYYY')} 至 ${dateRange[1].format('DD-MMM-YYYY')}`}
+              </Text>
             </Col>
           </Row>
         </Card>
@@ -1076,18 +1514,19 @@ const TransactionManagement: React.FC<TransactionManagementProps> = ({
       >
         <Form
           form={form}
-          layout="vertical"
+          layout="horizontal"
+          labelCol={{ span: 6 }}
+          wrapperCol={{ span: 18 }}
           initialValues={{
-            auditYear: fiscalYear,
             expense: 0,
             income: 0,
             inputBy: user?.uid || 'unknown-user',
           }}
         >
-          {/* 第一个卡片：基本信息 */}
-          <Card title="基本信息" size="small" style={{ marginBottom: 16 }}>
-            <Row gutter={16}>
-              <Col span={12}>
+          <Row gutter={16}>
+            {/* 第一个卡片：基本信息 */}
+            <Col span={12}>
+              <Card title="基本信息" size="small" style={{ marginBottom: 16, height: '100%' }}>
                 <Form.Item
                   name="transactionDate"
                   label="交易日期"
@@ -1099,8 +1538,7 @@ const TransactionManagement: React.FC<TransactionManagementProps> = ({
                     placeholder="请选择交易日期"
                   />
                 </Form.Item>
-              </Col>
-              <Col span={12}>
+
                 <Form.Item
                   name="bankAccountId"
                   label="银行户口"
@@ -1114,11 +1552,7 @@ const TransactionManagement: React.FC<TransactionManagementProps> = ({
                     ))}
                   </Select>
                 </Form.Item>
-              </Col>
-            </Row>
 
-            <Row gutter={16}>
-              <Col span={12}>
                 <Form.Item
                   name="mainDescription"
                   label="主描述"
@@ -1126,22 +1560,28 @@ const TransactionManagement: React.FC<TransactionManagementProps> = ({
                 >
                   <Input placeholder="请输入主描述" />
                 </Form.Item>
-              </Col>
-              <Col span={12}>
+
                 <Form.Item
                   name="subDescription"
                   label="副描述"
                 >
                   <Input placeholder="请输入副描述" />
                 </Form.Item>
-              </Col>
-            </Row>
 
-            <Row gutter={16}>
-              <Col span={12}>
                 <Form.Item
                   name="expense"
                   label="支出金额"
+                  rules={[
+                    {
+                      validator: (_, value) => {
+                        const income = form.getFieldValue('income');
+                        if (value > 0 && income > 0) {
+                          return Promise.reject(new Error('收入和支出不能同时有数额'));
+                        }
+                        return Promise.resolve();
+                      }
+                    }
+                  ]}
                 >
                   <InputNumber
                     placeholder="请输入支出金额"
@@ -1153,13 +1593,27 @@ const TransactionManagement: React.FC<TransactionManagementProps> = ({
                       const num = parseFloat(value!.replace(/RM\s?|(,*)/g, ''));
                       return (isNaN(num) ? 0 : num) as any;
                     }}
+                    onChange={() => {
+                      // 当支出金额变化时，验证收入字段
+                      form.validateFields(['income']);
+                    }}
                   />
                 </Form.Item>
-              </Col>
-              <Col span={12}>
+
                 <Form.Item
                   name="income"
                   label="收入金额"
+                  rules={[
+                    {
+                      validator: (_, value) => {
+                        const expense = form.getFieldValue('expense');
+                        if (value > 0 && expense > 0) {
+                          return Promise.reject(new Error('收入和支出不能同时有数额'));
+                        }
+                        return Promise.resolve();
+                      }
+                    }
+                  ]}
                 >
                   <InputNumber
                     placeholder="请输入收入金额"
@@ -1171,16 +1625,18 @@ const TransactionManagement: React.FC<TransactionManagementProps> = ({
                       const num = parseFloat(value!.replace(/RM\s?|(,*)/g, ''));
                       return (isNaN(num) ? 0 : num) as any;
                     }}
+                    onChange={() => {
+                      // 当收入金额变化时，验证支出字段
+                      form.validateFields(['expense']);
+                    }}
                   />
                 </Form.Item>
-              </Col>
-            </Row>
-          </Card>
+              </Card>
+            </Col>
 
-          {/* 第二个卡片：分类和人员信息 */}
-          <Card title="分类和人员信息" size="small">
-            <Row gutter={16}>
-              <Col span={8}>
+            {/* 第二个卡片：分类和人员信息 */}
+            <Col span={12}>
+              <Card title="分类和人员信息" size="small" style={{ marginBottom: 16, height: '100%' }}>
                 <Form.Item
                   name="transactionType"
                   label="主要分类"
@@ -1201,8 +1657,7 @@ const TransactionManagement: React.FC<TransactionManagementProps> = ({
                     ))}
                   </Select>
                 </Form.Item>
-              </Col>
-              <Col span={8}>
+
                 <Form.Item
                   name="projectAccount"
                   label="业务分类"
@@ -1223,8 +1678,7 @@ const TransactionManagement: React.FC<TransactionManagementProps> = ({
                     ))}
                   </Select>
                 </Form.Item>
-              </Col>
-              <Col span={8}>
+
                 <Form.Item
                   name="transactionPurpose"
                   label="具体用途"
@@ -1244,11 +1698,7 @@ const TransactionManagement: React.FC<TransactionManagementProps> = ({
                     ))}
                   </Select>
                 </Form.Item>
-              </Col>
-            </Row>
 
-            <Row gutter={16}>
-              <Col span={12}>
                 <Form.Item
                   name="payerPayee"
                   label="付款人/收款人"
@@ -1256,8 +1706,7 @@ const TransactionManagement: React.FC<TransactionManagementProps> = ({
                 >
                   <Input placeholder="请输入付款人或收款人" />
                 </Form.Item>
-              </Col>
-              <Col span={12}>
+
                 <Form.Item
                   name="inputBy"
                   label="输入人"
@@ -1268,16 +1717,19 @@ const TransactionManagement: React.FC<TransactionManagementProps> = ({
                     placeholder="当前用户"
                   />
                 </Form.Item>
-              </Col>
-            </Row>
+              </Card>
+            </Col>
+          </Row>
 
+
+          <Card title="备注信息" size="small" style={{ marginTop: 16, marginBottom: 16 }}>
             <Form.Item
               name="notes"
-              label="备注"
             >
               <Input.TextArea
                 placeholder="请输入备注"
                 rows={2}
+                style={{ width: '100%' }}
               />
             </Form.Item>
           </Card>

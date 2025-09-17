@@ -17,5 +17,15 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     sourcemap: true
-  }
+  },
+  optimizeDeps: {
+    exclude: ['pdfjs-dist']
+  },
+  worker: {
+    format: 'es'
+  },
+  define: {
+    global: 'globalThis',
+  },
+  assetsInclude: ['**/*.worker.js', '**/*.worker.mjs']
 })

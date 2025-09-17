@@ -188,7 +188,6 @@ const BatchSettingsModal: React.FC<BatchSettingsModalProps> = ({
       description: '设置JCI职位'
     },
     {
-      key: 'profile.vpDivision',
       label: '副总裁部门',
       type: 'select',
       options: [
@@ -462,7 +461,7 @@ const BatchSettingsModal: React.FC<BatchSettingsModalProps> = ({
           >
             <OptGroup label="基本信息">
               {batchFields.filter(field => 
-                ['status', 'level', 'accountType', 'joinDate'].includes(field.key)
+                field.key && ['status', 'level', 'accountType', 'joinDate'].includes(field.key)
               ).map(field => (
                 <Option key={field.key} value={field.key}>
                   <div>
@@ -477,7 +476,7 @@ const BatchSettingsModal: React.FC<BatchSettingsModalProps> = ({
             
             <OptGroup label="个人资料">
               {batchFields.filter(field => 
-                ['profile.gender', 'profile.race', 'profile.nationality', 'profile.introducerName'].includes(field.key)
+                field.key && ['profile.gender', 'profile.race', 'profile.nationality', 'profile.introducerName'].includes(field.key)
               ).map(field => (
                 <Option key={field.key} value={field.key}>
                   <div>
@@ -492,7 +491,7 @@ const BatchSettingsModal: React.FC<BatchSettingsModalProps> = ({
             
             <OptGroup label="JCI信息">
               {batchFields.filter(field => 
-                ['profile.jciPosition', 'profile.vpDivision', 'profile.isActingPosition'].includes(field.key)
+                field.key && ['profile.jciPosition', 'profile.isActingPosition'].includes(field.key)
               ).map(field => (
                 <Option key={field.key} value={field.key}>
                   <div>
@@ -507,7 +506,7 @@ const BatchSettingsModal: React.FC<BatchSettingsModalProps> = ({
             
             <OptGroup label="其他设置">
               {batchFields.filter(field => 
-                ['profile.whatsappGroup', 'profile.tshirtReceivingStatus', 'profile.acceptInternationalBusiness'].includes(field.key)
+                field.key && ['profile.whatsappGroup', 'profile.tshirtReceivingStatus', 'profile.acceptInternationalBusiness'].includes(field.key)
               ).map(field => (
                 <Option key={field.key} value={field.key}>
                   <div>

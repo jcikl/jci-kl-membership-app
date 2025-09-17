@@ -168,7 +168,7 @@ const MembershipFeeViewer: React.FC<MembershipFeeViewerProps> = ({
       width: 100,
       render: (amount: number) => (
         <Text strong style={{ color: amount > 0 ? '#52c41a' : '#ff4d4f' }}>
-          RM {amount.toFixed(2)}
+          {amount.toFixed(2)}
         </Text>
       )
     },

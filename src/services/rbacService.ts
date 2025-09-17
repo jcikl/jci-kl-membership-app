@@ -226,7 +226,6 @@ export const permissionCheckService = {
         accountType: userData.accountType || 'member',
         membershipCategory: userData.membershipCategory || 'associate',
         position: userData.position || 'member_none',
-        vpDivision: userData.vpDivision,
         effectivePermissions,
         roleBindings: bindings
       };

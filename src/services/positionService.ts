@@ -12,11 +12,10 @@ import {
   limit
 } from 'firebase/firestore';
 import { db } from './firebase';
-import { MemberPosition, JCIPosition, VPDivision } from '@/types/rbac';
+import { MemberPosition, JCIPosition } from '@/types/rbac';
 
 // 职位分配选项
 export interface PositionAssignmentOptions {
-  vpDivision?: VPDivision;
   startDate?: string;
   endDate?: string;
   isActing?: boolean;
@@ -26,7 +25,6 @@ export interface PositionAssignmentOptions {
 
 // 职位更新选项
 export interface PositionUpdateOptions {
-  vpDivision?: VPDivision;
   endDate?: string;
   isActing?: boolean;
   actingFor?: JCIPosition;
@@ -60,9 +58,6 @@ export const positionService = {
       };
 
       // 只添加非undefined的字段
-      if (options.vpDivision) {
-        positionData.vpDivision = options.vpDivision;
-      }
       if (options.startDate) {
         positionData.startDate = options.startDate;
       }

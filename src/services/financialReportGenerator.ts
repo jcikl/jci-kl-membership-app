@@ -22,17 +22,17 @@ export class FinancialReportGenerator {
    * 生成财务状况表 (资产负债表)
    */
   async generateStatementOfFinancialPosition(
-    auditYear: number,
+    fiscalYear: number,
     reportDate: string = dayjs().format('YYYY-MM-DD')
   ): Promise<StatementOfFinancialPositionData> {
     try {
-      const previousYear = auditYear - 1;
+      const previousYear = fiscalYear - 1;
       
       // 获取银行账户数据
-      const bankAccounts = await bankAccountService.getAccounts(auditYear);
+      const bankAccounts = await bankAccountService.getAccounts();
       
       // 获取交易数据
-      const transactions = await transactionService.getTransactions(auditYear);
+      const transactions = await transactionService.getTransactions();
       
       // 计算银行余额
       const currentBankBalances = this.calculateBankBalances(bankAccounts, transactions);
@@ -40,8 +40,8 @@ export class FinancialReportGenerator {
       // 计算固定资产 (假设有办公室等固定资产)
       const propertyPlantEquipment = {
         cost: 123700.00, // 办公室成本
-        accumulatedDepreciation: this.calculateAccumulatedDepreciation(auditYear),
-        carryingAmount: 123700.00 - this.calculateAccumulatedDepreciation(auditYear)
+        accumulatedDepreciation: this.calculateAccumulatedDepreciation(fiscalYear),
+        carryingAmount: 123700.00 - this.calculateAccumulatedDepreciation(fiscalYear)
       };
       
       // 计算其他应收款和预付款
@@ -70,7 +70,7 @@ export class FinancialReportGenerator {
       return {
         organizationName: this.organizationName,
         reportDate,
-        currentYear: auditYear,
+        currentYear: fiscalYear,
         previousYear,
         
         nonCurrentAssets: {
@@ -112,13 +112,13 @@ export class FinancialReportGenerator {
    * 生成损益表
    */
   async generateIncomeStatement(
-    auditYear: number,
-    reportPeriod: string = `${auditYear}年财政年度`
+    fiscalYear: number,
+    reportPeriod: string = `${fiscalYear}年财政年度`
   ): Promise<IncomeStatementData> {
     try {
-      const previousYear = auditYear - 1;
+      const previousYear = fiscalYear - 1;
       
-      const transactions = await transactionService.getTransactions(auditYear);
+      const transactions = await transactionService.getTransactions();
       
       const incomes = this.calculateTotalIncome(transactions);
       // const previousIncomes = this.calculateTotalIncome(previousYearTransactions);
@@ -138,7 +138,7 @@ export class FinancialReportGenerator {
       return {
         organizationName: this.organizationName,
         reportPeriod,
-        currentYear: auditYear,
+        currentYear: fiscalYear,
         previousYear,
         
         incomes,
@@ -162,13 +162,13 @@ export class FinancialReportGenerator {
    * 生成详细损益表
    */
   async generateDetailedIncomeStatement(
-    auditYear: number,
-    reportPeriod: string = `${auditYear}年财政年度`
+    fiscalYear: number,
+    reportPeriod: string = `${fiscalYear}年财政年度`
   ): Promise<DetailedIncomeStatementData> {
-    const previousYear = auditYear - 1;
+    const previousYear = fiscalYear - 1;
     
-    const transactions = await transactionService.getTransactions(auditYear);
-    const previousYearTransactions = await transactionService.getTransactions(previousYear);
+    const transactions = await transactionService.getTransactions();
+    const previousYearTransactions = await transactionService.getTransactions();
     
     // 生成收入明细
     const incomeDetails = this.generateIncomeDetails(transactions, previousYearTransactions);
@@ -200,7 +200,7 @@ export class FinancialReportGenerator {
     return {
       organizationName: this.organizationName,
       reportPeriod,
-      currentYear: auditYear,
+      currentYear: fiscalYear,
       previousYear,
       
       incomeDetails,
@@ -215,18 +215,18 @@ export class FinancialReportGenerator {
    * 生成财务报表附注
    */
   async generateNotesToFinancialStatements(
-    auditYear: number,
-    reportPeriod: string = `${auditYear}年财政年度`
+    fiscalYear: number,
+    reportPeriod: string = `${fiscalYear}年财政年度`
   ): Promise<NotesToFinancialStatementsData> {
-    const previousYear = auditYear - 1;
+    const previousYear = fiscalYear - 1;
     
-    const transactions = await transactionService.getTransactions(auditYear);
-    const previousYearTransactions = await transactionService.getTransactions(previousYear);
-    const bankAccounts = await bankAccountService.getAccounts(auditYear);
-    const previousYearBankAccounts = await bankAccountService.getAccounts(previousYear);
+    const transactions = await transactionService.getTransactions();
+    const previousYearTransactions = await transactionService.getTransactions();
+    const bankAccounts = await bankAccountService.getAccounts();
+    const previousYearBankAccounts = await bankAccountService.getAccounts();
     
     const notes: any[] = [
-      this.generatePropertyPlantEquipmentNote(auditYear, previousYear),
+      this.generatePropertyPlantEquipmentNote(fiscalYear, previousYear),
       this.generateInventoriesNote(transactions, previousYearTransactions),
       this.generateOtherReceivablesNote(transactions, previousYearTransactions),
       this.generateDepositsNote(transactions, previousYearTransactions),
@@ -251,9 +251,9 @@ export class FinancialReportGenerator {
     }, 0);
   }
 
-  private calculateAccumulatedDepreciation(auditYear: number): number {
+  private calculateAccumulatedDepreciation(fiscalYear: number): number {
     const startYear = 2020; // 假设从2020年开始折旧
-    const yearsDepreciated = auditYear - startYear;
+    const yearsDepreciated = fiscalYear - startYear;
     return yearsDepreciated * 2474.00; // 年折旧2474
   }
 
@@ -419,7 +419,7 @@ export class FinancialReportGenerator {
   }
 
   // 生成各种附注
-  private generatePropertyPlantEquipmentNote(auditYear: number, previousYear: number): any {
+  private generatePropertyPlantEquipmentNote(fiscalYear: number, previousYear: number): any {
     return {
       noteNumber: '1',
       title: 'Property, Plant and Equipment',
@@ -433,13 +433,13 @@ export class FinancialReportGenerator {
         },
         {
           description: 'Accumulated Depreciation',
-          currentYear: this.calculateAccumulatedDepreciation(auditYear),
+          currentYear: this.calculateAccumulatedDepreciation(fiscalYear),
           previousYear: this.calculateAccumulatedDepreciation(previousYear),
           additionalInfo: 'Accumulated Depreciation'
         },
         {
           description: 'Carrying Amount',
-          currentYear: 123700.00 - this.calculateAccumulatedDepreciation(auditYear),
+          currentYear: 123700.00 - this.calculateAccumulatedDepreciation(fiscalYear),
           previousYear: 123700.00 - this.calculateAccumulatedDepreciation(previousYear),
           additionalInfo: 'Carrying Amount'
         }

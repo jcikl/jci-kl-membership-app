@@ -15,6 +15,7 @@ import EventRegistrationManagement from '@/components/EventRegistrationManagemen
 import EventSettings from '@/components/EventSettings';
 import ProjectAccountManagement from '@/components/ProjectAccountManagement';
 import ProjectAccountTracker from '@/components/ProjectAccountTracker';
+import UnifiedProjectFinanceManagement from '@/components/UnifiedProjectFinanceManagement';
 
 const { Title } = Typography;
 const { Content } = Layout;
@@ -29,6 +30,27 @@ const EventManagementPage: React.FC = () => {
 
   const handleEventSelect = (event: any) => {
     navigate(`/events/${event.id}`);
+  };
+
+  // 项目财务管理相关处理函数
+  const handleProjectTransactionSync = async (projectId: string, transactions: any[]) => {
+    try {
+      // 这里可以添加同步逻辑
+      console.log(`同步项目 ${projectId} 的交易记录:`, transactions);
+      // 可以显示成功消息或更新UI
+    } catch (error) {
+      console.error('同步项目交易记录失败:', error);
+    }
+  };
+
+  const handleVerificationRequest = async (projectId: string, verificationData: any) => {
+    try {
+      // 这里可以添加验证请求处理逻辑
+      console.log(`项目 ${projectId} 验证请求:`, verificationData);
+      // 可以显示成功消息或更新UI
+    } catch (error) {
+      console.error('提交验证请求失败:', error);
+    }
   };
 
   const tabItems = [
@@ -62,6 +84,17 @@ const EventManagementPage: React.FC = () => {
               key: 'tracker',
               label: '数据追踪',
               children: <ProjectAccountTracker />
+            },
+            {
+              key: 'finance',
+              label: '项目财务管理',
+              children: (
+                <UnifiedProjectFinanceManagement
+                  mode="activity"
+                  onTransactionSync={handleProjectTransactionSync}
+                  onVerificationRequest={handleVerificationRequest}
+                />
+              )
             }
           ]} 
         />

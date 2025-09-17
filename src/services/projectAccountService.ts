@@ -92,16 +92,12 @@ export class ProjectAccountService {
   }
 
   // 获取项目户口列表
-  static async getProjectAccounts(fiscalYear?: string): Promise<ProjectAccount[]> {
+  static async getProjectAccounts(): Promise<ProjectAccount[]> {
     try {
-      let q = query(
+      const q = query(
         collection(db, this.COLLECTION_NAME),
         orderBy('createdAt', 'desc')
       );
-      
-      if (fiscalYear) {
-        q = query(q, where('fiscalYear', '==', fiscalYear));
-      }
       
       const snapshot = await getDocs(q);
       const accounts: ProjectAccount[] = [];
@@ -118,17 +114,13 @@ export class ProjectAccountService {
   }
 
   // 获取活跃的项目户口
-  static async getActiveProjectAccounts(fiscalYear?: string): Promise<ProjectAccount[]> {
+  static async getActiveProjectAccounts(): Promise<ProjectAccount[]> {
     try {
-      let q = query(
+      const q = query(
         collection(db, this.COLLECTION_NAME),
         where('status', '==', 'active'),
         orderBy('name', 'asc')
       );
-      
-      if (fiscalYear) {
-        q = query(q, where('fiscalYear', '==', fiscalYear));
-      }
       
       const snapshot = await getDocs(q);
       const accounts: ProjectAccount[] = [];
@@ -194,28 +186,6 @@ export class ProjectAccountService {
     }
   }
 
-  // 获取财政年度的所有项目户口
-  static async getProjectAccountsByFiscalYear(fiscalYear: string): Promise<ProjectAccount[]> {
-    try {
-      const q = query(
-        collection(db, this.COLLECTION_NAME),
-        where('fiscalYear', '==', fiscalYear),
-        orderBy('name', 'asc')
-      );
-      
-      const snapshot = await getDocs(q);
-      const accounts: ProjectAccount[] = [];
-      
-      snapshot.forEach((doc) => {
-        accounts.push({ id: doc.id, ...doc.data() } as ProjectAccount);
-      });
-      
-      return accounts;
-    } catch (error) {
-      console.error('获取财政年度项目户口失败:', error);
-      throw new Error('获取财政年度项目户口失败');
-    }
-  }
 }
 
 // 导出服务实例

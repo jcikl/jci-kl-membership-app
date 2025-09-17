@@ -9,7 +9,8 @@ import {
   MessageOutlined,
   SettingOutlined,
   FileTextOutlined,
-  TrophyOutlined
+  TrophyOutlined,
+  FilePdfOutlined
 } from '@ant-design/icons';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useSidebar } from '@/contexts/SidebarContext';
@@ -53,6 +54,11 @@ const AppSider: React.FC = () => {
       key: '/awards',
       icon: <TrophyOutlined />,
       label: '奖励管理',
+    },
+    {
+      key: '/pdf-interpretation',
+      icon: <FilePdfOutlined />,
+      label: 'PDF解读',
     },
     {
       key: '/messages',

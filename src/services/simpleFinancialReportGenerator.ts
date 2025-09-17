@@ -29,14 +29,14 @@ export class SimpleFinancialReportGenerator {
   /**
    * 生成财务状况表 (资产负债表)
    */
-  async generateStatementOfFinancialPosition(auditYear: number): Promise<StatementOfFinancialPositionData> {
+  async generateStatementOfFinancialPosition(fiscalYear: number): Promise<StatementOfFinancialPositionData> {
     try {
-      const previousYear = auditYear - 1;
+      const previousYear = fiscalYear - 1;
       
       // 获取基础数据
-      const transactions = await this.getTransactions(auditYear);
+      const transactions = await this.getTransactions(fiscalYear);
       const previousYearTransactions = await this.getTransactions(previousYear);
-      const bankAccounts = await this.getBankAccounts(auditYear);
+      const bankAccounts = await this.getBankAccounts();
       
       // 计算基础财务数据
       const totalIncome = transactions.reduce((sum, t) => sum + t.income, 0);
@@ -62,7 +62,7 @@ export class SimpleFinancialReportGenerator {
       
       // 简化的固定资产计算
       const propertyCost = 123700.00;
-      const accumulatedDepreciation = (auditYear - 2020) * 2474.00; // 从2020年开始折旧
+      const accumulatedDepreciation = (fiscalYear - 2020) * 2474.00; // 从2020年开始折旧
       const carryingAmount = propertyCost - accumulatedDepreciation;
       
       // const previousAccumulatedDepreciation = (previousYear - 2020) * 2474.00;
@@ -83,7 +83,7 @@ export class SimpleFinancialReportGenerator {
       return {
         organizationName: this.organizationName,
         reportDate: dayjs().format('YYYY-MM-DD'),
-        currentYear: auditYear,
+        currentYear: fiscalYear,
         previousYear,
         
         nonCurrentAssets: {
@@ -124,11 +124,11 @@ export class SimpleFinancialReportGenerator {
   /**
    * 生成损益表
    */
-  async generateIncomeStatement(auditYear: number): Promise<IncomeStatementData> {
+  async generateIncomeStatement(fiscalYear: number): Promise<IncomeStatementData> {
     try {
-      const previousYear = auditYear - 1;
+      const previousYear = fiscalYear - 1;
       
-      const transactions = await this.getTransactions(auditYear);
+      const transactions = await this.getTransactions(fiscalYear);
       // const previousYearTransactions = await this.getTransactions(previousYear);
       
       const incomes = transactions.reduce((sum, t) => sum + t.income, 0);
@@ -161,8 +161,8 @@ export class SimpleFinancialReportGenerator {
       
       return {
         organizationName: this.organizationName,
-        reportPeriod: `${auditYear}年财政年度`,
-        currentYear: auditYear,
+        reportPeriod: `${fiscalYear}年财政年度`,
+        currentYear: fiscalYear,
         previousYear,
         
         incomes,
@@ -185,11 +185,11 @@ export class SimpleFinancialReportGenerator {
   /**
    * 生成详细损益表
    */
-  async generateDetailedIncomeStatement(auditYear: number): Promise<DetailedIncomeStatementData> {
+  async generateDetailedIncomeStatement(fiscalYear: number): Promise<DetailedIncomeStatementData> {
     try {
-      const previousYear = auditYear - 1;
+      const previousYear = fiscalYear - 1;
       
-      const transactions = await this.getTransactions(auditYear);
+      const transactions = await this.getTransactions(fiscalYear);
       const previousYearTransactions = await this.getTransactions(previousYear);
       
       // 简化的收入明细
@@ -292,8 +292,8 @@ export class SimpleFinancialReportGenerator {
       
       return {
         organizationName: this.organizationName,
-        reportPeriod: `${auditYear}年财政年度`,
-        currentYear: auditYear,
+        reportPeriod: `${fiscalYear}年财政年度`,
+        currentYear: fiscalYear,
         previousYear,
         
         incomeDetails,
@@ -311,13 +311,13 @@ export class SimpleFinancialReportGenerator {
   /**
    * 生成财务报表附注
    */
-  async generateNotesToFinancialStatements(auditYear: number): Promise<NotesToFinancialStatementsData> {
+  async generateNotesToFinancialStatements(fiscalYear: number): Promise<NotesToFinancialStatementsData> {
     try {
-      const previousYear = auditYear - 1;
+      const previousYear = fiscalYear - 1;
       
-      // const transactions = await this.getTransactions(auditYear);
+      // const transactions = await this.getTransactions(fiscalYear);
       // const previousYearTransactions = await this.getTransactions(previousYear);
-      const bankAccounts = await this.getBankAccounts(auditYear);
+      const bankAccounts = await this.getBankAccounts();
       
       const notes = [
         {
@@ -333,13 +333,13 @@ export class SimpleFinancialReportGenerator {
             },
             {
               description: 'Accumulated Depreciation',
-              currentYear: (auditYear - 2020) * 2474.00,
+              currentYear: (fiscalYear - 2020) * 2474.00,
               previousYear: (previousYear - 2020) * 2474.00,
               additionalInfo: 'Accumulated Depreciation'
             },
             {
               description: 'Carrying Amount',
-              currentYear: 123700.00 - (auditYear - 2020) * 2474.00,
+              currentYear: 123700.00 - (fiscalYear - 2020) * 2474.00,
               previousYear: 123700.00 - (previousYear - 2020) * 2474.00,
               additionalInfo: 'Carrying Amount'
             }
@@ -372,7 +372,7 @@ export class SimpleFinancialReportGenerator {
       
       return {
         organizationName: this.organizationName,
-        reportPeriod: `${auditYear}年财政年度`,
+        reportPeriod: `${fiscalYear}年财政年度`,
         notes
       };
     } catch (error) {
@@ -382,10 +382,10 @@ export class SimpleFinancialReportGenerator {
   }
 
   // 辅助方法：获取交易数据
-  private async getTransactions(auditYear: number): Promise<Transaction[]> {
+  private async getTransactions(fiscalYear: number): Promise<Transaction[]> {
     try {
-      const startDate = new Date(auditYear, 0, 1); // 财政年度开始
-      const endDate = new Date(auditYear, 11, 31); // 财政年度结束
+      const startDate = new Date(fiscalYear, 0, 1); // 财政年度开始
+      const endDate = new Date(fiscalYear, 11, 31); // 财政年度结束
       
       const q = query(
         collection(db, 'transactions'),
@@ -408,7 +408,7 @@ export class SimpleFinancialReportGenerator {
   }
 
   // 辅助方法：获取银行账户数据
-  private async getBankAccounts(_auditYear: number): Promise<BankAccount[]> {
+  private async getBankAccounts(): Promise<BankAccount[]> {
     try {
       const q = query(collection(db, 'bank_accounts'), orderBy('createdAt', 'desc'));
       const querySnapshot = await getDocs(q);

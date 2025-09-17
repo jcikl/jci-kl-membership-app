@@ -178,7 +178,7 @@ const EventDetail: React.FC<EventDetailProps> = ({ eventId, mode = 'admin' }) =>
                   <div>
                     <div style={{ fontWeight: 'bold' }}>{event.projectAccount.name}</div>
                     <Text type="secondary" style={{ fontSize: '12px' }}>
-                      {event.projectAccount.fiscalYear} • {event.projectAccount.currency} {event.projectAccount.budget.toLocaleString()}
+                      {event.projectAccount.currency} {event.projectAccount.budget.toLocaleString()}
                     </Text>
                   </div>
                 ) : (

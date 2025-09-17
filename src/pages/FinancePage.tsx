@@ -10,16 +10,16 @@ import {
   Row,
   Col,
   Statistic,
-  Tag,
+  Select,
+  DatePicker,
 } from 'antd';
 import {
   DollarOutlined,
   BankOutlined,
   FileTextOutlined,
-  CalendarOutlined,
-  SettingOutlined,
+  FundOutlined,
+  FilterOutlined,
 } from '@ant-design/icons';
-import { useFiscalYear } from '@/contexts/FiscalYearContext';
 import { useAuthStore } from '@/store/authStore';
 import BankAccountManagement from '@/components/BankAccountManagement';
 import TransactionManagement from '@/components/TransactionManagement';
@@ -29,9 +29,11 @@ import BillPaymentSystem from '@/components/BillPaymentSystem';
 import FinancialReports from '@/components/FinancialReports';
 import FinancialReportGenerator from '@/components/FinancialReportGenerator';
 import ExpenseSplittingModal from '@/components/ExpenseSplittingModal';
-import FinanceDateFilter from '@/components/FinanceDateFilter';
 import MembershipFeeManagement from '@/components/MembershipFeeManagement';
-import { useFinanceDateFilter } from '@/hooks/useFinanceDateFilter';
+import UnifiedProjectFinanceManagement from '@/components/UnifiedProjectFinanceManagement';
+import GlobalYearFilterModal from '@/components/GlobalYearFilterModal';
+import { FinanceYearProvider, useFinanceYear } from '@/contexts/FinanceYearContext';
+import dayjs from 'dayjs';
 import {
   bankAccountService,
   transactionService,
@@ -57,11 +59,16 @@ import {
 
 const { Title, Text } = Typography;
 const { Content } = Layout;
+const { Option } = Select;
+const { RangePicker } = DatePicker;
 
-const FinancePage: React.FC = () => {
+const FinancePageContent: React.FC = () => {
   const [activeTab, setActiveTab] = useState('overview');
   const [loading, setLoading] = useState(false);
-  const { fiscalYear, fiscalYearStartMonth } = useFiscalYear();
+  // 使用全局年份状态
+  const { selectedYear, setSelectedYear, availableYears } = useFinanceYear();
+  const [selectedMonth, setSelectedMonth] = useState<number | null>(null);
+  const [dateRange, setDateRange] = useState<[dayjs.Dayjs, dayjs.Dayjs] | null>(null);
   const { user } = useAuthStore();
 
   // 数据状态
@@ -73,15 +80,36 @@ const FinancePage: React.FC = () => {
   const [billRequests, setBillRequests] = useState<BillPaymentRequest[]>([]);
   const [reports, setReports] = useState<FinancialReport[]>([]);
 
-  // 日期筛选功能
-  const {
-    dateFilter,
-    setYear,
-    setMonth,
-    resetFilter,
-    filteredData: filteredTransactions,
-    getFilteredStats,
-  } = useFinanceDateFilter(transactions, { dateField: 'transactionDate', format: 'DD-MMM-YYYY' });
+  // 统一的筛选功能
+  const getFilteredTransactions = () => {
+    let filtered = transactions;
+    
+    if (selectedYear) {
+      filtered = filtered.filter(t => {
+        const transactionYear = dayjs(t.transactionDate, 'DD-MMM-YYYY').year();
+        return transactionYear === selectedYear;
+      });
+    }
+    
+    if (selectedMonth) {
+      filtered = filtered.filter(t => {
+        const transactionMonth = dayjs(t.transactionDate, 'DD-MMM-YYYY').month() + 1;
+        return transactionMonth === selectedMonth;
+      });
+    }
+    
+    if (dateRange && dateRange[0] && dateRange[1]) {
+      filtered = filtered.filter(t => {
+        const transactionDate = dayjs(t.transactionDate, 'DD-MMM-YYYY');
+        return transactionDate.isAfter(dateRange[0].subtract(1, 'day')) && 
+               transactionDate.isBefore(dateRange[1].add(1, 'day'));
+      });
+    }
+    
+    return filtered;
+  };
+  
+  const filteredTransactions = getFilteredTransactions();
 
   // 费用拆分模态框状态
   const [isExpenseSplittingVisible, setIsExpenseSplittingVisible] = useState(false);
@@ -89,6 +117,9 @@ const FinancePage: React.FC = () => {
   
   // 财务报表生成器模态框状态
   const [isFinancialReportGeneratorVisible, setIsFinancialReportGeneratorVisible] = useState(false);
+  
+  // 项目财务管理相关状态
+  // const [projectFinanceVerifications, setProjectFinanceVerifications] = useState<any[]>([]);
 
   // 加载数据
   const loadData = async () => {
@@ -103,12 +134,12 @@ const FinancePage: React.FC = () => {
         billRequestsData,
         reportsData,
       ] = await Promise.all([
-        bankAccountService.getAccounts(fiscalYear),
-        transactionService.getTransactions(fiscalYear),
+        bankAccountService.getAccounts(),
+        transactionService.getTransactions(),
         transactionPurposeService.getPurposes(),
         budgetService.getBudgets(),
         budgetAllocationService.getAllocations(),
-        billPaymentService.getRequests(fiscalYear),
+        billPaymentService.getRequests(),
         financialReportService.getReports(),
       ]);
 
@@ -138,9 +169,32 @@ const FinancePage: React.FC = () => {
     }
   };
 
+  // 项目财务管理相关处理函数
+  const handleProjectTransactionSync = async (projectId: string, transactions: Transaction[]) => {
+    try {
+      // 这里可以添加同步逻辑，比如更新交易记录的项目关联
+      console.log(`同步项目 ${projectId} 的交易记录:`, transactions);
+      message.success(`成功同步 ${transactions.length} 笔交易记录到项目财务`);
+    } catch (error) {
+      console.error('同步项目交易记录失败:', error);
+      message.error('同步项目交易记录失败');
+    }
+  };
+
+  const handleVerificationRequest = async (projectId: string, verificationData: any) => {
+    try {
+      // 这里可以添加验证请求处理逻辑
+      console.log(`项目 ${projectId} 验证请求:`, verificationData);
+      message.success('已提交财政长核对申请');
+    } catch (error) {
+      console.error('提交验证请求失败:', error);
+      message.error('提交验证请求失败');
+    }
+  };
+
   useEffect(() => {
     loadData();
-  }, [fiscalYear]);
+  }, []);
 
   // 银行户口管理
   const handleCreateAccount = async (account: Omit<BankAccount, 'id' | 'createdAt' | 'updatedAt'>) => {
@@ -199,30 +253,48 @@ const FinancePage: React.FC = () => {
     }
   };
 
+  const handleDeleteTransactions = async (ids: string[]) => {
+    try {
+      const result = await transactionService.deleteTransactions(ids);
+      await loadData();
+      return result;
+    } catch (error) {
+      throw error;
+    }
+  };
+
   const handleImportTransactions = async (transactions: FinancialImportData[], _bankAccountId: string) => {
     try {
       // 转换 FinancialImportData 为 Transaction 格式
-      const transactionData = transactions.map(t => ({
-        bankAccountId: t.bankAccountId,
-        transactionDate: t.transactionDate,
-        mainDescription: t.mainDescription,
-        subDescription: t.subDescription,
-        expense: t.expense,
-        income: t.income,
-        payer: t.payer,
-        payee: t.payee,
-        transactionPurpose: t.transactionPurpose,
-        projectAccount: t.projectAccount,
-        accountType: t.accountType,
-        inputBy: t.inputBy || '系统导入',
-        paymentDescription: t.paymentDescription,
-        auditYear: t.auditYear,
-      }));
+      const transactionData = transactions.map(t => {
+        // 合并 payer 和 payee 字段到 payerPayee
+        const payerPayee = [t.payer, t.payee].filter(Boolean).join(' / ') || '';
+        
+        return {
+          bankAccountId: t.bankAccountId,
+          transactionDate: t.transactionDate,
+          mainDescription: t.mainDescription,
+          subDescription: t.subDescription || '',
+          expense: t.expense || 0,
+          income: t.income || 0,
+          payerPayee: payerPayee, // 使用合并字段
+          transactionPurpose: t.transactionPurpose || '',
+          projectAccount: t.projectAccount || '',
+          accountType: t.accountType || '',
+          inputBy: t.inputBy || '系统导入',
+          paymentDescription: t.paymentDescription || '',
+          transactionNumber: '', // 将在服务层自动生成
+          // 兼容性字段，确保不为 undefined
+          payer: t.payer || '',
+          payee: t.payee || '',
+        };
+      });
       
       const result = await transactionService.createTransactions(transactionData);
       await loadData();
       return result;
     } catch (error) {
+      console.error('交易记录导入失败:', error);
       throw error;
     }
   };
@@ -366,13 +438,13 @@ const FinancePage: React.FC = () => {
   };
 
   // 财务报告管理
-  const handleGenerateReport = async (reportType: FinancialReportType, _startDate: string, _endDate: string, auditYear: number) => {
+  const handleGenerateReport = async (reportType: FinancialReportType, _startDate: string, _endDate: string) => {
     try {
       const reportId = await newFinancialReportService.generateReport(
         reportType,
-        auditYear,
+        selectedYear, // 使用当前选中的年份
         user?.uid || 'unknown-user',
-        fiscalYearStartMonth
+        1 // 默认从1月开始
       );
       await loadData();
       
@@ -426,8 +498,8 @@ const FinancePage: React.FC = () => {
   };
 
   // 计算财务概览（使用筛选后的数据）
-  const totalIncome = getFilteredStats(filteredTransactions, 'income');
-  const totalExpense = getFilteredStats(filteredTransactions, 'expense');
+  const totalIncome = filteredTransactions.reduce((sum, t) => sum + t.income, 0);
+  const totalExpense = filteredTransactions.reduce((sum, t) => sum + t.expense, 0);
   const netIncome = totalIncome - totalExpense;
   const totalAccounts = bankAccounts.length;
   const activeAccounts = bankAccounts.filter(acc => acc.isActive).length;
@@ -441,14 +513,63 @@ const FinancePage: React.FC = () => {
       label: '财务概览',
       children: (
         <div>
-          {/* 日期筛选组件 */}
-          <FinanceDateFilter
-            dateFilter={dateFilter}
-            onYearChange={setYear}
-            onMonthChange={setMonth}
-            onReset={resetFilter}
-            fiscalYear={fiscalYear}
-          />
+          {/* 统一的筛选功能 */}
+          <Card style={{ marginBottom: 24 }}>
+            <Row gutter={16} align="middle">
+              <Col>
+                <Space>
+                  <FilterOutlined />
+                  <Text strong>筛选条件：</Text>
+                </Space>
+              </Col>
+              <Col>
+                <GlobalYearFilterModal
+                  value={selectedYear}
+                  onChange={(year) => setSelectedYear(year || new Date().getFullYear())}
+                  availableYears={availableYears}
+                  placeholder="选择年份"
+                  style={{ width: 120 }}
+                />
+              </Col>
+              <Col>
+                <Select
+                  value={selectedMonth}
+                  onChange={setSelectedMonth}
+                  style={{ width: 120 }}
+                  placeholder="选择月份"
+                  allowClear
+                >
+                  {Array.from({ length: 12 }, (_, i) => {
+                    const month = i + 1;
+                    return (
+                      <Option key={month} value={month}>
+                        {month}月
+                      </Option>
+                    );
+                  })}
+                </Select>
+              </Col>
+              <Col>
+                <RangePicker
+                  value={dateRange}
+                  onChange={(dates) => setDateRange(dates as [dayjs.Dayjs, dayjs.Dayjs])}
+                  style={{ width: 240 }}
+                  placeholder={['开始日期', '结束日期']}
+                />
+              </Col>
+              <Col>
+                <Button 
+                  onClick={() => {
+                    setSelectedYear(new Date().getFullYear());
+                    setSelectedMonth(null);
+                    setDateRange(null);
+                  }}
+                >
+                  重置筛选
+                </Button>
+              </Col>
+            </Row>
+          </Card>
           
           <Row gutter={16} style={{ marginBottom: 24 }}>
             <Col span={6}>
@@ -530,28 +651,6 @@ const FinancePage: React.FC = () => {
             </Col>
           </Row>
 
-          <Card title="财政年度设置" style={{ marginTop: 24 }}>
-            <Space>
-              <Text strong>当前财政年度：</Text>
-              <Tag color="blue" icon={<CalendarOutlined />}>
-                {fiscalYear}
-              </Tag>
-              <Button 
-                type="link" 
-                icon={<SettingOutlined />}
-                onClick={() => {
-                  message.info('财政年度设置已迁移到分会设置页面，请前往系统设置 > 分会设置进行修改');
-                }}
-              >
-                修改财政年度
-              </Button>
-            </Space>
-            <div style={{ marginTop: 8 }}>
-              <Text type="secondary" style={{ fontSize: 12 }}>
-                财政年度设置已统一管理，请前往 系统设置 &gt; 分会设置 进行修改
-              </Text>
-            </div>
-          </Card>
         </div>
       ),
     },
@@ -576,6 +675,7 @@ const FinancePage: React.FC = () => {
           onCreateTransaction={handleCreateTransaction}
           onUpdateTransaction={handleUpdateTransaction}
           onDeleteTransaction={handleDeleteTransaction}
+          onDeleteTransactions={handleDeleteTransactions}
           onImportTransactions={handleImportTransactions}
           transactions={filteredTransactions}
           bankAccounts={bankAccounts}
@@ -642,7 +742,24 @@ const FinancePage: React.FC = () => {
           requests={billRequests}
           bankAccounts={bankAccounts}
           loading={loading}
-          dateFilter={dateFilter}
+          dateFilter={{
+            year: selectedYear,
+            month: selectedMonth
+          }}
+        />
+      ),
+    },
+    {
+      key: 'project-finance',
+      label: '项目财务管理',
+      icon: <FundOutlined />,
+      children: (
+        <UnifiedProjectFinanceManagement
+          mode="finance"
+          selectedYear={selectedYear}
+          selectedMonth={selectedMonth}
+          onTransactionSync={handleProjectTransactionSync}
+          onVerificationRequest={handleVerificationRequest}
         />
       ),
     },
@@ -681,8 +798,8 @@ const FinancePage: React.FC = () => {
           <Title level={2} style={{ margin: 0 }}>
             <DollarOutlined /> 财务管理系统
           </Title>
-          <Text type="secondary">
-            JCI Kuala Lumpur 标准财务管理系统 - 财政年度 {fiscalYear}
+          <Text type='secondary'>
+            JCI Kuala Lumpur 标准财务管理系统 - {selectedYear}年{selectedMonth ? `${selectedMonth}月` : ''}
           </Text>
         </div>
 
@@ -712,6 +829,14 @@ const FinancePage: React.FC = () => {
         />
       </Content>
     </Layout>
+  );
+};
+
+const FinancePage: React.FC = () => {
+  return (
+    <FinanceYearProvider>
+      <FinancePageContent />
+    </FinanceYearProvider>
   );
 };
 

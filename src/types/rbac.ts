@@ -87,20 +87,11 @@ export type JCIPosition =
   | 'associate_member'             // 准会员
   | 'honorary_member';             // 荣誉会员
 
-// 副会长分管方向
-export type VPDivision = 
-  | 'personal_dev'        // 个人发展
-  | 'business_dev'        // 商务发展
-  | 'international_dev'   // 国际发展
-  | 'chapter_admin'       // 分会管理
-  | 'community_dev';      // 社区发展
-
 // 会员职位信息
 export interface MemberPosition {
   id: string;
   memberId: string;
   position: JCIPosition;
-  vpDivision?: VPDivision;
   startDate?: string;
   endDate?: string;
   isActing: boolean;
@@ -132,7 +123,6 @@ export interface UserRole {
   accountType: AccountType;
   membershipCategory: MembershipCategory;
   position: Position;
-  vpDivision?: VPDivision;
   effectivePermissions: string[];
   roleBindings: RoleBinding[];
 }
@@ -263,15 +253,6 @@ export const JCI_POSITION_OPTIONS = [
   { value: 'official_member', label: '正式会员' },
   { value: 'associate_member', label: '准会员' },
   { value: 'honorary_member', label: '荣誉会员' }
-] as const;
-
-// 副会长分管方向选项
-export const VP_DIVISION_OPTIONS = [
-  { value: 'personal_dev', label: '个人发展' },
-  { value: 'business_dev', label: '商务发展' },
-  { value: 'international_dev', label: '国际发展' },
-  { value: 'chapter_admin', label: '分会管理' },
-  { value: 'community_dev', label: '社区发展' }
 ] as const;
 
 // 会员类别选项

@@ -11,19 +11,22 @@ import {
   Typography,
   Space,
   Divider,
+  Select,
 } from 'antd';
 import {
   SaveOutlined,
   InfoCircleOutlined,
 } from '@ant-design/icons';
-import { Switch } from 'antd';
 import ImageUpload from './ImageUpload';
 import { getChapterSettings, saveChapterSettings, getDefaultChapterSettings } from '@/services/chapterSettingsService';
-import { useFiscalYear } from '@/contexts/FiscalYearContext';
+import { getWorldRegions } from '@/services/worldRegionService';
+import { getCountries } from '@/services/countryService';
+import { getNationalRegions } from '@/services/nationalRegionService';
 import type { ChapterSettings } from '@/types';
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
+const { Option } = Select;
 
 const ChapterSettings: React.FC = () => {
   const [form] = Form.useForm();
@@ -31,19 +34,72 @@ const ChapterSettings: React.FC = () => {
   const [saving, setSaving] = useState(false);
   const [settings, setSettings] = useState<ChapterSettings | null>(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
-  const { refreshFiscalYear } = useFiscalYear();
+  const [worldRegions, setWorldRegions] = useState<any[]>([]);
+  const [countries, setCountries] = useState<any[]>([]);
+  const [nationalRegions, setNationalRegions] = useState<any[]>([]);
+  const [filteredCountries, setFilteredCountries] = useState<any[]>([]);
+  const [filteredNationalRegions, setFilteredNationalRegions] = useState<any[]>([]);
 
   // 加载分会设置
   const loadSettings = async () => {
     setLoading(true);
     try {
-      const data = await getChapterSettings();
+      const [data, regionsData, countriesData, nationalRegionsData] = await Promise.all([
+        getChapterSettings(),
+        getWorldRegions(),
+        getCountries(),
+        getNationalRegions()
+      ]);
+      
+      // 调试信息
+      console.log('数据加载完成:', {
+        worldRegions: regionsData.length,
+        countries: countriesData.length,
+        nationalRegions: nationalRegionsData.length,
+        chapterData: data ? '已加载' : '未加载'
+      });
+
+      // 检查数据结构
+      if (regionsData.length > 0) {
+        console.log('世界区域示例:', regionsData[0]);
+      }
+      if (countriesData.length > 0) {
+        console.log('国家示例:', countriesData[0]);
+      }
+      if (nationalRegionsData.length > 0) {
+        console.log('国家区域示例:', nationalRegionsData[0]);
+      }
+      
+      setWorldRegions(regionsData);
+      setCountries(countriesData);
+      setNationalRegions(nationalRegionsData);
+      
+      // 初始化筛选后的数据
+      setFilteredCountries(countriesData);
+      setFilteredNationalRegions(nationalRegionsData);
+      
       if (data) {
         setSettings(data);
-        form.setFieldsValue(data);
+        
+        // 根据已选择的值进行筛选
+        if (data.worldRegionId) {
+          console.log('根据世界区域筛选国家:', data.worldRegionId);
+          filterCountriesByWorldRegion(data.worldRegionId);
+        }
+        if (data.countryId) {
+          console.log('根据国家筛选国家区域:', data.countryId);
+          filterNationalRegionsByCountry(data.countryId);
+        }
+        
+        // 延迟设置表单值，确保筛选完成后再设置
+        setTimeout(() => {
+          console.log('设置表单值:', data);
+          form.setFieldsValue(data);
+        }, 200);
       } else {
         // 如果没有设置，使用默认值
         const defaultSettings = getDefaultChapterSettings();
+        console.log('使用默认设置:', defaultSettings);
         form.setFieldsValue(defaultSettings);
       }
       setHasUnsavedChanges(false); // 重置修改状态
@@ -65,13 +121,7 @@ const ChapterSettings: React.FC = () => {
     try {
       await saveChapterSettings(values);
       
-      // 如果财政年度发生变化，刷新财政年度上下文
-      if (settings && settings.fiscalYear !== values.fiscalYear) {
-        await refreshFiscalYear();
-        message.success('分会设置保存成功，财政年度已更新');
-      } else {
-        message.success('分会设置保存成功');
-      }
+      message.success('分会设置保存成功');
       
       setHasUnsavedChanges(false); // 重置修改状态
       await loadSettings(); // 重新加载设置
@@ -95,9 +145,76 @@ const ChapterSettings: React.FC = () => {
     });
   };
 
+  // 根据世界区域筛选国家
+  const filterCountriesByWorldRegion = (worldRegionId: string) => {
+    if (!worldRegionId || !countries.length) {
+      console.log('筛选国家: 参数无效或数据未加载');
+      setFilteredCountries([]);
+      return;
+    }
+    
+    const filtered = countries.filter(country => 
+      country.worldRegionId === worldRegionId
+    );
+    console.log(`筛选国家: 世界区域ID ${worldRegionId}, 找到 ${filtered.length} 个国家`);
+    filtered.forEach(country => {
+      console.log(`  - ${country.name} (${country.id})`);
+    });
+    setFilteredCountries(filtered);
+  };
+
+  // 根据国家筛选国家区域
+  const filterNationalRegionsByCountry = (countryId: string) => {
+    if (!countryId || !nationalRegions.length) {
+      console.log('筛选国家区域: 参数无效或数据未加载');
+      setFilteredNationalRegions([]);
+      return;
+    }
+    
+    const filtered = nationalRegions.filter(region => 
+      region.countryId === countryId
+    );
+    console.log(`筛选国家区域: 国家ID ${countryId}, 找到 ${filtered.length} 个区域`);
+    filtered.forEach(region => {
+      console.log(`  - ${region.name} (${region.id})`);
+    });
+    setFilteredNationalRegions(filtered);
+  };
+
+  // 处理世界区域变化
+  const handleWorldRegionChange = (worldRegionId: string) => {
+    // 筛选国家
+    filterCountriesByWorldRegion(worldRegionId);
+    
+    // 清空国家和国家区域的选择
+    form.setFieldsValue({
+      countryId: undefined,
+      nationalRegionId: undefined
+    });
+  };
+
+  // 处理国家变化
+  const handleCountryChange = (countryId: string) => {
+    // 筛选国家区域
+    filterNationalRegionsByCountry(countryId);
+    
+    // 清空国家区域的选择
+    form.setFieldsValue({
+      nationalRegionId: undefined
+    });
+  };
+
   // 处理表单值变化
-  const handleValuesChange = () => {
+  const handleValuesChange = (changedValues: any) => {
     setHasUnsavedChanges(hasChanges());
+    
+    // 处理级联筛选
+    if (changedValues.worldRegionId !== undefined) {
+      handleWorldRegionChange(changedValues.worldRegionId);
+    }
+    if (changedValues.countryId !== undefined) {
+      handleCountryChange(changedValues.countryId);
+    }
   };
 
   return (
@@ -159,23 +276,86 @@ const ChapterSettings: React.FC = () => {
             </Col>
           </Row>
 
+          <Divider orientation="left">区域设置</Divider>
+
           <Row gutter={24}>
-            <Col span={12}>
+            <Col span={8}>
               <Form.Item
-                name="fiscalYear"
-                label="财政年度"
-                rules={[
-                  { required: true, message: '请输入财政年度' },
-                  { type: 'number', min: 2020, max: 2030, message: '请输入有效的财政年度' }
-                ]}
-                extra="用于财务管理的财政年度，影响所有财务数据的分类和报告"
+                name="worldRegionId"
+                label="世界区域"
               >
-                <InputNumber
-                  style={{ width: '100%' }}
-                  placeholder="请输入财政年度"
-                  min={2020}
-                  max={2030}
-                />
+                <Select
+                  placeholder="选择世界区域"
+                  allowClear
+                  showSearch
+                  optionFilterProp="children"
+                  filterOption={(input, option) =>
+                    String(option?.children).toLowerCase().includes(input.toLowerCase())
+                  }
+                >
+                  {worldRegions.map(region => {
+                    console.log('渲染世界区域选项:', region);
+                    return (
+                      <Option key={region.id} value={region.id}>
+                        {region.name} ({region.code})
+                      </Option>
+                    );
+                  })}
+                </Select>
+              </Form.Item>
+            </Col>
+            <Col span={8}>
+              <Form.Item
+                name="countryId"
+                label="所属国家"
+                extra={filteredCountries.length === 0 ? "请先选择世界区域" : ""}
+              >
+                <Select
+                  placeholder={filteredCountries.length === 0 ? "请先选择世界区域" : "选择国家"}
+                  allowClear
+                  disabled={filteredCountries.length === 0}
+                  showSearch
+                  optionFilterProp="children"
+                  filterOption={(input, option) =>
+                    String(option?.children).toLowerCase().includes(input.toLowerCase())
+                  }
+                >
+                  {filteredCountries.map(country => {
+                    console.log('渲染国家选项:', country);
+                    return (
+                      <Option key={country.id} value={country.id}>
+                        {country.name} ({country.code})
+                      </Option>
+                    );
+                  })}
+                </Select>
+              </Form.Item>
+            </Col>
+            <Col span={8}>
+              <Form.Item
+                name="nationalRegionId"
+                label="国家区域"
+                extra={filteredNationalRegions.length === 0 ? "请先选择国家" : ""}
+              >
+                <Select
+                  placeholder={filteredNationalRegions.length === 0 ? "请先选择国家" : "选择国家区域"}
+                  allowClear
+                  disabled={filteredNationalRegions.length === 0}
+                  showSearch
+                  optionFilterProp="children"
+                  filterOption={(input, option) =>
+                    String(option?.children).toLowerCase().includes(input.toLowerCase())
+                  }
+                >
+                  {filteredNationalRegions.map(region => {
+                    console.log('渲染国家区域选项:', region);
+                    return (
+                      <Option key={region.id} value={region.id}>
+                        {region.name} ({region.code})
+                      </Option>
+                    );
+                  })}
+                </Select>
               </Form.Item>
             </Col>
           </Row>
@@ -197,33 +377,6 @@ const ChapterSettings: React.FC = () => {
             </Col>
           </Row>
 
-          <Divider orientation="left">用户户口类别晋升条件</Divider>
-
-          <Row gutter={24}>
-            <Col span={8}>
-              <Form.Item name={["promotionRules", "minAgeForActive"]} label="最低年龄（活跃/晋升参考）">
-                <InputNumber style={{ width: '100%' }} min={0} max={120} placeholder="如：21" />
-              </Form.Item>
-            </Col>
-            <Col span={8}>
-              <Form.Item name={["promotionRules", "requirePaymentVerified"]} label="需付款核验">
-                <Switch />
-              </Form.Item>
-            </Col>
-            <Col span={8}>
-              <Form.Item name={["promotionRules", "requireSenatorIdForHonorary"]} label="荣誉需参议员编号">
-                <Switch />
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Row gutter={24}>
-            <Col span={24}>
-              <Form.Item name={["promotionRules", "nationalityWhitelist"]} label="国籍白名单（逗号分隔）">
-                <Input placeholder="例如：MY, SG, CN" />
-              </Form.Item>
-            </Col>
-          </Row>
 
           <Divider orientation="left">联系信息</Divider>
 

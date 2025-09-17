@@ -13,6 +13,7 @@ import {
   Typography,
   message,
   Divider,
+  Table,
 } from 'antd';
 import {
   PlusOutlined,
@@ -20,6 +21,7 @@ import {
   SplitCellsOutlined,
 } from '@ant-design/icons';
 import { Transaction, TransactionSplit, TransactionPurpose } from '@/types/finance';
+import { transactionSplitService } from '@/services/financeService';
 
 const { Text } = Typography;
 const { Option } = Select;
@@ -84,34 +86,124 @@ const TransactionSplitModal: React.FC<TransactionSplitModalProps> = ({
   };
 
   useEffect(() => {
-    if (visible && transaction) {
-      // 初始化拆分记录，默认拆分为2项
-      const defaultSplits = [
-        { 
-          amount: 0, 
-          transactionPurpose: '', 
-          projectAccount: '', 
-          description: '', 
-          notes: '',
-          mainCategory: '',
-          businessCategory: '',
-          specificPurpose: ''
-        },
-        { 
-          amount: 0, 
-          transactionPurpose: '', 
-          projectAccount: '', 
-          description: '', 
-          notes: '',
-          mainCategory: '',
-          businessCategory: '',
-          specificPurpose: ''
+    const loadExistingSplits = async () => {
+      if (visible && transaction) {
+        try {
+          // 首先尝试加载现有的拆分记录
+          const existingSplits = await transactionSplitService.getSplitsByTransaction(transaction.id);
+          
+          if (existingSplits.length > 0) {
+            // 如果有现有拆分记录，加载它们
+            const loadedSplits = existingSplits.map(split => {
+              // 根据交易用途ID查找对应的层级信息
+              const purpose = purposes.find(p => p.id === split.transactionPurpose);
+              let mainCategory = '';
+              let businessCategory = '';
+              let specificPurpose = split.transactionPurpose || '';
+              
+              if (purpose) {
+                if (purpose.level === 2) {
+                  // 具体用途
+                  specificPurpose = purpose.id;
+                  const businessPurpose = purposes.find(p => p.id === purpose.parentId);
+                  if (businessPurpose) {
+                    businessCategory = businessPurpose.id;
+                    if (businessPurpose.level === 1) {
+                      const mainPurpose = purposes.find(p => p.id === businessPurpose.parentId);
+                      if (mainPurpose) {
+                        mainCategory = mainPurpose.id;
+                      }
+                    }
+                  }
+                } else if (purpose.level === 1) {
+                  // 业务分类
+                  businessCategory = purpose.id;
+                  const mainPurpose = purposes.find(p => p.id === purpose.parentId);
+                  if (mainPurpose) {
+                    mainCategory = mainPurpose.id;
+                  }
+                } else if (purpose.level === 0) {
+                  // 主要分类
+                  mainCategory = purpose.id;
+                }
+              }
+              
+              return {
+                amount: split.amount || 0,
+                transactionPurpose: split.transactionPurpose || '',
+                projectAccount: split.projectAccount || '',
+                description: split.description || '',
+                notes: split.notes || '',
+                mainCategory,
+                businessCategory,
+                specificPurpose,
+              };
+            });
+            
+            setSplits(loadedSplits);
+            form.setFieldsValue({ splits: loadedSplits });
+            console.log('✅ 已加载现有拆分记录:', existingSplits.length, '项');
+          } else {
+            // 如果没有现有拆分记录，创建默认的2项拆分
+            const defaultSplits = [
+              { 
+                amount: 0, 
+                transactionPurpose: '', 
+                projectAccount: '', 
+                description: '', 
+                notes: '',
+                mainCategory: '',
+                businessCategory: '',
+                specificPurpose: ''
+              },
+              { 
+                amount: 0, 
+                transactionPurpose: '', 
+                projectAccount: '', 
+                description: '', 
+                notes: '',
+                mainCategory: '',
+                businessCategory: '',
+                specificPurpose: ''
+              }
+            ];
+            setSplits(defaultSplits);
+            form.setFieldsValue({ splits: defaultSplits });
+            console.log('📝 创建默认拆分记录');
+          }
+        } catch (error) {
+          console.error('❌ 加载拆分记录失败:', error);
+          // 出错时使用默认拆分
+          const defaultSplits = [
+            { 
+              amount: 0, 
+              transactionPurpose: '', 
+              projectAccount: '', 
+              description: '', 
+              notes: '',
+              mainCategory: '',
+              businessCategory: '',
+              specificPurpose: ''
+            },
+            { 
+              amount: 0, 
+              transactionPurpose: '', 
+              projectAccount: '', 
+              description: '', 
+              notes: '',
+              mainCategory: '',
+              businessCategory: '',
+              specificPurpose: ''
+            }
+          ];
+          setSplits(defaultSplits);
+          form.setFieldsValue({ splits: defaultSplits });
         }
-      ];
-      setSplits(defaultSplits);
-      form.setFieldsValue({ splits: defaultSplits });
-    }
-  }, [visible, transaction, form]);
+      }
+    };
+    
+    loadExistingSplits();
+  }, [visible, transaction, form, purposes]);
 
   const handleAddSplit = () => {
     const newSplit = { 
@@ -228,8 +320,12 @@ const TransactionSplitModal: React.FC<TransactionSplitModalProps> = ({
       // 准备拆分数据，自动复制主交易的分类信息到拆分记录
       const splitData = splits.map((split, index) => ({
         transactionId: transaction!.id,
+        transactionNumber: `${transaction!.transactionNumber}-${String(index + 1).padStart(2, '0')}`, // 生成拆分记录序号
         splitIndex: index + 1,
         amount: split.amount,
+        transactionDate: transaction!.transactionDate, // 从主交易记录复制交易日期
+        mainDescription: transaction!.mainDescription, // 从主交易记录复制主描述
+        subDescription: transaction!.subDescription, // 从主交易记录复制副描述
         transactionPurpose: split.transactionPurpose,
         projectAccount: split.projectAccount,
         payerPayee: transaction!.payerPayee, // 从主交易记录复制付款人/收款人
@@ -261,23 +357,35 @@ const TransactionSplitModal: React.FC<TransactionSplitModalProps> = ({
       open={visible}
       onOk={handleOk}
       onCancel={onCancel}
-      width={800}
+      width={1200}
       destroyOnHidden
     >
       <div style={{ marginBottom: 16 }}>
         <Card size="small">
           <Row gutter={16}>
-            <Col span={8}>
+            <Col span={6}>
               <Text strong>交易日期：</Text>
               <Text>{new Date(transaction.transactionDate).toLocaleDateString('zh-CN')}</Text>
             </Col>
-            <Col span={8}>
+            <Col span={6}>
               <Text strong>交易描述：</Text>
               <Text>{transaction.mainDescription}</Text>
             </Col>
-            <Col span={8}>
+            <Col span={6}>
+              <Text strong>交易类型：</Text>
+              <Text style={{ 
+                color: transaction.income > 0 ? '#52c41a' : '#ff4d4f', 
+                fontWeight: 'bold' 
+              }}>
+                {transaction.income > 0 ? '收入' : '支出'}
+              </Text>
+            </Col>
+            <Col span={6}>
               <Text strong>交易金额：</Text>
-              <Text style={{ color: '#52c41a', fontWeight: 'bold' }}>
+              <Text style={{ 
+                color: transaction.income > 0 ? '#52c41a' : '#ff4d4f', 
+                fontWeight: 'bold' 
+              }}>
                 RM {totalAmount.toLocaleString('en-MY', { minimumFractionDigits: 2 })}
               </Text>
             </Col>
@@ -299,56 +407,71 @@ const TransactionSplitModal: React.FC<TransactionSplitModalProps> = ({
           </Space>
         </div>
 
-        {splits.map((split, index) => (
-          <Card key={index} size="small" style={{ marginBottom: 16 }}>
-            <Row gutter={16} align="middle">
-              <Col span={2}>
-                <Text strong>#{index + 1}</Text>
-              </Col>
-              <Col span={6}>
+        <Table
+          dataSource={splits.map((split, index) => ({ ...split, key: index }))}
+          columns={[
+            {
+              title: '序号',
+              dataIndex: 'key',
+              key: 'key',
+              width: 60,
+              render: (key: number) => `#${key + 1}`,
+            },
+            {
+              title: '交易序号',
+              dataIndex: 'transactionNumber',
+              key: 'transactionNumber',
+              width: 150,
+              render: (_, _record: any, index: number) => {
+                const splitNumber = `${transaction?.transactionNumber}-${String(index + 1).padStart(2, '0')}`;
+                return (
+                  <Text code style={{ fontSize: '12px', whiteSpace: 'nowrap' }}>
+                    {splitNumber}
+                  </Text>
+                );
+              },
+            },
+            {
+              title: '拆分金额',
+              dataIndex: 'amount',
+              key: 'amount',
+              width: 120,
+              render: (amount: number, _record: any, index: number) => (
                 <Form.Item
                   name={['splits', index, 'amount']}
-                  label="拆分金额"
                   rules={[{ required: true, message: '请输入拆分金额' }]}
+                  style={{ margin: 0 }}
                 >
                   <InputNumber
                     style={{ width: '100%' }}
                     placeholder="0.00"
                     precision={2}
                     min={0}
-                    value={split.amount}
+                    value={amount}
                     onChange={(value) => handleAmountChange(value, index)}
                     prefix="RM"
                   />
                 </Form.Item>
-              </Col>
-              <Col span={4}>
-                <Form.Item label=" ">
-                  <Button
-                    type="text"
-                    danger
-                    icon={<DeleteOutlined />}
-                    onClick={() => handleRemoveSplit(index)}
-                    disabled={splits.length <= 2}
-                  />
-                </Form.Item>
-              </Col>
-            </Row>
-            
-            {/* 级联选择区域 */}
-            <Row gutter={16}>
-              <Col span={8}>
+              ),
+            },
+            {
+              title: '主要分类',
+              dataIndex: 'mainCategory',
+              key: 'mainCategory',
+              width: 120,
+              render: (mainCategory: string, _record: any, index: number) => (
                 <Form.Item
                   name={['splits', index, 'mainCategory']}
-                  label="主要分类"
+                  style={{ margin: 0 }}
                 >
                   <Select
-                    placeholder="请选择主要分类"
-                    value={split.mainCategory}
+                    placeholder="主要分类"
+                    value={mainCategory}
                     onChange={(value) => handleMainCategoryChange(value, index)}
                     showSearch
                     optionFilterProp="children"
                     allowClear
+                    size="small"
                   >
                     {getMainCategoryOptions().map(option => (
                       <Option key={option.value} value={option.value}>
@@ -357,68 +480,84 @@ const TransactionSplitModal: React.FC<TransactionSplitModalProps> = ({
                     ))}
                   </Select>
                 </Form.Item>
-              </Col>
-              <Col span={8}>
+              ),
+            },
+            {
+              title: '业务分类',
+              dataIndex: 'businessCategory',
+              key: 'businessCategory',
+              width: 120,
+              render: (businessCategory: string, record: any, index: number) => (
                 <Form.Item
                   name={['splits', index, 'businessCategory']}
-                  label="业务分类"
+                  style={{ margin: 0 }}
                 >
                   <Select
-                    placeholder="请选择业务分类"
-                    value={split.businessCategory}
+                    placeholder="业务分类"
+                    value={businessCategory}
                     onChange={(value) => handleBusinessCategoryChange(value, index)}
                     showSearch
                     optionFilterProp="children"
                     allowClear
-                    disabled={!split.mainCategory}
+                    disabled={!record.mainCategory}
+                    size="small"
                   >
-                    {getBusinessCategoryOptions(split.mainCategory || '').map(option => (
+                    {getBusinessCategoryOptions(record.mainCategory || '').map(option => (
                       <Option key={option.value} value={option.value}>
                         {option.label}
                       </Option>
                     ))}
                   </Select>
                 </Form.Item>
-              </Col>
-              <Col span={8}>
+              ),
+            },
+            {
+              title: '具体用途',
+              dataIndex: 'specificPurpose',
+              key: 'specificPurpose',
+              width: 120,
+              render: (specificPurpose: string, record: any, index: number) => (
                 <Form.Item
                   name={['splits', index, 'specificPurpose']}
-                  label="具体用途"
+                  style={{ margin: 0 }}
                 >
                   <Select
-                    placeholder="请选择具体用途"
-                    value={split.specificPurpose}
+                    placeholder="具体用途"
+                    value={specificPurpose}
                     onChange={(value) => handleSpecificPurposeChange(value, index)}
                     showSearch
                     optionFilterProp="children"
                     allowClear
-                    disabled={!split.businessCategory}
+                    disabled={!record.businessCategory}
+                    size="small"
                   >
-                    {getSpecificPurposeOptions(split.businessCategory || '').map(option => (
+                    {getSpecificPurposeOptions(record.businessCategory || '').map(option => (
                       <Option key={option.value} value={option.value}>
                         {option.label}
                       </Option>
                     ))}
                   </Select>
                 </Form.Item>
-              </Col>
-            </Row>
-
-            {/* 传统交易用途选择（作为备选） */}
-            <Row gutter={16}>
-              <Col span={12}>
+              ),
+            },
+            {
+              title: '交易用途',
+              dataIndex: 'transactionPurpose',
+              key: 'transactionPurpose',
+              width: 150,
+              render: (transactionPurpose: string, _record: any, index: number) => (
                 <Form.Item
                   name={['splits', index, 'transactionPurpose']}
-                  label="交易用途（备选）"
-                  tooltip="如果上面的级联选择无法满足需求，可以直接选择交易用途"
+                  style={{ margin: 0 }}
                 >
                   <Select
-                    placeholder="请选择交易用途"
-                    value={split.transactionPurpose}
+                    placeholder="交易用途"
+                    value={transactionPurpose}
                     onChange={(value) => handlePurposeChange(value, index)}
                     showSearch
                     optionFilterProp="children"
                     allowClear
+                    size="small"
                   >
                     {purposes.map(purpose => (
                       <Option key={purpose.id} value={purpose.id}>
@@ -427,37 +566,76 @@ const TransactionSplitModal: React.FC<TransactionSplitModalProps> = ({
                     ))}
                   </Select>
                 </Form.Item>
-              </Col>
-              <Col span={12}>
-                <Form.Item
-                  name={['splits', index, 'projectAccount']}
-                  label="项目户口"
-                >
-                  <Input placeholder="请输入项目户口" />
-                </Form.Item>
-              </Col>
-            </Row>
-            
-            <Row gutter={16}>
-              <Col span={12}>
+              ),
+            },
+            {
+              title: '拆分描述',
+              dataIndex: 'description',
+              key: 'description',
+              width: 150,
+              render: (description: string, _record: any, index: number) => (
                 <Form.Item
                   name={['splits', index, 'description']}
-                  label="拆分描述"
+                  style={{ margin: 0 }}
                 >
-                  <Input placeholder="请输入拆分描述" />
+                  <Input
+                    placeholder="拆分描述"
+                    value={description}
+                    onChange={(e) => {
+                      const newSplits = [...splits];
+                      newSplits[index] = { ...newSplits[index], description: e.target.value };
+                      setSplits(newSplits);
+                      form.setFieldsValue({ splits: newSplits });
+                    }}
+                    size="small"
+                  />
                 </Form.Item>
-              </Col>
-              <Col span={12}>
+              ),
+            },
+            {
+              title: '备注',
+              dataIndex: 'notes',
+              key: 'notes',
+              width: 120,
+              render: (notes: string, _record: any, index: number) => (
                 <Form.Item
                   name={['splits', index, 'notes']}
-                  label="备注"
+                  style={{ margin: 0 }}
                 >
-                  <Input placeholder="请输入备注" />
+                  <Input
+                    placeholder="备注"
+                    value={notes}
+                    onChange={(e) => {
+                      const newSplits = [...splits];
+                      newSplits[index] = { ...newSplits[index], notes: e.target.value };
+                      setSplits(newSplits);
+                      form.setFieldsValue({ splits: newSplits });
+                    }}
+                    size="small"
+                  />
                 </Form.Item>
-              </Col>
-            </Row>
-          </Card>
-        ))}
+              ),
+            },
+            {
+              title: '操作',
+              key: 'action',
+              width: 80,
+              render: (_, _record: any, index: number) => (
+                <Button
+                  type="text"
+                  danger
+                  icon={<DeleteOutlined />}
+                  onClick={() => handleRemoveSplit(index)}
+                  disabled={splits.length <= 2}
+                  size="small"
+                />
+              ),
+            },
+          ]}
+          pagination={false}
+          size="small"
+          scroll={{ x: 1000 }}
+        />
 
         <Divider />
         
@@ -465,7 +643,7 @@ const TransactionSplitModal: React.FC<TransactionSplitModalProps> = ({
           <Col span={8}>
             <Text strong>拆分总金额：</Text>
             <Text style={{ color: '#1890ff', fontWeight: 'bold' }}>
-              RM {calculateTotalAmount().toLocaleString('en-MY', { minimumFractionDigits: 2 })}
+              {calculateTotalAmount().toLocaleString('en-MY', { minimumFractionDigits: 2 })}
             </Text>
           </Col>
           <Col span={8}>
@@ -474,7 +652,7 @@ const TransactionSplitModal: React.FC<TransactionSplitModalProps> = ({
               color: getRemainingAmount() === 0 ? '#52c41a' : '#ff4d4f', 
               fontWeight: 'bold' 
             }}>
-              RM {getRemainingAmount().toLocaleString('en-MY', { minimumFractionDigits: 2 })}
+              {getRemainingAmount().toLocaleString('en-MY', { minimumFractionDigits: 2 })}
             </Text>
           </Col>
           <Col span={8}>

@@ -35,12 +35,10 @@ const { RangePicker } = DatePicker;
 
 interface ProjectAccountTrackerProps {
   projectAccountId?: string;
-  fiscalYear?: string;
 }
 
 const ProjectAccountTracker: React.FC<ProjectAccountTrackerProps> = ({
-  projectAccountId,
-  fiscalYear
+  projectAccountId
 }) => {
   const navigate = useNavigate();
   const [selectedAccount, setSelectedAccount] = useState<string>(projectAccountId || '');
@@ -53,7 +51,7 @@ const ProjectAccountTracker: React.FC<ProjectAccountTrackerProps> = ({
 
   useEffect(() => {
     loadAccounts();
-  }, [fiscalYear]);
+  }, []);
 
   useEffect(() => {
     if (selectedAccount) {
@@ -63,9 +61,7 @@ const ProjectAccountTracker: React.FC<ProjectAccountTrackerProps> = ({
 
   const loadAccounts = async () => {
     try {
-      const accountsData = fiscalYear 
-        ? await projectAccountService.getProjectAccountsByFiscalYear(fiscalYear)
-        : await projectAccountService.getProjectAccounts();
+      const accountsData = await projectAccountService.getProjectAccounts();
       setAccounts(accountsData);
       
       // 如果有指定的项目户口ID，自动选择
@@ -216,7 +212,7 @@ const ProjectAccountTracker: React.FC<ProjectAccountTrackerProps> = ({
             >
               {accounts.map(account => (
                 <Option key={account.id} value={account.id}>
-                  {account.name} ({account.fiscalYear})
+                  {account.name}
                 </Option>
               ))}
             </Select>
@@ -253,13 +249,6 @@ const ProjectAccountTracker: React.FC<ProjectAccountTrackerProps> = ({
                   title="项目户口"
                   value={account.name}
                   prefix={<FundOutlined />}
-                />
-              </Col>
-              <Col xs={24} sm={6}>
-                <Statistic
-                  title="财政年度"
-                  value={account.fiscalYear}
-                  prefix={<CalendarOutlined />}
                 />
               </Col>
               <Col xs={24} sm={6}>

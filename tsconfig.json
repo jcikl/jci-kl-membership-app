@@ -29,12 +29,11 @@
       "@/utils/*": ["src/utils/*"],
       "@/types/*": ["src/types/*"],
       "@/hooks/*": ["src/hooks/*"],
-      "@/store/*": ["src/store/*"]
+      "@/store/*": ["src/store/*"],
+      "@/services/*": ["src/services/*"],
+      "@/config/*": ["src/config/*"]
     }
   },
   "include": ["src"],
-  "exclude": [
-    "src/tests/**"
-  ],
   "references": [{ "path": "./tsconfig.node.json" }]
 }

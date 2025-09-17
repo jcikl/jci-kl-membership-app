@@ -9,6 +9,14 @@ export interface Member {
   status: MemberStatus;
   level: MemberLevel;
   accountType?: string; // 用户户口类别（用于权限控制）
+  // 分会相关字段
+  chapterId?: string; // 分会Document ID
+  chapterName?: string; // 分会名称
+  countryName?: string; // 国家分会名称
+  worldRegion?: string; // 世界区域
+  country?: string; // 国家
+  countryRegion?: string; // 国家区域
+  chapter?: string; // 分会
   profile: MemberProfile;
   createdAt: string;
   updatedAt: string;
@@ -167,7 +175,6 @@ export interface MemberProfile {
 
   // JCI职位相关
   jciPosition?: 'president' | 'acting_president' | 'secretary_general' | 'treasurer' | 'advisor_president' | 'vice_president' | 'department_head' | 'official_member' | 'associate_member' | 'honorary_member';
-  vpDivision?: 'personal_dev' | 'business_dev' | 'international_dev' | 'chapter_admin' | 'community_dev';
   positionStartDate?: string;
   positionEndDate?: string;
   isActingPosition?: boolean;
@@ -308,21 +315,83 @@ export interface ChapterSettings {
   id: string;
   chapterName: string;
   establishmentYear: number;
-  fiscalYear: number; // 财政年度
-  fiscalYearStartMonth: number; // 财政年度起始月份 (1-12)
   description?: string;
   address?: string;
   contactEmail?: string;
   contactPhone?: string;
   website?: string;
   logoUrl?: string;
-  // 用户户口类别晋升条件配置
-  promotionRules?: {
-    minAgeForActive?: number; // 达到年龄可晋升（如40用于affiliate示例，可按需）
-    nationalityWhitelist?: string[]; // 国籍名单（如 MY, SG...）
-    requirePaymentVerified?: boolean; // 付款已核验
-    requireSenatorIdForHonorary?: boolean; // 参议员编号作为荣誉会员前置条件
-  };
+  // 区域关联字段
+  worldRegionId?: string;
+  countryId?: string;
+  nationalRegionId?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// 总部设置
+export interface HeadquartersSettings {
+  id: string;
+  name: string;
+  description?: string;
+  address?: string;
+  contactEmail?: string;
+  contactPhone?: string;
+  website?: string;
+  logoUrl?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// 世界区域
+export interface WorldRegion {
+  id: string;
+  name: string;
+  code: string; // 如 "AMEC", "ASPAC", "EUROPE", "AMERICA"
+  description?: string;
+  countries: string[]; // 覆盖的国家ID列表
+  createdAt: string;
+  updatedAt: string;
+}
+
+// 国家
+export interface Country {
+  id: string;
+  name: string;
+  code: string; // 如 "MY", "SG", "CN"
+  worldRegionId?: string; // 所属世界区域ID
+  nationalRegions: string[]; // 覆盖的国家区域ID列表
+  createdAt: string;
+  updatedAt: string;
+}
+
+// 国家区域
+export interface NationalRegion {
+  id: string;
+  name: string;
+  code: string; // 如 "CENTRAL", "SOUTH", "NORTH", "SABAH", "SARAWAK"
+  countryId: string; // 所属国家ID
+  description?: string;
+  chapters: string[]; // 覆盖的分会ID列表
+  createdAt: string;
+  updatedAt: string;
+}
+
+// 地方分会
+export interface LocalChapter {
+  id: string;
+  name: string;
+  code: string; // 如 "KL", "JB", "PG"
+  nationalRegionId: string; // 所属国家区域ID
+  establishmentYear: number;
+  description?: string;
+  address?: string;
+  contactEmail?: string;
+  contactPhone?: string;
+  website?: string;
+  logoUrl?: string;
+  status: 'active' | 'inactive' | 'suspended'; // 分会状态
+  memberCount?: number; // 会员数量
   createdAt: string;
   updatedAt: string;
 }

@@ -236,7 +236,7 @@ const ExpenseSplittingModal: React.FC<ExpenseSplittingModalProps> = ({
                 color: transaction.expense > 0 ? '#ff4d4f' : '#52c41a',
                 fontSize: '16px'
               }}>
-                {transaction.expense > 0 ? '支出' : '收入'}：RM {totalAmount.toLocaleString('en-MY', { 
+                {transaction.expense > 0 ? '支出' : '收入'}：{totalAmount.toLocaleString('en-MY', { 
                   minimumFractionDigits: 2,
                   maximumFractionDigits: 2
                 })}
@@ -267,7 +267,7 @@ const ExpenseSplittingModal: React.FC<ExpenseSplittingModalProps> = ({
               <div style={{ textAlign: 'center' }}>
                 <Text type="secondary">交易金额</Text>
                 <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#1890ff' }}>
-                  RM {totalAmount.toLocaleString('en-MY', { 
+                  {totalAmount.toLocaleString('en-MY', { 
                     minimumFractionDigits: 2,
                     maximumFractionDigits: 2
                   })}
@@ -278,7 +278,7 @@ const ExpenseSplittingModal: React.FC<ExpenseSplittingModalProps> = ({
               <div style={{ textAlign: 'center' }}>
                 <Text type="secondary">已拆分</Text>
                 <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#52c41a' }}>
-                  RM {splitTotal.toLocaleString('en-MY', { 
+                  {splitTotal.toLocaleString('en-MY', { 
                     minimumFractionDigits: 2,
                     maximumFractionDigits: 2
                   })}
@@ -293,7 +293,7 @@ const ExpenseSplittingModal: React.FC<ExpenseSplittingModalProps> = ({
                   fontWeight: 'bold', 
                   color: isBalanced ? '#52c41a' : '#ff4d4f'
                 }}>
-                  RM {remaining.toLocaleString('en-MY', { 
+                  {remaining.toLocaleString('en-MY', { 
                     minimumFractionDigits: 2,
                     maximumFractionDigits: 2
                   })}

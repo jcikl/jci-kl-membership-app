@@ -110,6 +110,16 @@ export const FIELD_GROUPS: FieldGroup[] = [
     ]
   },
   {
+    key: 'jci_location',
+    label: 'JCI 地理位置信息',
+    fields: [
+      'worldRegion',
+      'country',
+      'countryRegion',
+      'chapter'
+    ]
+  },
+  {
     key: 'payment_info',
     label: '付款信息',
     fields: [
@@ -175,10 +185,6 @@ export const FIELD_PERMISSION_RULES: FieldPermissionRule[] = [
   },
   {
     field: 'jciPosition',
-    permission: FieldPermission.ADMIN_ONLY
-  },
-  {
-    field: 'vpDivision',
     permission: FieldPermission.ADMIN_ONLY
   },
   {

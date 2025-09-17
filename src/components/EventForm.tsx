@@ -912,7 +912,7 @@ const EventForm: React.FC<EventFormProps> = ({
              >
                {projectAccounts.map(account => (
                  <Option key={account.id} value={account.id}>
-                   {account.name} ({account.fiscalYear}) - {account.currency} {account.budget.toLocaleString()}
+                   {account.name} - {account.currency} {account.budget.toLocaleString()}
                  </Option>
                ))}
              </Select>

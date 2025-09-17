@@ -31,7 +31,6 @@ import {
   CheckCircleOutlined,
   ClockCircleOutlined,
   SettingOutlined,
-  CalendarOutlined
 } from '@ant-design/icons';
 import { useForm, Controller } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
@@ -48,7 +47,6 @@ import SenatorManagement from '@/components/SenatorManagement';
 import VisitingMembershipManager from '@/components/VisitingMembershipManager';
 import AssociateMembershipManager from '@/components/AssociateMembershipManager';
 import OfficialMembershipManager from '@/components/OfficialMembershipManager';
-import NricToBirthDateConverter from '@/components/NricToBirthDateConverter';
 import FieldSelector, { FieldOption, FieldPreset } from '@/components/FieldSelector';
 import BatchSettingsModal, { BatchSettings } from '@/components/BatchSettingsModal';
 
@@ -63,6 +61,10 @@ const memberFormSchema = yup.object({
   memberId: yup.string().required('请输入会员编号'),
   accountType: yup.string().test('is-valid-account-type', '请选择有效的用户户口类别', (value) => value ? isValidAccountType(value) : false).required('请选择用户户口类别'),
   level: yup.string().required('请选择等级'),
+  chapterId: yup.string().optional(),
+  chapterName: yup.string().optional(),
+  countryName: yup.string().optional(),
+  worldRegion: yup.string().optional(),
 });
 
 type MemberFormData = yup.InferType<typeof memberFormSchema>;
@@ -91,7 +93,6 @@ const MemberListPage: React.FC = () => {
   const [selectedFields, setSelectedFields] = useState<string[]>([]);
   const [isBatchSettingsVisible, setIsBatchSettingsVisible] = useState(false);
   const [selectedMembers, setSelectedMembers] = useState<Member[]>([]);
-  const [isNricConverterVisible, setIsNricConverterVisible] = useState(false);
   
   // 财务数据状态
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -118,6 +119,12 @@ const MemberListPage: React.FC = () => {
     { key: 'accountType', label: '用户户口类别', category: '基本信息' },
     { key: 'level', label: '等级', category: '基本信息' },
     { key: 'joinDate', label: '加入时间', category: '基本信息' },
+    
+    // 分会信息
+    { key: 'chapterId', label: '分会Document ID', category: '分会信息' },
+    { key: 'chapterName', label: '分会名称', category: '分会信息' },
+    { key: 'countryName', label: '国家分会名称', category: '分会信息' },
+    { key: 'worldRegion', label: '世界区域', category: '分会信息' },
     
     // 个人资料
     { key: 'profile.birthDate', label: '出生日期', category: '个人资料' },
@@ -165,7 +172,6 @@ const MemberListPage: React.FC = () => {
     { key: 'profile.jciPosition', label: 'JCI职位', category: '职位信息' },
     { key: 'profile.positionStartDate', label: '职位开始日期', category: '职位信息' },
     { key: 'profile.positionEndDate', label: '职位结束日期', category: '职位信息' },
-    { key: 'profile.vpDivision', label: '副总裁部门', category: '职位信息' },
     { key: 'profile.isActingPosition', label: '代理职位', category: '职位信息' },
     { key: 'profile.actingForPosition', label: '代理职位类型', category: '职位信息' },
     
@@ -185,6 +191,14 @@ const MemberListPage: React.FC = () => {
       name: '基本信息',
       description: '显示会员的基本信息字段',
       fields: ['name', 'email', 'phone', 'memberId', 'accountType', 'level', 'joinDate']
+    },
+    {
+      name: '分会信息',
+      description: '显示分会相关字段',
+      fields: [
+        'name', 'email', 'phone', 'memberId',
+        'chapterId', 'chapterName', 'countryName', 'worldRegion'
+      ]
     },
     {
       name: '完整信息',
@@ -525,6 +539,11 @@ const MemberListPage: React.FC = () => {
           joinDate: new Date().toISOString(),
           status: 'active', // 默认状态
           level: data.level as any,
+          // 分会相关字段
+          chapterId: data.chapterId,
+          chapterName: data.chapterName,
+          countryName: data.countryName,
+          worldRegion: data.worldRegion,
           profile: {
             // 基本档案信息
           }
@@ -584,6 +603,31 @@ const MemberListPage: React.FC = () => {
         return config ? <Tag color={config.color}>{config.text}</Tag> : (value as string);
       case 'joinDate':
         return value ? new Date(value as string).toLocaleDateString() : '-';
+      case 'chapterId':
+        return (
+          <Space>
+            <Tag color="blue">{value as string || '-'}</Tag>
+          </Space>
+        );
+      case 'chapterName':
+        return (
+          <Space>
+            <TeamOutlined />
+            <span>{value as string || '-'}</span>
+          </Space>
+        );
+      case 'countryName':
+        return (
+          <Space>
+            <Tag color="green">{value as string || '-'}</Tag>
+          </Space>
+        );
+      case 'worldRegion':
+        return (
+          <Space>
+            <Tag color="purple">{value as string || '-'}</Tag>
+          </Space>
+        );
       case 'profile.birthDate':
       case 'profile.paymentDate':
       case 'profile.endorsementDate':
@@ -640,6 +684,10 @@ const MemberListPage: React.FC = () => {
                fieldKey === 'email' ? 200 : 
                fieldKey === 'phone' ? 120 : 
                fieldKey === 'memberId' ? 120 : 
+               fieldKey === 'chapterId' ? 150 : 
+               fieldKey === 'chapterName' ? 150 : 
+               fieldKey === 'countryName' ? 120 : 
+               fieldKey === 'worldRegion' ? 120 : 
                fieldKey === 'profile.company' ? 150 : 
                fieldKey === 'profile.departmentAndPosition' ? 150 : 
                fieldKey === 'profile.address' ? 200 : 
@@ -770,17 +818,6 @@ const MemberListPage: React.FC = () => {
                   }}
                 >
                   批量导入
-                </Button>
-                <Button 
-                  icon={<CalendarOutlined />}
-                  onClick={() => setIsNricConverterVisible(true)}
-                  style={{ 
-                    background: 'rgba(255,255,255,0.2)', 
-                    border: '1px solid rgba(255,255,255,0.3)',
-                    color: 'white'
-                  }}
-                >
-                  NRIC转生日
                 </Button>
                 <Button 
                   type="primary" 
@@ -1250,6 +1287,64 @@ const MemberListPage: React.FC = () => {
             </Col>
           </Row>
 
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item
+                label="分会Document ID"
+                validateStatus={errors.chapterId ? 'error' : ''}
+                help={errors.chapterId?.message}
+              >
+                <Controller
+                  name="chapterId"
+                  control={control}
+                  render={({ field }) => <Input {...field} placeholder="请输入分会Document ID" />}
+                />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item
+                label="分会名称"
+                validateStatus={errors.chapterName ? 'error' : ''}
+                help={errors.chapterName?.message}
+              >
+                <Controller
+                  name="chapterName"
+                  control={control}
+                  render={({ field }) => <Input {...field} placeholder="请输入分会名称" />}
+                />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item
+                label="国家分会名称"
+                validateStatus={errors.countryName ? 'error' : ''}
+                help={errors.countryName?.message}
+              >
+                <Controller
+                  name="countryName"
+                  control={control}
+                  render={({ field }) => <Input {...field} placeholder="请输入国家分会名称" />}
+                />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item
+                label="世界区域"
+                validateStatus={errors.worldRegion ? 'error' : ''}
+                help={errors.worldRegion?.message}
+              >
+                <Controller
+                  name="worldRegion"
+                  control={control}
+                  render={({ field }) => <Input {...field} placeholder="请输入世界区域" />}
+                />
+              </Form.Item>
+            </Col>
+          </Row>
+
           <Form.Item style={{ marginBottom: 0, textAlign: 'right' }}>
             <Space>
               <Button onClick={() => setIsModalVisible(false)}>
@@ -1271,19 +1366,6 @@ const MemberListPage: React.FC = () => {
         onImport={handleBatchImportSubmit}
       />
 
-      {/* NRIC转生日工具 */}
-      {isNricConverterVisible && (
-        <Modal
-          title="NRIC/Passport 转生日日期工具"
-          open={isNricConverterVisible}
-          onCancel={() => setIsNricConverterVisible(false)}
-          width={900}
-          footer={null}
-          destroyOnHidden
-        >
-          <NricToBirthDateConverter onClose={() => setIsNricConverterVisible(false)} />
-        </Modal>
-      )}
 
       {/* 字段选择器 */}
       <FieldSelector

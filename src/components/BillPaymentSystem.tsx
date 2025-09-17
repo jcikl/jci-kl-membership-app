@@ -45,7 +45,6 @@ import {
   UploadOutlined,
   DownloadOutlined,
 } from '@ant-design/icons';
-import { useFiscalYear } from '@/contexts/FiscalYearContext';
 import { BillPaymentRequest, BillPaymentStatus, BillDetail, BankAccount } from '@/types/finance';
 import { useAuthStore } from '@/store/authStore';
 import { DateFilter } from '@/hooks/useFinanceDateFilter';
@@ -79,7 +78,6 @@ const BillPaymentSystem: React.FC<BillPaymentSystemProps> = ({
   bankAccounts,
   loading = false,
 }) => {
-  const { fiscalYear } = useFiscalYear();
   const { user } = useAuthStore();
   const permissions = useBillPaymentPermissions();
   const [isModalVisible, setIsModalVisible] = useState(false);
@@ -134,7 +132,7 @@ const BillPaymentSystem: React.FC<BillPaymentSystemProps> = ({
       form.resetFields();
       form.setFieldsValue({
         submitDate: dayjs(),
-        projectYear: fiscalYear,
+        projectYear: new Date().getFullYear(),
         currency: 'MYR',
       });
     }, 0);
@@ -245,7 +243,6 @@ const BillPaymentSystem: React.FC<BillPaymentSystemProps> = ({
         paymentAccountName: bankAccounts.find(acc => acc.id === values.paymentAccountId)?.accountName || '',
         billDetails: billDetails,
         status: 'pending' as BillPaymentStatus,
-        auditYear: fiscalYear,
       };
 
       if (editingRequest) {
@@ -431,15 +428,6 @@ const BillPaymentSystem: React.FC<BillPaymentSystemProps> = ({
           <CalendarOutlined />
           <Text>{dayjs(date).format('DD-MMM-YYYY')}</Text>
         </Space>
-      ),
-    },
-    {
-      title: '项目财政年度',
-      dataIndex: 'projectYear',
-      key: 'projectYear',
-      width: 100,
-      render: (year: number) => (
-        <Text>{year}</Text>
       ),
     },
     {
@@ -732,7 +720,6 @@ const BillPaymentSystem: React.FC<BillPaymentSystemProps> = ({
               <Title level={4} style={{ margin: 0 }}>
                 <FileTextOutlined /> 账单付款申请系统
               </Title>
-              <Text type="secondary">财政年度：{fiscalYear}</Text>
             </Col>
             <Col>
               {permissions.canCreate && (
@@ -810,24 +797,6 @@ const BillPaymentSystem: React.FC<BillPaymentSystemProps> = ({
                   style={{ width: '100%' }}
                   format="YYYY-MM-DD"
                   placeholder="请选择提交日期"
-                />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
-                name="projectYear"
-                label="付款项目财政年度"
-                rules={[
-                  { required: true, message: '请输入付款项目财政年度' },
-                  { type: 'number', min: 2020, max: 2030, message: '财政年度必须在2020-2030之间' }
-                ]}
-              >
-                <InputNumber
-                  placeholder="请输入付款项目财政年度"
-                  style={{ width: '100%' }}
-                  min={2020}
-                  max={2030}
-                  precision={0}
                 />
               </Form.Item>
             </Col>
@@ -943,7 +912,7 @@ const BillPaymentSystem: React.FC<BillPaymentSystemProps> = ({
                 添加账单明细
               </Button>
               <Text type="secondary">
-                明细总额：RM {calculateTotalAmount().toLocaleString('en-MY', { 
+                明细总额：{calculateTotalAmount().toLocaleString('en-MY', { 
                   minimumFractionDigits: 2,
                   maximumFractionDigits: 2
                 })}
@@ -1117,7 +1086,7 @@ const BillPaymentSystem: React.FC<BillPaymentSystemProps> = ({
                     align: 'right' as const,
                     render: (amount: number) => (
                       <Text strong>
-                        RM {amount.toLocaleString('en-MY', { 
+                        {amount.toLocaleString('en-MY', { 
                           minimumFractionDigits: 2,
                           maximumFractionDigits: 2
                         })}

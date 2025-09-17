@@ -7,7 +7,6 @@ export interface BankAccount {
   accountType: BankAccountType; // 户口类型
   initialAmount: number; // 初始金额
   currentBalance: number; // 当前余额
-  auditYear: number; // 财政年度
   bankName?: string; // 银行名称
   accountNumber?: string; // 账号
   description?: string; // 描述
@@ -32,6 +31,7 @@ export interface MembershipFeeData {
 // 交易记录类型
 export interface Transaction {
   id: string;
+  transactionNumber: string; // 交易记录序号 (TXN-YYYY-XXXX-XXXX)
   bankAccountId: string; // 关联银行户口
   transactionDate: string; // 交易日期
   mainDescription: string; // 主描述（必填）
@@ -47,8 +47,12 @@ export interface Transaction {
   paymentDescription?: string; // 付款描述
   notes?: string; // 备注
   attachments?: string[]; // 附件URL
-  auditYear: number; // 财政年度
   membershipFeeData?: MembershipFeeData; // 会员费匹配数据
+  // 地理和组织信息
+  worldRegion?: string; // 世界区域
+  country?: string; // 国家
+  countryRegion?: string; // 国家区域
+  chapter?: string; // 分会
   createdAt: string;
   updatedAt: string;
   
@@ -95,8 +99,12 @@ export interface ExpenseSplit {
 export interface TransactionSplit {
   id: string;
   transactionId: string; // 关联主交易记录
+  transactionNumber: string; // 拆分记录序号（格式：主交易记录序号-01）
   splitIndex: number; // 拆分序号
   amount: number; // 拆分金额
+  transactionDate: string; // 交易日期（从主交易记录复制）
+  mainDescription: string; // 主描述（从主交易记录复制）
+  subDescription?: string; // 副描述（从主交易记录复制）
   transactionPurpose?: string; // 交易用途ID
   projectAccount?: string; // 项目户口
   payerPayee?: string; // 付款人/收款人（从主交易记录复制）
@@ -110,6 +118,43 @@ export interface TransactionSplit {
   status?: string; // 兼容 status
   payerName?: string; // 兼容 payerName
   payeeName?: string; // 兼容 payeeName
+}
+
+// JCI预算分类类型
+export type BudgetMainCategory = 'income' | 'expense';
+export type BudgetSubCategory = 
+  // 收入子分类
+  | 'membership_subscription' | 'external_funding' | 'project_surplus' | 'project_floating_funds' | 'other_income'
+  // 支出子分类  
+  | 'administrative_management' | 'projects' | 'convention_reception' | 'merchandise' | 'pre_purchase_tickets';
+
+// 预算项目类型
+export interface BudgetItem {
+  id: string;
+  itemName: string; // 具体项目名称
+  itemCode: string; // 项目代码 (如 A.1, B.1, C.1 等)
+  amount: number; // 项目金额
+  note?: string; // 备注说明
+  parentSubCategory: BudgetSubCategory; // 所属子分类
+}
+
+// 预算子分类类型
+export interface BudgetSubCategoryData {
+  id: string;
+  subCategoryName: string; // 子分类名称
+  subCategoryCode: string; // 子分类代码 (如 A, B, C, D, E)
+  totalAmount: number; // 子分类总金额
+  items: BudgetItem[]; // 具体项目列表
+  parentMainCategory: BudgetMainCategory; // 所属主分类
+}
+
+// 预算主分类类型
+export interface BudgetMainCategoryData {
+  id: string;
+  mainCategoryName: string; // 主分类名称 (收入/支出)
+  mainCategoryCode: string; // 主分类代码 (I/II)
+  totalAmount: number; // 主分类总金额
+  subCategories: BudgetSubCategoryData[]; // 子分类列表
 }
 
 // 预算类型
@@ -126,9 +171,14 @@ export interface Budget {
   createdBy: string; // 创建者
   createdAt: string;
   updatedAt: string;
+  // 新增的层次结构字段
+  mainCategory?: BudgetMainCategory; // 主分类
+  subCategory?: BudgetSubCategory; // 子分类
+  itemCode?: string; // 项目代码
+  note?: string; // 备注
 }
 
-export type BudgetStatus = 'draft' | 'approved' | 'active' | 'completed' | 'cancelled';
+export type BudgetStatus = 'draft' | 'approved' | 'active' | 'completed' | 'cancelled' | 'revoked';
 
 // 预算分配类型
 export interface BudgetAllocation {
@@ -164,7 +214,6 @@ export interface BillPaymentRequest {
   approvedBy?: string; // 审批人
   approvedAt?: string; // 审批时间
   paidAt?: string; // 支付时间
-  auditYear: number; // 财政年度
   approvalHistory?: ApprovalHistory[]; // 审批历史记录
   createdAt: string;
   updatedAt: string;
@@ -211,7 +260,6 @@ export interface FinancialReport {
   reportType: FinancialReportType; // 报告类型
   reportName: string; // 报告名称
   reportPeriod: string; // 报告期间
-  auditYear: number; // 财政年度
   generatedBy: string; // 生成者
   generatedAt: string; // 生成时间
   data: FinancialReportData; // 报告数据
@@ -239,7 +287,6 @@ export type ReportStatus = 'generating' | 'completed' | 'failed';
 export interface FinancialReportData {
   reportType?: FinancialReportType; // 报告类型
   period?: { 
-    fiscalYear: number;
     startDate?: string;
     endDate?: string;
   }; // 报告期间
@@ -462,7 +509,6 @@ export interface FinancialImportData {
   inputBy?: string; // 输入人
   paymentDescription?: string; // 付款描述
   bankAccountId: string; // 银行户口ID
-  auditYear: number; // 财政年度
 }
 
 // 财务权限类型

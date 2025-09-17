@@ -34,7 +34,6 @@ import {
   ReloadOutlined,
   LineChartOutlined,
 } from '@ant-design/icons';
-import { useFiscalYear } from '@/contexts/FiscalYearContext';
 import { 
   FinancialReport, 
   FinancialReportType,
@@ -49,7 +48,7 @@ const { Option } = Select;
 const { RangePicker } = DatePicker;
 
 interface FinancialReportsProps {
-  onGenerateReport: (reportType: FinancialReportType, startDate: string, endDate: string, auditYear: number) => Promise<FinancialReport>;
+  onGenerateReport: (reportType: FinancialReportType, startDate: string, endDate: string) => Promise<FinancialReport>;
   onExportReport: (reportId: string, format: 'pdf' | 'excel') => Promise<void>;
   onRefreshReports?: () => void; // 新增：刷新报告列表的回调
   reports: FinancialReport[];
@@ -67,7 +66,6 @@ const FinancialReports: React.FC<FinancialReportsProps> = ({
   budgets,
   loading = false,
 }) => {
-  const { fiscalYear } = useFiscalYear();
   const [selectedReportType, setSelectedReportType] = useState<FinancialReportType>('statement_of_financial_position');
   const [dateRange, setDateRange] = useState<[dayjs.Dayjs, dayjs.Dayjs]>([
     dayjs().startOf('year'),
@@ -81,7 +79,6 @@ const FinancialReports: React.FC<FinancialReportsProps> = ({
   const [searchText, setSearchText] = useState('');
   const [filterReportType, setFilterReportType] = useState<FinancialReportType | 'all'>('all');
   const [filterStatus, setFilterStatus] = useState<string | 'all'>('all');
-  const [filterAuditYear, setFilterAuditYear] = useState<number | 'all'>('all');
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
   const [sortField, setSortField] = useState<string>('generatedAt');
   const [sortOrder, setSortOrder] = useState<'ascend' | 'descend'>('descend');
@@ -124,8 +121,7 @@ const FinancialReports: React.FC<FinancialReportsProps> = ({
       await onGenerateReport(
         selectedReportType,
         dateRange[0].format('YYYY-MM-DD'),
-        dateRange[1].format('YYYY-MM-DD'),
-        fiscalYear
+        dateRange[1].format('YYYY-MM-DD')
       );
       message.success('报告生成成功');
     } catch (error) {
@@ -196,10 +192,6 @@ const FinancialReports: React.FC<FinancialReportsProps> = ({
       filtered = filtered.filter(report => report.status === filterStatus);
     }
 
-    // 按财政年度筛选
-    if (filterAuditYear !== 'all') {
-      filtered = filtered.filter(report => report.auditYear === filterAuditYear);
-    }
 
     // 排序
     filtered.sort((a, b) => {
@@ -218,10 +210,6 @@ const FinancialReports: React.FC<FinancialReportsProps> = ({
           aValue = a.reportName;
           bValue = b.reportName;
           break;
-        case 'auditYear':
-          aValue = a.auditYear;
-          bValue = b.auditYear;
-          break;
         default:
           aValue = a.generatedAt;
           bValue = b.generatedAt;
@@ -235,13 +223,8 @@ const FinancialReports: React.FC<FinancialReportsProps> = ({
     });
 
     return filtered;
-  }, [reports, searchText, filterReportType, filterStatus, filterAuditYear, sortField, sortOrder]);
+  }, [reports, searchText, filterReportType, filterStatus, sortField, sortOrder]);
 
-  // 获取可用的财政年度列表
-  const availableAuditYears = useMemo(() => {
-    const years = [...new Set(reports.map(report => report.auditYear))].sort((a, b) => b - a);
-    return years;
-  }, [reports]);
 
   // 批量操作处理
   const handleBatchExport = async (format: 'pdf' | 'excel') => {
@@ -391,16 +374,6 @@ const FinancialReports: React.FC<FinancialReportsProps> = ({
           <CalendarOutlined />
           <Text>{period}</Text>
         </Space>
-      ),
-    },
-    {
-      title: '财政年度',
-      dataIndex: 'auditYear',
-      key: 'auditYear',
-      width: 100,
-      sorter: true,
-      render: (year: number) => (
-        <Text>{year}</Text>
       ),
     },
     {
@@ -557,14 +530,6 @@ const FinancialReports: React.FC<FinancialReportsProps> = ({
                   style={{ width: '100%' }}
                 />
               </Col>
-              <Col span={8}>
-                <div style={{ marginBottom: 8 }}>
-                  <Text strong>财政年度：</Text>
-                </div>
-                <div style={{ paddingTop: '32px' }}>
-                  <Text>{fiscalYear}</Text>
-                </div>
-              </Col>
             </Row>
             <Button
               type="primary"
@@ -662,22 +627,6 @@ const FinancialReports: React.FC<FinancialReportsProps> = ({
                   <Option value="failed">失败</Option>
                 </Select>
               </Col>
-              <Col span={4}>
-                <Select
-                  placeholder="财政年度"
-                  value={filterAuditYear}
-                  onChange={setFilterAuditYear}
-                  style={{ width: '100%' }}
-                  allowClear
-                >
-                  <Option value="all">全部年度</Option>
-                  {availableAuditYears.map(year => (
-                    <Option key={year} value={year}>
-                      {year}
-                    </Option>
-                  ))}
-                </Select>
-              </Col>
               <Col span={6}>
                 <Space>
                   <Button
@@ -746,7 +695,7 @@ const FinancialReports: React.FC<FinancialReportsProps> = ({
                             <div>
                               <Text type="secondary">总收入：</Text>
                               <Text strong style={{ color: '#52c41a' }}>
-                                RM {(record.data.totalIncome || 0).toLocaleString('en-MY', { 
+                                {(record.data.totalIncome || 0).toLocaleString('en-MY', { 
                                   minimumFractionDigits: 2,
                                   maximumFractionDigits: 2
                                 })}
@@ -755,7 +704,7 @@ const FinancialReports: React.FC<FinancialReportsProps> = ({
                             <div>
                               <Text type="secondary">总支出：</Text>
                               <Text strong style={{ color: '#ff4d4f' }}>
-                                RM {(record.data.totalExpense || 0).toLocaleString('en-MY', { 
+                                {(record.data.totalExpense || 0).toLocaleString('en-MY', { 
                                   minimumFractionDigits: 2,
                                   maximumFractionDigits: 2
                                 })}
@@ -766,7 +715,7 @@ const FinancialReports: React.FC<FinancialReportsProps> = ({
                               <Text strong style={{ 
                                 color: (record.data.netIncome || 0) >= 0 ? '#52c41a' : '#ff4d4f' 
                               }}>
-                                RM {(record.data.netIncome || 0).toLocaleString('en-MY', { 
+                                {(record.data.netIncome || 0).toLocaleString('en-MY', { 
                                   minimumFractionDigits: 2,
                                   maximumFractionDigits: 2
                                 })}
@@ -785,7 +734,7 @@ const FinancialReports: React.FC<FinancialReportsProps> = ({
                                   <Text strong style={{ 
                                     color: (balance.balance || 0) >= 0 ? '#52c41a' : '#ff4d4f' 
                                   }}>
-                                    RM {(balance.balance || 0).toLocaleString('en-MY', { 
+                                    {(balance.balance || 0).toLocaleString('en-MY', { 
                                       minimumFractionDigits: 2,
                                       maximumFractionDigits: 2
                                     })}
@@ -1093,7 +1042,6 @@ const FinancialReports: React.FC<FinancialReportsProps> = ({
               <Descriptions.Item label="报告名称">{viewingReport.reportName}</Descriptions.Item>
               <Descriptions.Item label="报告类型">{getReportTypeLabel(viewingReport.reportType)}</Descriptions.Item>
               <Descriptions.Item label="报告期间">{viewingReport.reportPeriod}</Descriptions.Item>
-              <Descriptions.Item label="财政年度">{viewingReport.auditYear}</Descriptions.Item>
               <Descriptions.Item label="生成时间">{dayjs(viewingReport.generatedAt).format('YYYY-MM-DD HH:mm:ss')}</Descriptions.Item>
               <Descriptions.Item label="状态">
                 <Tag color={getReportStatusColor(viewingReport.status)}>
@@ -1157,7 +1105,7 @@ const FinancialReports: React.FC<FinancialReportsProps> = ({
                         align: 'right' as const,
                         render: (amount: number) => (
                           <Text strong style={{ color: amount >= 0 ? '#52c41a' : '#ff4d4f' }}>
-                            RM {amount.toLocaleString('en-MY', { 
+                            {amount.toLocaleString('en-MY', { 
                               minimumFractionDigits: 2,
                               maximumFractionDigits: 2
                             })}
@@ -1190,7 +1138,7 @@ const FinancialReports: React.FC<FinancialReportsProps> = ({
                           key: 'budgetedAmount',
                           align: 'right' as const,
                           render: (amount: number) => (
-                            <Text>RM {amount.toLocaleString('en-MY', { 
+                            <Text>{amount.toLocaleString('en-MY', { 
                               minimumFractionDigits: 2,
                               maximumFractionDigits: 2
                             })}</Text>
@@ -1202,7 +1150,7 @@ const FinancialReports: React.FC<FinancialReportsProps> = ({
                           key: 'actualAmount',
                           align: 'right' as const,
                           render: (amount: number) => (
-                            <Text>RM {amount.toLocaleString('en-MY', { 
+                            <Text>{amount.toLocaleString('en-MY', { 
                               minimumFractionDigits: 2,
                               maximumFractionDigits: 2
                             })}</Text>
@@ -1215,7 +1163,7 @@ const FinancialReports: React.FC<FinancialReportsProps> = ({
                           align: 'right' as const,
                           render: (amount: number) => (
                             <Text style={{ color: amount >= 0 ? '#52c41a' : '#ff4d4f' }}>
-                              RM {amount.toLocaleString('en-MY', { 
+                              {amount.toLocaleString('en-MY', { 
                                 minimumFractionDigits: 2,
                                 maximumFractionDigits: 2
                               })}

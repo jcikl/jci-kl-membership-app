@@ -6,7 +6,6 @@ import { onAuthStateChanged } from '@/services/authService';
 import { getMemberByEmail } from '@/services/memberService';
 import { User } from 'firebase/auth';
 import { initChapterSettings } from '@/scripts/initChapterSettings';
-import { FiscalYearProvider } from '@/contexts/FiscalYearContext';
 import { SidebarProvider, useSidebar } from '@/contexts/SidebarContext';
 
 // 页面组件
@@ -29,6 +28,7 @@ import EventDetailPage from '@/pages/EventDetailPage';
 import EventRegistrationPage from '@/pages/EventRegistrationPage';
 import EventRegistrationSuccessPage from '@/pages/EventRegistrationSuccessPage';
 import AwardsManagementWrapper from '@/components/AwardsManagementWrapper';
+import PDFInterpretationPage from '@/pages/PDFInterpretationPage';
 
 // 布局组件
 import AppHeader from '@/components/AppHeader';
@@ -78,7 +78,8 @@ const MainContent: React.FC = () => {
         <Route path="/awards/e-awards" element={<AwardsManagementWrapper />} />
         <Route path="/awards/tracker" element={<AwardsManagementWrapper />} />
         <Route path="/awards/competitors" element={<AwardsManagementWrapper />} />
-              <Route path="/system-settings" element={<SystemSettingsPage />} />
+        <Route path="/pdf-interpretation" element={<PDFInterpretationPage />} />
+        <Route path="/system-settings" element={<SystemSettingsPage />} />
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>
     </Content>
@@ -130,17 +131,15 @@ const App: React.FC = () => {
   }
 
   return (
-    <FiscalYearProvider>
-      <SidebarProvider>
-        <Layout style={{ minHeight: '100vh' }}>
-          <AppSider />
-          <Layout>
-            <AppHeader />
-            <MainContent />
-          </Layout>
+    <SidebarProvider>
+      <Layout style={{ minHeight: '100vh' }}>
+        <AppSider />
+        <Layout>
+          <AppHeader />
+          <MainContent />
         </Layout>
-      </SidebarProvider>
-    </FiscalYearProvider>
+      </Layout>
+    </SidebarProvider>
   );
 };
 

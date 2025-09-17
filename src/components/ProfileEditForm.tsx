@@ -25,6 +25,10 @@ import { useIsAdmin } from '@/hooks/usePermissions';
 import { uploadFileAndGetUrl } from '@/services/firebase';
 import { positionService } from '@/services/positionService';
 import { getAccountTypeFormOptions } from '@/utils/accountType';
+import { getWorldRegions } from '@/services/worldRegionService';
+import { getCountries, getCountriesByWorldRegion } from '@/services/countryService';
+import { getNationalRegions, getNationalRegionsByCountry } from '@/services/nationalRegionService';
+import { getLocalChapters, getLocalChaptersByNationalRegion } from '@/services/localChapterService';
 import MembershipFeeViewer from '@/components/MembershipFeeViewer';
 import SenatorScoreManager from '@/components/SenatorScoreManager';
 import ActivityParticipationManager from '@/components/ActivityParticipationManager';
@@ -52,6 +56,13 @@ const ProfileEditForm: React.FC<ProfileEditFormProps> = ({ member, onSubmit, onC
   const [positionHistory, setPositionHistory] = React.useState<any[]>([]);
   const [loadingPositions, setLoadingPositions] = React.useState(false);
   const { isAdmin } = useIsAdmin();
+  
+  // JCI 地理位置相关状态
+  const [worldRegions, setWorldRegions] = React.useState<any[]>([]);
+  const [countries, setCountries] = React.useState<any[]>([]);
+  const [nationalRegions, setNationalRegions] = React.useState<any[]>([]);
+  const [chapters, setChapters] = React.useState<any[]>([]);
+  const [loadingRegions, setLoadingRegions] = React.useState(false);
   
   // 获取用户角色
   const getUserRole = (): UserRole => {
@@ -106,6 +117,11 @@ const ProfileEditForm: React.FC<ProfileEditFormProps> = ({ member, onSubmit, onC
       status: member?.status || undefined,
       level: member?.level || undefined,
       accountType: member?.accountType || 'member',
+      // JCI 地理位置信息
+      worldRegion: member?.worldRegion || undefined,
+      country: member?.country || 'JCI Malaysia',
+      countryRegion: member?.countryRegion || undefined,
+      chapter: member?.chapter || 'JCI Kuala Lumpur',
       // 任期管理字段已移除
       // 特殊权限字段已移除
     }), [member]),
@@ -114,6 +130,90 @@ const ProfileEditForm: React.FC<ProfileEditFormProps> = ({ member, onSubmit, onC
   React.useEffect(() => {
     reset();
   }, [member, reset]);
+
+  // 加载 JCI 地理位置数据
+  React.useEffect(() => {
+    let mounted = true;
+    const loadRegionData = async () => {
+      setLoadingRegions(true);
+      try {
+        const [worldRegionsData, countriesData] = await Promise.all([
+          getWorldRegions(),
+          getCountries()
+        ]);
+        
+        if (!mounted) return;
+        
+        setWorldRegions(worldRegionsData);
+        setCountries(countriesData);
+        
+        // 如果有选中的国家，加载对应的国家区域
+        const selectedCountry = countriesData.find(c => c.name === 'JCI Malaysia');
+        console.log('查找的国家:', selectedCountry);
+        if (selectedCountry) {
+          try {
+            const nationalRegionsData = await getNationalRegionsByCountry(selectedCountry.id);
+            console.log('获取到的国家区域数据:', nationalRegionsData);
+            if (!mounted) return;
+            setNationalRegions(nationalRegionsData);
+            
+            // 如果有选中的国家区域，加载对应的分会
+            const selectedRegion = nationalRegionsData.find(r => r.name === 'JCI Malaysia Area Central');
+            console.log('查找的中央区域:', selectedRegion);
+            if (selectedRegion) {
+              try {
+                const chaptersData = await getLocalChaptersByNationalRegion(selectedRegion.id);
+                console.log('获取到的分会数据:', chaptersData);
+                if (!mounted) return;
+                setChapters(chaptersData);
+              } catch (chapterError) {
+                console.error('加载分会数据失败:', chapterError);
+                // 如果分会数据加载失败，尝试加载所有分会
+                try {
+                  const allChapters = await getLocalChapters();
+                  if (!mounted) return;
+                  setChapters(allChapters);
+                } catch (allChaptersError) {
+                  console.error('加载所有分会数据也失败:', allChaptersError);
+                }
+              }
+            }
+          } catch (regionError) {
+            console.error('加载国家区域数据失败:', regionError);
+            // 如果国家区域数据加载失败，尝试加载所有国家区域
+            try {
+              const allRegions = await getNationalRegions();
+              if (!mounted) return;
+              setNationalRegions(allRegions);
+            } catch (allRegionsError) {
+              console.error('加载所有国家区域数据也失败:', allRegionsError);
+            }
+          }
+        } else {
+          console.log('未找到JCI Malaysia国家，可用国家:', countriesData.map(c => c.name));
+          // 如果没有找到马来西亚，尝试加载所有国家区域和分会
+          try {
+            const allRegions = await getNationalRegions();
+            if (!mounted) return;
+            setNationalRegions(allRegions);
+            
+            const allChapters = await getLocalChapters();
+            if (!mounted) return;
+            setChapters(allChapters);
+          } catch (error) {
+            console.error('加载所有区域和分会数据失败:', error);
+          }
+        }
+      } catch (error) {
+        console.error('加载地理位置数据失败:', error);
+      } finally {
+        if (mounted) setLoadingRegions(false);
+      }
+    };
+    
+    loadRegionData();
+    return () => { mounted = false; };
+  }, []);
 
   // 加载职位历史（从职位管理记录获取）
   React.useEffect(() => {
@@ -973,6 +1073,149 @@ const ProfileEditForm: React.FC<ProfileEditFormProps> = ({ member, onSubmit, onC
             </Col>
           );
         
+        // ========== JCI 地理位置信息 ==========
+        case 'worldRegion':
+          return (
+            <Col span={12}>
+              <FieldPermissionController field={field} userRole={userRole} memberData={member}>
+                <Form.Item label="世界区域">
+                  <Controller
+                    name="worldRegion"
+                    control={control}
+                    render={({ field }) => (
+                      <Select 
+                        {...field} 
+                        options={worldRegions.map(region => ({ 
+                          value: region.name, 
+                          label: region.name 
+                        }))} 
+                        allowClear 
+                        placeholder="请选择世界区域"
+                        loading={loadingRegions}
+                        onChange={(value) => {
+                          field.onChange(value);
+                          // 当世界区域改变时，重新加载国家列表
+                          if (value) {
+                            const selectedRegion = worldRegions.find(r => r.name === value);
+                            if (selectedRegion) {
+                              getCountriesByWorldRegion(selectedRegion.id).then(countriesData => {
+                                setCountries(countriesData);
+                                // 清空下级选择
+                                setNationalRegions([]);
+                                setChapters([]);
+                              });
+                            }
+                          }
+                        }}
+                      />
+                    )}
+                  />
+                </Form.Item>
+              </FieldPermissionController>
+            </Col>
+          );
+        case 'country':
+          return (
+            <Col span={12}>
+              <FieldPermissionController field={field} userRole={userRole} memberData={member}>
+                <Form.Item label="国家" required>
+                  <Controller
+                    name="country"
+                    control={control}
+                    render={({ field }) => (
+                      <Select 
+                        {...field} 
+                        options={countries.map(country => ({ 
+                          value: country.name, 
+                          label: country.name 
+                        }))} 
+                        allowClear 
+                        placeholder="请选择国家"
+                        loading={loadingRegions}
+                        onChange={(value) => {
+                          field.onChange(value);
+                          // 当国家改变时，重新加载国家区域列表
+                          if (value) {
+                            const selectedCountry = countries.find(c => c.name === value);
+                            if (selectedCountry) {
+                              getNationalRegionsByCountry(selectedCountry.id).then(regionsData => {
+                                setNationalRegions(regionsData);
+                                // 清空下级选择
+                                setChapters([]);
+                              });
+                            }
+                          }
+                        }}
+                      />
+                    )}
+                  />
+                </Form.Item>
+              </FieldPermissionController>
+            </Col>
+          );
+        case 'countryRegion':
+          return (
+            <Col span={12}>
+              <FieldPermissionController field={field} userRole={userRole} memberData={member}>
+                <Form.Item label="国家区域">
+                  <Controller
+                    name="countryRegion"
+                    control={control}
+                    render={({ field }) => (
+                      <Select 
+                        {...field} 
+                        options={nationalRegions.map(region => ({ 
+                          value: region.name, 
+                          label: region.name 
+                        }))} 
+                        allowClear 
+                        placeholder="请选择国家区域"
+                        loading={loadingRegions}
+                        onChange={(value) => {
+                          field.onChange(value);
+                          // 当国家区域改变时，重新加载分会列表
+                          if (value) {
+                            const selectedRegion = nationalRegions.find(r => r.name === value);
+                            if (selectedRegion) {
+                              getLocalChaptersByNationalRegion(selectedRegion.id).then(chaptersData => {
+                                setChapters(chaptersData);
+                              });
+                            }
+                          }
+                        }}
+                      />
+                    )}
+                  />
+                </Form.Item>
+              </FieldPermissionController>
+            </Col>
+          );
+        case 'chapter':
+          return (
+            <Col span={12}>
+              <FieldPermissionController field={field} userRole={userRole} memberData={member}>
+                <Form.Item label="分会" required>
+                  <Controller
+                    name="chapter"
+                    control={control}
+                    render={({ field }) => (
+                      <Select 
+                        {...field} 
+                        options={chapters.map(chapter => ({ 
+                          value: chapter.name, 
+                          label: chapter.name 
+                        }))} 
+                        allowClear 
+                        placeholder="请选择分会"
+                        loading={loadingRegions}
+                      />
+                    )}
+                  />
+                </Form.Item>
+              </FieldPermissionController>
+            </Col>
+          );
+        
         default:
           return null;
       }
@@ -1001,6 +1244,11 @@ const ProfileEditForm: React.FC<ProfileEditFormProps> = ({ member, onSubmit, onC
         status: cleanValue(values.status),
         level: cleanValue(values.level),
         accountType: cleanValue(values.accountType),
+        // JCI 地理位置信息
+        worldRegion: cleanValue(values.worldRegion),
+        country: cleanValue(values.country),
+        countryRegion: cleanValue(values.countryRegion),
+        chapter: cleanValue(values.chapter),
         profile: {
           ...member.profile,
           fullNameNric: cleanValue(values.fullNameNric),
@@ -1086,6 +1334,7 @@ const ProfileEditForm: React.FC<ProfileEditFormProps> = ({ member, onSubmit, onC
             children: (
               <div style={{ maxHeight: '60vh', overflowY: 'auto', padding: '0 8px' }}>
                 {renderFieldGroup('jci_membership')}
+                {renderFieldGroup('jci_location')}
                 {renderFieldGroup('payment_info')}
                 {renderFieldGroup('clothing_info')}
               </div>
@@ -1120,7 +1369,6 @@ const ProfileEditForm: React.FC<ProfileEditFormProps> = ({ member, onSubmit, onC
                               <tr>
                                 <th style={{ textAlign: 'left', padding: '6px 8px', borderBottom: '1px solid #f0f0f0' }}>年份</th>
                                 <th style={{ textAlign: 'left', padding: '6px 8px', borderBottom: '1px solid #f0f0f0' }}>岗位</th>
-                                <th style={{ textAlign: 'left', padding: '6px 8px', borderBottom: '1px solid #f0f0f0' }}>分管方向</th>
                                 <th style={{ textAlign: 'left', padding: '6px 8px', borderBottom: '1px solid #f0f0f0' }}>状态</th>
                               </tr>
                             </thead>
@@ -1132,7 +1380,6 @@ const ProfileEditForm: React.FC<ProfileEditFormProps> = ({ member, onSubmit, onC
                                   <tr key={p.id}>
                                     <td style={{ padding: '6px 8px', borderBottom: '1px solid #fafafa' }}>{year}</td>
                                     <td style={{ padding: '6px 8px', borderBottom: '1px solid #fafafa' }}>{p.position}</td>
-                                    <td style={{ padding: '6px 8px', borderBottom: '1px solid #fafafa' }}>{p.vpDivision || '-'}</td>
                                     <td style={{ padding: '6px 8px', borderBottom: '1px solid #fafafa' }}>{p.status}</td>
                                   </tr>
                                 );

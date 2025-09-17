@@ -17,6 +17,7 @@ import {
   Popconfirm,
   Statistic,
   Progress,
+  Tabs,
 } from 'antd';
 import {
   PlusOutlined,
@@ -27,6 +28,7 @@ import {
   CalendarOutlined,
   UserOutlined,
   FundOutlined,
+  BarChartOutlined,
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import {
@@ -35,41 +37,65 @@ import {
   ProjectAccountUpdateData,
   Event,
 } from '@/types/event';
+import { Transaction } from '@/types/finance';
 import { projectAccountService } from '@/services/projectAccountService';
 import { eventService } from '@/services/eventService';
+import UnifiedProjectFinanceManagement from './UnifiedProjectFinanceManagement';
+import GlobalYearFilterModal from './GlobalYearFilterModal';
+import { useFinanceYear } from '@/contexts/FinanceYearContext';
 
 const { Title, Text } = Typography;
 const { Search } = Input;
 const { Option } = Select;
 
 interface ProjectAccountManagementProps {
-  fiscalYear?: string;
 }
 
-const ProjectAccountManagement: React.FC<ProjectAccountManagementProps> = ({
-  fiscalYear
-}) => {
+const ProjectAccountManagement: React.FC<ProjectAccountManagementProps> = () => {
   const [accounts, setAccounts] = useState<ProjectAccount[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchText, setSearchText] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('');
+  // 使用全局年份状态
+  const { selectedYear: yearFilter, setSelectedYear: setYearFilter, availableYears, setAvailableYears } = useFinanceYear();
   const [selectedAccount, setSelectedAccount] = useState<ProjectAccount | null>(null);
   const [accountEvents, setAccountEvents] = useState<Event[]>([]);
   const [accountStatistics, setAccountStatistics] = useState<any>(null);
   const [isModalVisible, setIsModalVisible] = useState(false);
+  const [isUnifiedFinanceModalVisible, setIsUnifiedFinanceModalVisible] = useState(false);
   const [modalMode, setModalMode] = useState<'create' | 'edit'>('create');
+  const [activeTab, setActiveTab] = useState('details');
   const [form] = Form.useForm();
 
   useEffect(() => {
     loadAccounts();
-  }, [fiscalYear]);
+  }, []);
+
+  // 更新全局可用年份
+  useEffect(() => {
+    if (accounts.length > 0) {
+      const years = new Set<number>();
+      accounts.forEach(account => {
+        if (account.createdAt) {
+          // 处理Firebase Timestamp类型
+          const timestamp = account.createdAt as any;
+          const createdDate = dayjs(timestamp.seconds ? timestamp.seconds * 1000 : timestamp);
+          if (createdDate.isValid()) {
+            years.add(createdDate.year());
+          }
+        }
+      });
+      if (years.size > 0) {
+        setAvailableYears(Array.from(years));
+      }
+    }
+  }, [accounts, setAvailableYears]);
+
 
   const loadAccounts = async () => {
     setLoading(true);
     try {
-      const accountsData = fiscalYear 
-        ? await projectAccountService.getProjectAccountsByFiscalYear(fiscalYear)
-        : await projectAccountService.getProjectAccounts();
+      const accountsData = await projectAccountService.getProjectAccounts();
       setAccounts(accountsData);
     } catch (error) {
       console.error('加载项目户口列表失败:', error);
@@ -131,6 +157,7 @@ const ProjectAccountManagement: React.FC<ProjectAccountManagementProps> = ({
 
   const handleViewDetails = async (account: ProjectAccount) => {
     setSelectedAccount(account);
+    setActiveTab('details');
     try {
       const [events, statistics] = await Promise.all([
         eventService.getEventsByProjectAccount(account.id),
@@ -142,6 +169,22 @@ const ProjectAccountManagement: React.FC<ProjectAccountManagementProps> = ({
       console.error('获取项目户口详情失败:', error);
       message.error('获取项目户口详情失败');
     }
+  };
+
+  const handleViewUnifiedFinance = (account: ProjectAccount) => {
+    setSelectedAccount(account);
+    setActiveTab('unified-finance');
+    setIsUnifiedFinanceModalVisible(true);
+  };
+
+  const handleTransactionSync = (projectId: string, transactions: Transaction[]) => {
+    console.log('Transaction sync for project:', projectId, transactions);
+    message.success(`成功同步 ${transactions.length} 笔交易记录`);
+  };
+
+  const handleVerificationRequest = (projectId: string, verificationData: any) => {
+    console.log('Verification request for project:', projectId, verificationData);
+    message.success('已提交财政长核对申请');
   };
 
   const getStatusColor = (status: string) => {
@@ -183,12 +226,9 @@ const ProjectAccountManagement: React.FC<ProjectAccountManagementProps> = ({
       dataIndex: 'name',
       key: 'name',
       width: 200,
-      render: (name: string, record: ProjectAccount) => (
+      render: (name: string) => (
         <div>
           <div style={{ fontWeight: 'bold' }}>{name}</div>
-          <Text type="secondary" style={{ fontSize: '12px' }}>
-            {record.fiscalYear}
-          </Text>
         </div>
       ),
     },
@@ -257,7 +297,7 @@ const ProjectAccountManagement: React.FC<ProjectAccountManagementProps> = ({
     {
       title: '操作',
       key: 'actions',
-      width: 150,
+      width: 200,
       fixed: 'right' as const,
       render: (_: any, record: ProjectAccount) => (
         <Space size="small">
@@ -266,6 +306,13 @@ const ProjectAccountManagement: React.FC<ProjectAccountManagementProps> = ({
               type="text"
               icon={<EyeOutlined />}
               onClick={() => handleViewDetails(record)}
+            />
+          </Tooltip>
+          <Tooltip title="统一财务管理">
+            <Button
+              type="text"
+              icon={<BarChartOutlined />}
+              onClick={() => handleViewUnifiedFinance(record)}
             />
           </Tooltip>
           <Tooltip title="编辑">
@@ -381,6 +428,19 @@ const ProjectAccountManagement: React.FC<ProjectAccountManagementProps> = ({
                 <Option value="inactive">停用</Option>
                 <Option value="completed">已完成</Option>
               </Select>
+              <GlobalYearFilterModal
+                value={yearFilter}
+                onChange={(year) => setYearFilter(year || new Date().getFullYear())}
+                availableYears={availableYears}
+                placeholder="年份筛选"
+                style={{ width: 120 }}
+              />
+              <Button
+                icon={<BarChartOutlined />}
+                onClick={() => setIsUnifiedFinanceModalVisible(true)}
+              >
+                统一财务管理
+              </Button>
               <Button
                 type="primary"
                 icon={<PlusOutlined />}
@@ -417,103 +477,142 @@ const ProjectAccountManagement: React.FC<ProjectAccountManagementProps> = ({
         open={!!selectedAccount}
         onCancel={() => setSelectedAccount(null)}
         footer={null}
-        width={1000}
+        width={1200}
       >
         {selectedAccount && (
-          <div>
-            {/* 基本信息 */}
-            <Card title="基本信息" style={{ marginBottom: 16 }}>
-              <Row gutter={[16, 16]}>
-                <Col xs={24} sm={12}>
-                  <Statistic
-                    title="项目户口"
-                    value={selectedAccount.name}
-                    prefix={<FundOutlined />}
-                  />
-                </Col>
-                <Col xs={24} sm={12}>
-                  <Statistic
-                    title="财政年度"
-                    value={selectedAccount.fiscalYear}
-                    prefix={<CalendarOutlined />}
-                  />
-                </Col>
-                <Col xs={24} sm={12}>
-                  <Statistic
-                    title="预算"
-                    value={`${selectedAccount.currency} ${selectedAccount.budget.toLocaleString()}`}
-                    prefix={<DollarOutlined />}
-                  />
-                </Col>
-                <Col xs={24} sm={12}>
-                  <Statistic
-                    title="负责人"
-                    value={selectedAccount.responsiblePerson}
-                    prefix={<UserOutlined />}
-                  />
-                </Col>
-              </Row>
-            </Card>
+          <Tabs
+            activeKey={activeTab}
+            onChange={setActiveTab}
+            items={[
+              {
+                key: 'details',
+                label: '基本信息',
+                icon: <EyeOutlined />,
+                children: (
+                  <div>
+                    {/* 基本信息 */}
+                    <Card title="基本信息" style={{ marginBottom: 16 }}>
+                      <Row gutter={[16, 16]}>
+                        <Col xs={24} sm={12}>
+                          <Statistic
+                            title="项目户口"
+                            value={selectedAccount.name}
+                            prefix={<FundOutlined />}
+                          />
+                        </Col>
+                        <Col xs={24} sm={12}>
+                          <Statistic
+                            title="预算"
+                            value={`${selectedAccount.currency} ${selectedAccount.budget.toLocaleString()}`}
+                            prefix={<DollarOutlined />}
+                          />
+                        </Col>
+                        <Col xs={24} sm={12}>
+                          <Statistic
+                            title="负责人"
+                            value={selectedAccount.responsiblePerson}
+                            prefix={<UserOutlined />}
+                          />
+                        </Col>
+                      </Row>
+                    </Card>
 
-            {/* 统计信息 */}
-            {accountStatistics && (
-              <Card title="活动统计" style={{ marginBottom: 16 }}>
-                <Row gutter={[16, 16]}>
-                  <Col xs={24} sm={6}>
-                    <Statistic
-                      title="总活动数"
-                      value={accountStatistics.totalEvents}
-                      prefix={<CalendarOutlined />}
-                    />
-                  </Col>
-                  <Col xs={24} sm={6}>
-                    <Statistic
-                      title="已发布活动"
-                      value={accountStatistics.publishedEvents}
-                      valueStyle={{ color: '#3f8600' }}
-                    />
-                  </Col>
-                  <Col xs={24} sm={6}>
-                    <Statistic
-                      title="总注册人数"
-                      value={accountStatistics.totalRegistrations}
-                      prefix={<UserOutlined />}
-                    />
-                  </Col>
-                  <Col xs={24} sm={6}>
-                    <Statistic
-                      title="总收入"
-                      value={accountStatistics.totalRevenue}
-                      prefix={<DollarOutlined />}
-                      suffix={selectedAccount.currency}
-                    />
-                  </Col>
-                </Row>
-                <div style={{ marginTop: 16 }}>
-                  <Text>预算使用率</Text>
-                  <Progress
-                    percent={accountStatistics.budgetUtilization}
-                    status={accountStatistics.budgetUtilization > 100 ? 'exception' : 'active'}
-                  />
-                  <Text type="secondary">
-                    {accountStatistics.totalRevenue.toLocaleString()} / {selectedAccount.budget.toLocaleString()} {selectedAccount.currency}
-                  </Text>
-                </div>
-              </Card>
-            )}
+                    {/* 统计信息 */}
+                    {accountStatistics && (
+                      <Card title="活动统计" style={{ marginBottom: 16 }}>
+                        <Row gutter={[16, 16]}>
+                          <Col xs={24} sm={6}>
+                            <Statistic
+                              title="总活动数"
+                              value={accountStatistics.totalEvents}
+                              prefix={<CalendarOutlined />}
+                            />
+                          </Col>
+                          <Col xs={24} sm={6}>
+                            <Statistic
+                              title="已发布活动"
+                              value={accountStatistics.publishedEvents}
+                              valueStyle={{ color: '#3f8600' }}
+                            />
+                          </Col>
+                          <Col xs={24} sm={6}>
+                            <Statistic
+                              title="总注册人数"
+                              value={accountStatistics.totalRegistrations}
+                              prefix={<UserOutlined />}
+                            />
+                          </Col>
+                          <Col xs={24} sm={6}>
+                            <Statistic
+                              title="总收入"
+                              value={accountStatistics.totalRevenue}
+                              prefix={<DollarOutlined />}
+                              suffix={selectedAccount.currency}
+                            />
+                          </Col>
+                        </Row>
+                        <div style={{ marginTop: 16 }}>
+                          <Text>预算使用率</Text>
+                          <Progress
+                            percent={accountStatistics.budgetUtilization}
+                            status={accountStatistics.budgetUtilization > 100 ? 'exception' : 'active'}
+                          />
+                          <Text type="secondary">
+                            {accountStatistics.totalRevenue.toLocaleString()} / {selectedAccount.budget.toLocaleString()} {selectedAccount.currency}
+                          </Text>
+                        </div>
+                      </Card>
+                    )}
 
-            {/* 相关活动 */}
-            <Card title="相关活动">
-              <Table
-                columns={eventColumns}
-                dataSource={accountEvents}
-                rowKey="id"
-                pagination={false}
-                size="small"
-              />
-            </Card>
-          </div>
+                    {/* 相关活动 */}
+                    <Card title="相关活动">
+                      <Table
+                        columns={eventColumns}
+                        dataSource={accountEvents}
+                        rowKey="id"
+                        pagination={false}
+                        size="small"
+                      />
+                    </Card>
+                  </div>
+                ),
+              },
+              {
+                key: 'unified-finance',
+                label: '统一财务管理',
+                icon: <BarChartOutlined />,
+                children: (
+                  <UnifiedProjectFinanceManagement
+                    mode="finance"
+                    onTransactionSync={handleTransactionSync}
+                    onVerificationRequest={handleVerificationRequest}
+                  />
+                ),
+              },
+            ]}
+          />
         )}
+      </Modal>
+
+      {/* 统一财务管理模态框 */}
+      <Modal
+        title={
+          <Space>
+            <BarChartOutlined />
+            <span>统一项目财务管理</span>
+          </Space>
+        }
+        open={isUnifiedFinanceModalVisible}
+        onCancel={() => setIsUnifiedFinanceModalVisible(false)}
+        footer={null}
+        width={1400}
+        destroyOnClose
+      >
+        <UnifiedProjectFinanceManagement
+          mode="finance"
+          onTransactionSync={handleTransactionSync}
+          onVerificationRequest={handleVerificationRequest}
+        />
       </Modal>
 
       {/* 创建/编辑模态框 */}
@@ -549,19 +648,6 @@ const ProjectAccountManagement: React.FC<ProjectAccountManagementProps> = ({
           </Form.Item>
 
           <Row gutter={16}>
-            <Col xs={24} sm={12}>
-              <Form.Item
-                label="财政年度"
-                name="fiscalYear"
-                rules={[{ required: true, message: '请选择财政年度' }]}
-              >
-                <Select placeholder="请选择财政年度">
-                  <Option value="2024">2024</Option>
-                  <Option value="2025">2025</Option>
-                  <Option value="2026">2026</Option>
-                </Select>
-              </Form.Item>
-            </Col>
             <Col xs={24} sm={12}>
               <Form.Item
                 label="货币"

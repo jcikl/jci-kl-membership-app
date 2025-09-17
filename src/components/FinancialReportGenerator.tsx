@@ -23,7 +23,6 @@ import {
   DownloadOutlined,
   BarChartOutlined,
 } from '@ant-design/icons';
-import { useFiscalYear } from '@/contexts/FiscalYearContext';
 import { useAuthStore } from '@/store/authStore';
 import { financialReportService, FiscalYearCalculator } from '@/services/financialReportService';
 import { FinancialReport, FinancialReportType, FinancialReportData } from '@/types/finance';
@@ -41,7 +40,9 @@ const FinancialReportGenerator: React.FC<FinancialReportGeneratorProps> = ({
   visible,
   onCancel,
 }) => {
-  const { fiscalYear, fiscalYearStartMonth } = useFiscalYear();
+  // 使用当前年份作为默认财政年度
+  const fiscalYear = new Date().getFullYear();
+  const fiscalYearStartMonth = 1;
   const { user } = useAuthStore();
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
@@ -312,7 +313,7 @@ const FinancialReportGenerator: React.FC<FinancialReportGeneratorProps> = ({
                   key: 'netIncome',
                   render: (value: number) => (
                     <Text style={{ color: value >= 0 ? '#52c41a' : '#ff4d4f' }}>
-                      RM {value.toLocaleString()}
+                      {value.toLocaleString()}
                     </Text>
                   )
                 },
@@ -358,7 +359,7 @@ const FinancialReportGenerator: React.FC<FinancialReportGeneratorProps> = ({
                   key: 'netIncome',
                   render: (value: number) => (
                     <Text style={{ color: value >= 0 ? '#52c41a' : '#ff4d4f' }}>
-                      RM {value.toLocaleString()}
+                      {value.toLocaleString()}
                     </Text>
                   )
                 },

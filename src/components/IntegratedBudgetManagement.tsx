@@ -32,12 +32,20 @@ import {
   ClockCircleOutlined,
   ExclamationCircleOutlined,
   EyeOutlined,
-  CopyOutlined,
   WarningOutlined,
 } from '@ant-design/icons';
-import { Budget, BudgetStatus, BudgetAllocation, TransactionPurpose, Transaction } from '@/types/finance';
-import { useFiscalYear } from '@/contexts/FiscalYearContext';
+import { Budget, BudgetStatus, BudgetAllocation, TransactionPurpose, Transaction, BudgetMainCategory, BudgetSubCategory } from '@/types/finance';
 import dayjs from 'dayjs';
+import JCIBudgetTable from './JCIBudgetTable';
+import GlobalYearFilterModal from './GlobalYearFilterModal';
+import { useFinanceYear } from '@/contexts/FinanceYearContext';
+import { 
+  BUDGET_MAIN_CATEGORY_OPTIONS, 
+  getSubCategoryOptions, 
+  generateItemCode, 
+  getItemTemplates,
+  BUDGET_CATEGORIES 
+} from '@/config/budgetCategories';
 
 const { Title, Text } = Typography;
 const { Option } = Select;
@@ -115,11 +123,11 @@ const IntegratedBudgetManagement: React.FC<IntegratedBudgetManagementProps> = ({
   purposes,
   loading = false,
 }) => {
-  const { fiscalYear } = useFiscalYear();
   
   // 状态管理
   const [activeTab, setActiveTab] = useState('overview');
-  const [selectedYear, setSelectedYear] = useState<number>(fiscalYear);
+  // 使用全局年份状态
+  const { selectedYear, setSelectedYear, availableYears, setAvailableYears } = useFinanceYear();
   const [isCreateModalVisible, setIsCreateModalVisible] = useState(false);
   const [isEditModalVisible, setIsEditModalVisible] = useState(false);
   const [isAllocationModalVisible, setIsAllocationModalVisible] = useState(false);
@@ -127,13 +135,19 @@ const IntegratedBudgetManagement: React.FC<IntegratedBudgetManagementProps> = ({
   const [isWorkflowModalVisible, setIsWorkflowModalVisible] = useState(false);
   const [isTemplateModalVisible, setIsTemplateModalVisible] = useState(false);
   const [isCreateAllocationModalVisible, setIsCreateAllocationModalVisible] = useState(false);
+  const [isCreateYearlyBudgetModalVisible, setIsCreateYearlyBudgetModalVisible] = useState(false);
   const [selectedBudget, setSelectedBudget] = useState<Budget | null>(null);
   const [budgetTemplates, setBudgetTemplates] = useState<BudgetTemplate[]>([]);
+  
+  // 预算创建表单状态
+  const [selectedMainCategory, setSelectedMainCategory] = useState<BudgetMainCategory | undefined>(undefined);
+  const [selectedSubCategory, setSelectedSubCategory] = useState<BudgetSubCategory | undefined>(undefined);
 
   // 表单实例
   const [budgetForm] = Form.useForm();
   const [allocationForm] = Form.useForm();
   const [approvalForm] = Form.useForm();
+  const [yearlyBudgetForm] = Form.useForm();
 
   // 预算模板数据
   const defaultTemplates: BudgetTemplate[] = [
@@ -227,15 +241,21 @@ const IntegratedBudgetManagement: React.FC<IntegratedBudgetManagementProps> = ({
     setBudgetTemplates(defaultTemplates);
   }, []);
 
+  // 更新全局可用年份
+  useEffect(() => {
+    if (budgets.length > 0) {
+      const years = Array.from(new Set(budgets.map(budget => budget.budgetYear)))
+        .sort((a, b) => b - a);
+      setAvailableYears(years);
+    }
+  }, [budgets, setAvailableYears]);
+
   // 获取选中年度预算
   const selectedYearBudgets = budgets.filter(budget => budget.budgetYear === selectedYear);
   const selectedYearAllocations = allocations.filter(allocation => 
     selectedYearBudgets.some(budget => budget.id === allocation.budgetId)
   );
 
-  // 获取所有可用年份
-  const availableYears = Array.from(new Set(budgets.map(budget => budget.budgetYear)))
-    .sort((a, b) => b - a);
 
   // 计算预算统计
   const budgetStats = {
@@ -302,6 +322,7 @@ const IntegratedBudgetManagement: React.FC<IntegratedBudgetManagementProps> = ({
       active: 'success',
       completed: 'success',
       cancelled: 'error',
+      revoked: 'warning',
     };
     return colors[status] as any;
   };
@@ -314,6 +335,7 @@ const IntegratedBudgetManagement: React.FC<IntegratedBudgetManagementProps> = ({
       active: '执行中',
       completed: '已完成',
       cancelled: '已取消',
+      revoked: '已撤销',
     };
     return texts[status];
   };
@@ -352,10 +374,18 @@ const IntegratedBudgetManagement: React.FC<IntegratedBudgetManagementProps> = ({
         remainingAmount: values.totalBudget,
         status: 'draft',
         createdBy: 'current-user', // 这里应该从用户上下文获取
+        // 新增的层次结构字段 - 确保没有undefined值
+        mainCategory: values.mainCategory || null,
+        subCategory: values.subCategory || null,
+        itemCode: values.itemCode || (values.subCategory ? generateItemCode(values.subCategory, 0) : '') || null,
+        note: values.note || null,
+        description: values.description || null,
       });
-      message.success('预算创建成功');
+      message.success('JCI预算项目创建成功');
       setIsCreateModalVisible(false);
       budgetForm.resetFields();
+      setSelectedMainCategory(undefined);
+      setSelectedSubCategory(undefined);
     } catch (error) {
       console.error('创建预算失败:', error);
       message.error('创建预算失败');
@@ -414,6 +444,99 @@ const IntegratedBudgetManagement: React.FC<IntegratedBudgetManagementProps> = ({
     } catch (error) {
       console.error('预算审批失败:', error);
       message.error('预算审批失败');
+    }
+  };
+
+  const handleRevokeApproval = async () => {
+    try {
+      await approvalForm.validateFields();
+      
+      if (selectedBudget) {
+        await onUpdateBudget(selectedBudget.id, {
+          status: 'revoked',
+        });
+        message.success('撤销审批成功');
+        setIsApprovalModalVisible(false);
+        approvalForm.resetFields();
+      }
+    } catch (error) {
+      console.error('撤销审批失败:', error);
+      message.error('撤销审批失败');
+    }
+  };
+
+  // 处理新全年预算创建
+  const handleCreateYearlyBudget = () => {
+    setIsCreateYearlyBudgetModalVisible(true);
+    yearlyBudgetForm.setFieldsValue({
+      budgetYear: new Date().getFullYear() + 1, // 默认下一年
+    });
+  };
+
+  const handleYearlyBudgetSubmit = async () => {
+    try {
+      const values = await yearlyBudgetForm.validateFields();
+      const targetYear = values.budgetYear;
+      
+      // 检查目标年份是否已存在预算
+      const existingBudgets = budgets.filter(budget => budget.budgetYear === targetYear);
+      if (existingBudgets.length > 0) {
+        message.warning(`${targetYear}年已存在预算数据，请选择其他年份或删除现有预算`);
+        return;
+      }
+
+      // 使用标准模板创建新年度预算
+      const standardTemplate = defaultTemplates.find(t => t.id === 'standard');
+      if (!standardTemplate) {
+        message.error('找不到标准预算模板');
+        return;
+      }
+
+      // 创建预算项目 - 使用标准预算分类
+      const budgetCategories = [
+        // 收入预算
+        { mainCategory: 'income' as BudgetMainCategory, subCategory: 'membership_subscription' as BudgetSubCategory, name: '会员费收入', amount: 50000 },
+        { mainCategory: 'income' as BudgetMainCategory, subCategory: 'external_funding' as BudgetSubCategory, name: '外部资助', amount: 30000 },
+        { mainCategory: 'income' as BudgetMainCategory, subCategory: 'project_surplus' as BudgetSubCategory, name: '项目盈余', amount: 20000 },
+        { mainCategory: 'income' as BudgetMainCategory, subCategory: 'other_income' as BudgetSubCategory, name: '其他收入', amount: 10000 },
+        
+        // 支出预算
+        { mainCategory: 'expense' as BudgetMainCategory, subCategory: 'administrative' as BudgetSubCategory, name: '行政费用', amount: 25000 },
+        { mainCategory: 'expense' as BudgetMainCategory, subCategory: 'projects' as BudgetSubCategory, name: '项目费用', amount: 30000 },
+        { mainCategory: 'expense' as BudgetMainCategory, subCategory: 'convention' as BudgetSubCategory, name: '大会费用', amount: 20000 },
+        { mainCategory: 'expense' as BudgetMainCategory, subCategory: 'merchandise' as BudgetSubCategory, name: '商品费用', amount: 15000 },
+      ];
+
+      for (let i = 0; i < budgetCategories.length; i++) {
+        const category = budgetCategories[i];
+        const budgetData: Omit<Budget, 'id' | 'createdAt' | 'updatedAt'> = {
+          mainCategory: category.mainCategory,
+          subCategory: category.subCategory,
+          projectName: `${category.name} - ${targetYear}年`,
+          budgetYear: targetYear,
+          totalBudget: category.amount,
+          allocatedAmount: 0,
+          spentAmount: 0,
+          remainingAmount: category.amount,
+          status: 'draft',
+          description: `${category.name}预算项目`,
+          note: `自动生成的${targetYear}年${category.name}预算`,
+          itemCode: generateItemCode(category.subCategory, i),
+          createdBy: 'system', // 添加必需的createdBy字段
+        };
+
+        await onCreateBudget(budgetData);
+      }
+
+      message.success(`${targetYear}年全年预算创建成功！`);
+      setIsCreateYearlyBudgetModalVisible(false);
+      yearlyBudgetForm.resetFields();
+      
+      // 自动切换到新创建的年份
+      setSelectedYear(targetYear);
+    } catch (error) {
+      console.error('创建新全年预算失败:', error);
+      message.error('创建新全年预算失败');
     }
   };
 
@@ -600,13 +723,22 @@ const IntegratedBudgetManagement: React.FC<IntegratedBudgetManagementProps> = ({
             </>
           )}
           {record.status === 'approved' && (
-            <Button
-              type="primary"
-              size="small"
-              onClick={() => handleActivateBudget(record)}
-            >
-              激活预算
-            </Button>
+            <>
+              <Button
+                type="primary"
+                size="small"
+                onClick={() => handleActivateBudget(record)}
+              >
+                激活预算
+              </Button>
+              <Button
+                size="small"
+                danger
+                onClick={() => handleStartApproval(record)}
+              >
+                撤销审批
+              </Button>
+            </>
           )}
         </Space>
       ),
@@ -627,18 +759,22 @@ const IntegratedBudgetManagement: React.FC<IntegratedBudgetManagementProps> = ({
             </Text>
           </Col>
           <Col>
-            <Select
-              value={selectedYear}
-              onChange={setSelectedYear}
-              style={{ width: 120 }}
-              placeholder="选择年份"
-            >
-              {availableYears.map(year => (
-                <Option key={year} value={year}>
-                  {year}年
-                </Option>
-              ))}
-            </Select>
+            <Space>
+              <GlobalYearFilterModal
+                value={selectedYear}
+                onChange={(year) => setSelectedYear(year || new Date().getFullYear())}
+                availableYears={availableYears}
+                placeholder="选择年份"
+                style={{ width: 120 }}
+              />
+              <Button
+                type="primary"
+                icon={<PlusOutlined />}
+                onClick={handleCreateYearlyBudget}
+              >
+                创建新全年预算
+              </Button>
+            </Space>
           </Col>
         </Row>
 
@@ -757,35 +893,23 @@ const IntegratedBudgetManagement: React.FC<IntegratedBudgetManagementProps> = ({
               ),
             },
             {
-              key: 'list',
-              label: '预算列表',
+              key: 'jci-budget',
+              label: 'JCI预算列表',
               children: (
                 <>
-                  <div style={{ marginBottom: 16 }}>
-                    <Space>
-                      <Button
-                        type="primary"
-                        icon={<PlusOutlined />}
-                        onClick={() => setIsCreateModalVisible(true)}
-                      >
-                        创建预算
-                      </Button>
-                      <Button
-                        icon={<CopyOutlined />}
-                        onClick={() => setIsTemplateModalVisible(true)}
-                      >
-                        使用模板
-                      </Button>
-                    </Space>
-                  </div>
-
-                  <Table
-                    columns={budgetColumns}
-                    dataSource={selectedYearBudgets}
-                    rowKey="id"
+                  <JCIBudgetTable
+                    budgets={selectedYearBudgets}
+                    allocations={allocations}
                     loading={loading}
-                    pagination={false}
-                    size="small"
+                    onEditBudget={handleEditBudget}
+                    onDeleteBudget={handleDeleteBudget}
+                    onViewAllocations={handleViewAllocations}
+                    onStartApproval={handleStartApproval}
+                    onViewWorkflow={handleViewWorkflow}
+                    onUpdateBudget={(budget: Budget) => onUpdateBudget(budget.id, budget)}
+                    onCreateBudget={onCreateBudget}
+                    onUseTemplate={() => setIsTemplateModalVisible(true)}
+                    selectedYear={selectedYear}
                   />
                 </>
               ),
@@ -967,16 +1091,105 @@ const IntegratedBudgetManagement: React.FC<IntegratedBudgetManagementProps> = ({
 
       {/* 创建预算模态框 */}
       <Modal
-        title="创建预算"
+        title="创建JCI预算项目"
         open={isCreateModalVisible}
         onOk={handleCreateBudget}
         onCancel={() => {
           setIsCreateModalVisible(false);
           budgetForm.resetFields();
+          setSelectedMainCategory(undefined);
+          setSelectedSubCategory(undefined);
         }}
-        width={600}
+        width={800}
       >
         <Form form={budgetForm} layout="vertical">
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item
+                name="mainCategory"
+                label="主要分类"
+                rules={[{ required: true, message: '请选择主要分类' }]}
+              >
+                <Select 
+                  placeholder="请选择主要分类"
+                  onChange={(value: BudgetMainCategory) => {
+                    setSelectedMainCategory(value);
+                    setSelectedSubCategory(undefined);
+                    budgetForm.setFieldsValue({ subCategory: undefined, itemTemplate: undefined });
+                  }}
+                >
+                  {BUDGET_MAIN_CATEGORY_OPTIONS.map(option => (
+                    <Option key={option.value} value={option.value}>
+                      {option.label}
+                    </Option>
+                  ))}
+                </Select>
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item
+                name="subCategory"
+                label="子分类"
+                rules={[{ required: true, message: '请选择子分类' }]}
+              >
+                <Select 
+                  placeholder="请选择子分类"
+                  disabled={!selectedMainCategory}
+                  onChange={(value: BudgetSubCategory) => {
+                    setSelectedSubCategory(value);
+                    budgetForm.setFieldsValue({ itemTemplate: undefined });
+                  }}
+                >
+                  {selectedMainCategory && getSubCategoryOptions(selectedMainCategory).map(option => (
+                    <Option key={option.value} value={option.value}>
+                      {option.label}
+                    </Option>
+                  ))}
+                </Select>
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item
+                name="itemTemplate"
+                label="项目模板"
+                rules={[{ required: true, message: '请选择项目模板' }]}
+              >
+                <Select 
+                  placeholder="请选择项目模板"
+                  disabled={!selectedSubCategory}
+                  onChange={(value: string) => {
+                    const template = getItemTemplates(selectedSubCategory!).find(t => t.name === value);
+                    budgetForm.setFieldsValue({ 
+                      projectName: value,
+                      note: template?.note || ''
+                    });
+                  }}
+                >
+                  {selectedSubCategory && getItemTemplates(selectedSubCategory).map(template => (
+                    <Option key={template.name} value={template.name}>
+                      {template.name}
+                    </Option>
+                  ))}
+                </Select>
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item
+                name="itemCode"
+                label="项目代码"
+              >
+                <Input 
+                  placeholder="自动生成" 
+                  disabled 
+                  value={selectedSubCategory ? generateItemCode(selectedSubCategory, 0) : ''}
+                />
+              </Form.Item>
+            </Col>
+          </Row>
+
           <Form.Item
             name="projectName"
             label="项目名称"
@@ -984,55 +1197,90 @@ const IntegratedBudgetManagement: React.FC<IntegratedBudgetManagementProps> = ({
           >
             <Input placeholder="请输入项目名称" />
           </Form.Item>
-          <Form.Item
-            name="totalBudget"
-            label="总预算 (RM)"
-            rules={[{ required: true, message: '请输入总预算' }]}
-          >
-            <InputNumber
-              style={{ width: '100%' }}
-              placeholder="请输入总预算"
-              min={0}
-              formatter={value => `RM ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-              parser={(value: string | undefined) => parseFloat(value ? value.replace(/RM\s?|(,*)/g, '') : '0') || 0}
-            />
-          </Form.Item>
+
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item
+                name="totalBudget"
+                label="预算金额 (RM)"
+                rules={[{ required: true, message: '请输入预算金额' }]}
+              >
+                <InputNumber
+                  style={{ width: '100%' }}
+                  placeholder="请输入预算金额"
+                  min={0}
+                  formatter={value => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                  parser={(value: string | undefined) => parseFloat(value ? value.replace(/(,*)/g, '') : '0') || 0}
+                />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item
+                name="note"
+                label="备注"
+              >
+                <Input placeholder="备注说明 (如 Note 1)" />
+              </Form.Item>
+            </Col>
+          </Row>
+
           <Form.Item
             name="description"
-            label="描述"
+            label="详细描述"
           >
-            <TextArea rows={3} placeholder="请输入预算描述" />
+            <TextArea rows={3} placeholder="请输入预算详细描述" />
           </Form.Item>
+
+          {/* 分类信息预览 */}
+          {selectedMainCategory && selectedSubCategory && (
+            <Alert
+              message="分类信息预览"
+              description={
+                <div>
+                  <Text strong>主要分类：</Text> {BUDGET_CATEGORIES.find(cat => cat.id === selectedMainCategory)?.mainCategoryName}<br />
+                  <Text strong>子分类：</Text> {BUDGET_CATEGORIES.find(cat => cat.id === selectedMainCategory)?.subCategories.find(sub => sub.id === selectedSubCategory)?.subCategoryName}<br />
+                  <Text strong>项目代码：</Text> {generateItemCode(selectedSubCategory, 0)}
+                </div>
+              }
+              type="info"
+              showIcon
+            />
+          )}
         </Form>
       </Modal>
 
       {/* 审批模态框 */}
       <Modal
-        title="预算审批"
+        title={selectedBudget?.status === 'approved' ? '撤销审批' : '预算审批'}
         open={isApprovalModalVisible}
-        onOk={handleApprovalSubmit}
+        onOk={selectedBudget?.status === 'approved' ? handleRevokeApproval : handleApprovalSubmit}
         onCancel={() => {
           setIsApprovalModalVisible(false);
           approvalForm.resetFields();
         }}
         width={600}
+        okText={selectedBudget?.status === 'approved' ? '确认撤销' : '确认审批'}
+        okButtonProps={selectedBudget?.status === 'approved' ? { danger: true } : { type: 'primary' }}
       >
         {selectedBudget && (
           <div>
             <Alert
-              message={`审批预算: ${selectedBudget.projectName}`}
-              description={`总预算: RM ${selectedBudget.totalBudget.toLocaleString()}`}
-              type="info"
+              message={selectedBudget.status === 'approved' ? `撤销审批: ${selectedBudget.projectName}` : `审批预算: ${selectedBudget.projectName}`}
+              description={`总预算: RM ${selectedBudget.totalBudget.toLocaleString()} | 当前状态: ${getStatusText(selectedBudget.status)}`}
+              type={selectedBudget.status === 'approved' ? 'warning' : 'info'}
               style={{ marginBottom: 16 }}
             />
             
             <Form form={approvalForm} layout="vertical">
               <Form.Item
                 name="comments"
-                label="审批意见"
-                rules={[{ required: true, message: '请输入审批意见' }]}
+                label={selectedBudget.status === 'approved' ? '撤销原因' : '审批意见'}
+                rules={[{ required: true, message: selectedBudget.status === 'approved' ? '请输入撤销原因' : '请输入审批意见' }]}
               >
-                <TextArea rows={4} placeholder="请输入审批意见" />
+                <TextArea 
+                  rows={4} 
+                  placeholder={selectedBudget.status === 'approved' ? '请输入撤销原因' : '请输入审批意见'} 
+                />
               </Form.Item>
             </Form>
           </div>
@@ -1370,7 +1618,7 @@ const IntegratedBudgetManagement: React.FC<IntegratedBudgetManagementProps> = ({
                   placeholder="请输入分配金额"
                   min={0}
                   max={selectedBudget.remainingAmount}
-                  formatter={value => `RM ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                  formatter={value => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
                   parser={(value: string | undefined) => parseFloat(value ? value.replace(/RM\s?|(,*)/g, '') : '0') || 0}
                 />
               </Form.Item>
@@ -1383,6 +1631,72 @@ const IntegratedBudgetManagement: React.FC<IntegratedBudgetManagementProps> = ({
             </Form>
           </div>
         )}
+      </Modal>
+
+      {/* 创建新全年预算模态框 */}
+      <Modal
+        title="创建新全年预算"
+        open={isCreateYearlyBudgetModalVisible}
+        onOk={handleYearlyBudgetSubmit}
+        onCancel={() => {
+          setIsCreateYearlyBudgetModalVisible(false);
+          yearlyBudgetForm.resetFields();
+        }}
+        width={500}
+        confirmLoading={loading}
+      >
+        <Form form={yearlyBudgetForm} layout="vertical">
+          <Alert
+            message="新全年预算创建"
+            description="系统将使用标准预算模板为新年度创建完整的预算结构，包括收入、支出等各类预算项目。"
+            type="info"
+            style={{ marginBottom: 16 }}
+          />
+          
+          <Form.Item
+            name="budgetYear"
+            label="预算年份"
+            rules={[
+              { required: true, message: '请选择预算年份' },
+              { type: 'number', min: 2020, max: 2030, message: '请输入有效的年份（2020-2030）' }
+            ]}
+            extra="选择要创建预算的年份，系统会自动检查该年份是否已存在预算"
+          >
+            <InputNumber
+              style={{ width: '100%' }}
+              placeholder="请输入预算年份"
+              min={2020}
+              max={2030}
+            />
+          </Form.Item>
+
+          <Form.Item
+            name="templateType"
+            label="预算模板类型"
+            initialValue="standard"
+          >
+            <Select disabled>
+              <Option value="standard">标准年度预算模板</Option>
+            </Select>
+          </Form.Item>
+
+          <Alert
+            message="注意事项"
+            description={
+              <div>
+                <p>• 系统将创建包含以下分类的完整预算结构：</p>
+                <ul style={{ margin: '8px 0', paddingLeft: '20px' }}>
+                  <li>收入预算：会员费、外部资助、项目盈余、其他收入</li>
+                  <li>支出预算：行政费用、项目费用、大会费用、商品费用</li>
+                </ul>
+                <p>• 所有预算项目初始状态为"草稿"，需要后续审批</p>
+                <p>• 如果目标年份已存在预算，系统将提示错误</p>
+              </div>
+            }
+            type="warning"
+            style={{ marginTop: 16 }}
+          />
+        </Form>
       </Modal>
     </div>
   );

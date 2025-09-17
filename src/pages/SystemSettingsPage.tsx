@@ -8,7 +8,9 @@ import {
   UserOutlined,
   BarChartOutlined,
   AuditOutlined,
-  TagsOutlined
+  TagsOutlined,
+  FlagOutlined,
+  BankOutlined
 } from '@ant-design/icons';
 import RBACAudit from '@/components/rbac/RBACAudit';
 import PermissionMatrix from '@/components/rbac/PermissionMatrix';
@@ -19,6 +21,8 @@ import ChapterSettings from '@/components/ChapterSettings';
 import CouncilTasksManager from '@/components/CouncilTasksManager';
 import MembershipTasksManager from '@/components/MembershipTasksManager.tsx';
 import NewAwardIndicatorManagement from '@/components/NewAwardIndicatorManagement';
+import HeadquartersSettings from '@/components/HeadquartersSettings';
+import CountrySettings from '@/components/CountrySettings';
 
 const { Title } = Typography;
 
@@ -66,10 +70,30 @@ const SystemSettingsPage: React.FC = () => {
 
       <Card>
         <Tabs
-          defaultActiveKey="chapter"
+          defaultActiveKey="headquarters"
           size="large"
           tabPosition="left"
           items={[
+            {
+              key: 'headquarters',
+              label: (
+                <span>
+                  <BankOutlined />
+                  总部设置
+                </span>
+              ),
+              children: <HeadquartersSettings />
+            },
+            {
+              key: 'country-settings',
+              label: (
+                <span>
+                  <FlagOutlined />
+                  国家设置
+                </span>
+              ),
+              children: <CountrySettings />
+            },
             {
               key: 'chapter',
               label: (

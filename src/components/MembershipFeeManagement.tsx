@@ -33,7 +33,6 @@ import {
   FileTextOutlined,
   SplitCellsOutlined,
 } from '@ant-design/icons';
-import { useFiscalYear } from '@/contexts/FiscalYearContext';
 import { Transaction, TransactionPurpose, TransactionSplit } from '@/types/finance';
 import { Member } from '@/types';
 import { useAuthStore } from '@/store/authStore';
@@ -67,7 +66,6 @@ const MembershipFeeManagement: React.FC<MembershipFeeManagementProps> = ({
   purposes,
   loading = false,
 }) => {
-  const { fiscalYear } = useFiscalYear();
   const { user } = useAuthStore();
   
   // 状态管理
@@ -741,7 +739,7 @@ const MembershipFeeManagement: React.FC<MembershipFeeManagementProps> = ({
               <Title level={4} style={{ margin: 0 }}>
                 <DollarOutlined /> 会费管理
               </Title>
-              <Text type="secondary">财政年度：{fiscalYear} | 管理会费交易记录和会员匹配</Text>
+              <Text type="secondary">管理会费交易记录和会员匹配</Text>
             </Col>
           </Row>
         </div>
@@ -978,7 +976,7 @@ const MembershipFeeManagement: React.FC<MembershipFeeManagementProps> = ({
           <div style={{ marginTop: 8 }}>
             <Text>金额：</Text>
             <Text style={{ color: '#52c41a', fontWeight: 'bold' }}>
-              RM {(selectedSplit?.amount || selectedTransaction?.income || 0).toLocaleString()}
+              {(selectedSplit?.amount || selectedTransaction?.income || 0).toLocaleString()}
             </Text>
           </div>
           <div>
