@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite --config config/vite.config.ts",
-    "build": "tsc --project config/tsconfig.json && vite build --config config/vite.config.ts",
+    "build": "cross-env NODE_OPTIONS=--max-old-space-size=4096 tsc --project config/tsconfig.json && cross-env NODE_OPTIONS=--max-old-space-size=4096 vite build --config config/vite.config.ts",
+    "build:prod": "cross-env NODE_OPTIONS=--max-old-space-size=6144 tsc --project config/tsconfig.json && cross-env NODE_OPTIONS=--max-old-space-size=6144 vite build --config config/vite.config.ts",
     "preview": "vite preview",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "type-check": "tsc --noEmit --project config/tsconfig.json",
@@ -45,6 +46,7 @@
     "@typescript-eslint/eslint-plugin": "^6.14.0",
     "@typescript-eslint/parser": "^6.14.0",
     "@vitejs/plugin-react": "^4.2.1",
+    "cross-env": "^10.0.0",
     "eslint": "^8.55.0",
     "eslint-plugin-react-hooks": "^4.6.0",
     "eslint-plugin-react-refresh": "^0.4.5",

@@ -25,10 +25,38 @@ export default defineConfig({
   },
   build: {
     outDir: 'dist',
-    sourcemap: true
+    sourcemap: false, // Disable sourcemaps for production to reduce memory usage
+    minify: 'terser',
+    terserOptions: {
+      compress: {
+        drop_console: true,
+        drop_debugger: true,
+      },
+    },
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: ['react', 'react-dom'],
+          antd: ['antd'],
+          firebase: ['firebase/app', 'firebase/auth', 'firebase/firestore', 'firebase/storage'],
+          charts: ['@ant-design/charts'],
+          utils: ['dayjs', 'axios', 'crypto-js'],
+        },
+      },
+    },
+    chunkSizeWarningLimit: 1000,
   },
   optimizeDeps: {
-    exclude: ['pdfjs-dist']
+    exclude: ['pdfjs-dist'],
+    include: [
+      'react',
+      'react-dom',
+      'antd',
+      'firebase/app',
+      'firebase/auth',
+      'firebase/firestore',
+      'firebase/storage',
+    ],
   },
   worker: {
     format: 'es'
@@ -36,5 +64,8 @@ export default defineConfig({
   define: {
     global: 'globalThis',
   },
-  assetsInclude: ['**/*.worker.js', '**/*.worker.mjs']
+  assetsInclude: ['**/*.worker.js', '**/*.worker.mjs'],
+  esbuild: {
+    logOverride: { 'this-is-undefined-in-esm': 'silent' }
+  }
 })

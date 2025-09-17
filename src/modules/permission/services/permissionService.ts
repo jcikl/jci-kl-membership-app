@@ -1,6 +1,7 @@
 // 权限管理服务
 import { positionService } from '@/services/positionService';
 import { categoryService } from '@/services/categoryService';
+import { getMemberById } from '@/modules/member/services/memberService';
 import { JCIPosition, MembershipCategory, AccountType } from '@/types/rbac';
 
 // 权限增强规则类型
@@ -464,7 +465,7 @@ export const permissionService = {
   // 检查是否为超级管理员邮箱
   isSuperAdmin: async (memberId: string): Promise<boolean> => {
     try {
-      const member = await import('@/modules/member/services/memberService').then(module => module.getMemberById(memberId));
+      const member = await getMemberById(memberId);
       return member?.email === 'admin@jcikl.com';
     } catch (error) {
       console.error('检查超级管理员失败:', error);
